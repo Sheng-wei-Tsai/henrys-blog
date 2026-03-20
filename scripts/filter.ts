@@ -1,59 +1,53 @@
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import type { FeedItem } from './fetch-digest';
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// ── Rule-based pre-filter (free, instant) ─────────────────────
-
-// Patterns that signal low-quality / pure marketing content
+// ── Rule-based pre-filter ────────────────────────────────────────
 const NOISE_PATTERNS = [
   /excited to (announce|introduce|share)/i,
   /proud to (introduce|present|launch)/i,
   /we('re| are) (thrilled|delighted|pleased)/i,
-  /introducing [A-Z][a-z]+:/i,           // "Introducing Foo: A new..."
-  /^\s*(announcing|launched?|new:)/i,
-  /check out our (new|latest)/i,
   /available (now|today) (in|on|for)/i,
   /sign up (now|today|for free)/i,
   /join (our|the) (waitlist|beta)/i,
   /terms of (service|use)|privacy policy/i,
+  /^[\s\S]{0,60}$/, // titles under 60 chars with no summary are likely noise
 ];
 
-// Technical keywords that signal real substance
+// Strong signals of a genuine research essay or deep technical post
 const QUALITY_SIGNALS = [
-  /benchmark|evaluat/i,
-  /experiment|ablat/i,
-  /architecture|model|training|fine.?tun/i,
-  /dataset|corpus|annotation/i,
-  /accuracy|precision|recall|f1|perplexity/i,
-  /paper|research|study|findings/i,
+  /benchmark|evaluat|experiment|ablat/i,
+  /we (show|demonstrate|find|propose|introduce a (method|framework|approach))/i,
+  /training|fine.?tun|pre.?train/i,
+  /architecture|transformer|attention|diffusion/i,
+  /dataset|corpus|annotation|human.?eval/i,
+  /accuracy|precision|recall|f1|perplexity|bleu|rouge/i,
+  /paper|arxiv|research|study|findings/i,
   /outperform|state.of.the.art|sota/i,
-  /open.source|released|code available/i,
-  /workflow|pipeline|system design/i,
-  /lesson|learned|mistake|tradeoff/i,
+  /safety|alignment|rlhf|constitutional/i,
+  /open.source|code available|github\.com/i,
+  /lesson|learned|postmortem|tradeoff|analysis/i,
+  /essay|long.?read|deep.?dive/i,
 ];
 
 function scoreItem(item: FeedItem): number {
   const text = `${item.title} ${item.summary}`;
   let score = 0;
 
-  // Penalize noise
-  for (const pattern of NOISE_PATTERNS) {
-    if (pattern.test(text)) score -= 3;
-  }
+  for (const p of NOISE_PATTERNS)  { if (p.test(text)) score -= 4; }
+  for (const p of QUALITY_SIGNALS) { if (p.test(text)) score += 2; }
 
-  // Reward quality signals
-  for (const pattern of QUALITY_SIGNALS) {
-    if (pattern.test(text)) score += 2;
-  }
+  // Reward longer, more substantive summaries
+  if (item.summary.length < 100)  score -= 5;
+  if (item.summary.length < 300)  score -= 2;
+  if (item.summary.length > 600)  score += 2;
+  if (item.summary.length > 1200) score += 1;
 
-  // Penalize very short summaries (likely just a title re-stated)
-  if (item.summary.length < 80)  score -= 4;
-  if (item.summary.length < 200) score -= 1;
-  if (item.summary.length > 400) score += 1;
-
-  // ArXiv papers get a small boost — peer-reviewed by definition
-  if (item.source === 'ArXiv') score += 2;
+  // Trusted curated sources get a baseline boost
+  if (['The Gradient', 'Ahead of AI', 'AI Alignment Forum'].includes(item.source)) score += 4;
+  if (['Hugging Face Papers', 'Papers With Code'].includes(item.source)) score += 3;
+  if (['Anthropic Research', 'Google DeepMind'].includes(item.source)) score += 2;
 
   return score;
 }
@@ -61,38 +55,30 @@ function scoreItem(item: FeedItem): number {
 export function ruleBasedFilter(items: FeedItem[]): FeedItem[] {
   const scored = items
     .map(item => ({ item, score: scoreItem(item) }))
-    .filter(({ score }) => score > -2)          // drop obvious noise
+    .filter(({ score }) => score > 0)   // stricter threshold
     .sort((a, b) => b.score - a.score);
 
   console.log(`\n📊 Rule filter: ${items.length} → ${scored.length} items kept`);
-  scored.forEach(({ item, score }) =>
+  scored.slice(0, 12).forEach(({ item, score }) =>
     console.log(`   [${score > 0 ? '+' : ''}${score}] [${item.source}] ${item.title.slice(0, 70)}`)
   );
-
   return scored.map(s => s.item);
 }
 
-// ── Claude quality gate (catches what rules miss) ─────────────
+// ── Claude quality gate ──────────────────────────────────────────
+// Claude reads everything and picks only the genuinely valuable ones.
+const QUALITY_GATE_PROMPT = `You are curating a digest of the highest-quality AI essays, research papers, and technical writing for senior developers.
 
-const QUALITY_GATE_PROMPT = `You are a senior engineer curating a weekly digest for developers who want deep, substantive content.
+Your bar is very high. An item passes only if it meets ALL of these:
+1. Teaches something non-obvious — not just "X is now available"
+2. Written by a credible researcher or practitioner with domain expertise
+3. Has lasting value beyond this week — not just a news item
+4. Directly relevant to building AI-powered products or understanding AI deeply
 
-Given this list of articles/papers, return ONLY the indices (0-based) of items worth including.
+Return ONLY the indices (0-based) of items that genuinely pass this bar. Aim for 4–6 items maximum.
+Prefer essays and papers over blog announcements. Prefer novel findings over confirmations.
 
-Exclude:
-- Pure product announcements with no technical depth
-- Marketing fluff ("We're excited to...")
-- Content that doesn't teach or explain anything
-- Duplicate topics (keep the best one)
-- Anything that reads like AI-generated filler
-
-Include:
-- Technical deep-dives and architecture explanations
-- Research papers with novel contributions
-- Practical engineering lessons and postmortems
-- Meaningful benchmark results or comparisons
-- Thoughtful opinion pieces backed by evidence
-
-Return JSON only: { "keep": [0, 2, 4, ...] }
+Return JSON only: { "keep": [0, 3, 5, ...], "reason": "one line why these were selected" }
 
 Items:
 `;
@@ -101,46 +87,37 @@ export async function claudeQualityGate(items: FeedItem[]): Promise<FeedItem[]> 
   if (items.length === 0) return [];
 
   const itemList = items
-    .map((item, i) => `${i}. [${item.source}] ${item.title}\n   ${item.summary.slice(0, 200)}`)
+    .map((item, i) => `${i}. [${item.source}] ${item.title}\n   ${item.summary.slice(0, 300)}`)
     .join('\n\n');
 
-  const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',   // cheapest model — just scoring, not summarizing
-    max_tokens: 256,
-    messages: [{ role: 'user', content: QUALITY_GATE_PROMPT + itemList }],
-    response_format: { type: 'json_object' },
+  const message = await client.messages.create({
+    model:      'claude-sonnet-4-6',
+    max_tokens: 512,
+    messages:   [{ role: 'user', content: QUALITY_GATE_PROMPT + itemList }],
   });
 
-  const raw = response.choices[0].message.content ?? '{}';
+  const raw = message.content[0].type === 'text' ? message.content[0].text : '{}';
 
   let indices: number[] = [];
   try {
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { keep: [] };
+    const match  = raw.match(/\{[\s\S]*\}/);
+    const parsed = match ? JSON.parse(match[0]) : { keep: [] };
     indices = parsed.keep ?? [];
+    if (parsed.reason) console.log(`\n🤖 Claude selected: ${parsed.reason}`);
   } catch {
-    // If parsing fails, keep all items (don't drop anything on error)
-    return items;
+    return items.slice(0, 6);
   }
 
   const filtered = indices
-    .filter(i => i >= 0 && i < items.length)
-    .map(i => items[i]);
+    .filter((i: number) => i >= 0 && i < items.length)
+    .map((i: number) => items[i]);
 
   console.log(`\n🤖 Claude gate: ${items.length} → ${filtered.length} items kept`);
   return filtered;
 }
 
-// ── Combined filter pipeline ───────────────────────────────────
-
-export async function filterItems(items: FeedItem[], useClaudeGate = true): Promise<FeedItem[]> {
-  // Stage 1: fast rule-based filter
+export async function filterItems(items: FeedItem[]): Promise<FeedItem[]> {
   const afterRules = ruleBasedFilter(items);
-
-  // Stage 2: Claude quality gate (optional, costs ~$0.001)
-  if (useClaudeGate && afterRules.length > 0) {
-    return claudeQualityGate(afterRules);
-  }
-
-  return afterRules;
+  if (afterRules.length === 0) return [];
+  return claudeQualityGate(afterRules);
 }

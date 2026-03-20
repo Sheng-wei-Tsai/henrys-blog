@@ -1,32 +1,44 @@
 import 'dotenv/config';
+import { execSync } from 'child_process';
 import { fetchAll } from './fetch-digest';
 import { filterItems } from './filter';
 import { summarizeAll } from './summarize';
 import { writeDigestPost } from './generate-post';
 
 async function main() {
-  console.log('🚀 Starting AI digest pipeline...\n');
+  console.log('🚀 AI Research Digest pipeline\n');
 
-  // 1. Fetch
+  // 1. Fetch from curated high-quality sources
   const items = await fetchAll();
   if (items.length === 0) {
-    console.error('No items fetched. Exiting.');
+    console.error('No items fetched. Check your network / source URLs.');
     process.exit(1);
   }
 
-  // 2. Filter — rule-based + Claude quality gate
+  // 2. Filter — rule-based scoring + Claude quality gate
   const quality = await filterItems(items);
   if (quality.length === 0) {
-    console.error('No quality items passed the filter. Exiting.');
+    console.error('No items passed the quality gate. Try again later.');
     process.exit(1);
   }
 
-  // 3. Summarize top items (cap at 8 to control cost)
-  const topItems = quality.slice(0, 8);
-  const entries = await summarizeAll(topItems);
+  // 3. Summarize — cap at 6 so it stays readable
+  const topItems = quality.slice(0, 6);
+  const entries  = await summarizeAll(topItems);
 
-  // 4. Generate MDX post
-  writeDigestPost(entries);
+  // 4. Write digest post (.md so Obsidian can open it)
+  const filePath = writeDigestPost(entries);
+
+  // 5. Commit + push so Vercel deploys automatically
+  console.log('\n📤 Pushing to GitHub...');
+  try {
+    execSync(`git add "${filePath}"`, { stdio: 'inherit' });
+    execSync(`git commit -m "digest: AI Research Digest ${new Date().toISOString().split('T')[0]}"`, { stdio: 'inherit' });
+    execSync('git push origin main', { stdio: 'inherit' });
+    console.log('✅ Deployed — Vercel is building now');
+  } catch (err) {
+    console.warn('⚠️  Git push failed (maybe nothing changed):', (err as Error).message);
+  }
 
   console.log('\n✅ Digest pipeline complete!');
 }

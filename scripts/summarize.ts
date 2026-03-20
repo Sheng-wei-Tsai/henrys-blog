@@ -1,74 +1,92 @@
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import type { FeedItem } from './fetch-digest';
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export interface DigestEntry {
-  source: string;
-  title: string;
-  link: string;
-  summary: string;
-  diagram?: string;
+  source:       string;
+  title:        string;
+  link:         string;
+  summary:      string;
+  whyItMatters: string;
+  whatYouCanBuild: string;
   keyTakeaways: string[];
 }
 
-const SYSTEM_PROMPT = `You are a senior software engineer and AI researcher writing a weekly digest for developers.
-Your job is to summarize content clearly, extract practical insights, and when the topic has a concept worth visualizing, generate a Mermaid diagram.
+const SYSTEM_PROMPT = `You are a senior AI engineer writing a digest of the most valuable AI research and essays for developers building real products.
 
-Rules:
-- Keep summaries to 2-3 short paragraphs, plain language
-- Extract exactly 3 key takeaways as short bullet points
-- Only generate a Mermaid diagram if the concept is architectural, a workflow, or a comparison (skip for news/announcements)
-- Mermaid diagrams must use: graph TD, sequenceDiagram, or flowchart LR only
-- Return valid JSON only, no markdown wrapper`;
+For each piece, you write:
+- A clear, honest summary (what was done, how, what was found) — 2 tight paragraphs
+- Why it matters to a developer building AI products today
+- One concrete, specific project idea they can start this week using this research
+- Exactly 3 key takeaways — specific facts or lessons, not vague platitudes
+
+Your writing is direct, precise, and treats the reader as an expert.
+Never use the phrases "delve into", "it's worth noting", "in conclusion", or "exciting".
+No hype. No marketing language. Just the substance.
+
+Return valid JSON only.`;
 
 const userPrompt = (item: FeedItem) => `
-Summarize this for a developer audience:
+Summarize this research/essay for a senior developer audience:
 
 Source: ${item.source}
 Title: ${item.title}
-Content: ${item.summary.slice(0, 2000)}
+URL: ${item.link}
+Content: ${item.summary.slice(0, 3000)}
 
 Return JSON in this exact shape:
 {
-  "summary": "2-3 paragraph summary",
-  "keyTakeaways": ["takeaway 1", "takeaway 2", "takeaway 3"],
-  "diagram": "mermaid code here OR null"
+  "summary": "2-paragraph summary of what was done and what was found",
+  "whyItMatters": "1 paragraph — why does this matter for developers building AI products right now",
+  "whatYouCanBuild": "1 specific, concrete project idea a developer can start this week using insights from this paper/essay",
+  "keyTakeaways": ["specific takeaway 1", "specific takeaway 2", "specific takeaway 3"]
 }
 `;
 
 export async function summarizeItem(item: FeedItem): Promise<DigestEntry> {
-  const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',   // cheap + fast, good quality for summaries
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: userPrompt(item) },
-    ],
-    response_format: { type: 'json_object' },  // forces valid JSON output
-    max_tokens: 1024,
+  const message = await client.messages.create({
+    model:      'claude-sonnet-4-6',
+    max_tokens: 1200,
+    system:     SYSTEM_PROMPT,
+    messages:   [{ role: 'user', content: userPrompt(item) }],
   });
 
-  const raw = response.choices[0].message.content ?? '{}';
+  const raw = message.content[0].type === 'text' ? message.content[0].text : '{}';
 
-  let parsed: { summary: string; keyTakeaways: string[]; diagram: string | null };
+  let parsed: {
+    summary: string;
+    whyItMatters: string;
+    whatYouCanBuild: string;
+    keyTakeaways: string[];
+  };
+
   try {
-    parsed = JSON.parse(raw);
+    const match = raw.match(/\{[\s\S]*\}/);
+    parsed = match ? JSON.parse(match[0]) : null;
+    if (!parsed?.summary) throw new Error('bad parse');
   } catch {
-    parsed = { summary: item.summary.slice(0, 300), keyTakeaways: [], diagram: null };
+    parsed = {
+      summary:         item.summary.slice(0, 400),
+      whyItMatters:    '',
+      whatYouCanBuild: '',
+      keyTakeaways:    [],
+    };
   }
 
   return {
-    source: item.source,
-    title: item.title,
-    link: item.link,
-    summary: parsed.summary,
-    keyTakeaways: parsed.keyTakeaways ?? [],
-    diagram: parsed.diagram ?? undefined,
+    source:          item.source,
+    title:           item.title,
+    link:            item.link,
+    summary:         parsed.summary,
+    whyItMatters:    parsed.whyItMatters,
+    whatYouCanBuild: parsed.whatYouCanBuild,
+    keyTakeaways:    parsed.keyTakeaways ?? [],
   };
 }
 
 export async function summarizeAll(items: FeedItem[]): Promise<DigestEntry[]> {
-  console.log(`\n🤖 Summarizing ${items.length} items with GPT-4o-mini...`);
+  console.log(`\n🤖 Summarizing ${items.length} items with Claude Sonnet...`);
   const results: DigestEntry[] = [];
 
   for (const item of items) {

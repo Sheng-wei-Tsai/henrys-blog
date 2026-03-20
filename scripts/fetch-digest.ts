@@ -3,19 +3,6 @@ import axios from 'axios';
 
 const parser = new Parser();
 
-// ── RSS Sources ────────────────────────────────────────────────
-const RSS_FEEDS = [
-  { name: 'OpenAI',          url: 'https://openai.com/blog/rss.xml' },
-  { name: 'HuggingFace',     url: 'https://huggingface.co/blog/feed.xml' },
-  { name: 'DeepMind',        url: 'https://deepmind.google/blog/rss.xml' },
-  { name: 'Google AI',       url: 'https://blog.google/technology/ai/rss/' },
-  { name: 'Google Research', url: 'https://research.google/blog/rss/' },
-];
-
-// ── ArXiv categories ───────────────────────────────────────────
-const ARXIV_CATEGORIES = ['cs.AI', 'cs.LG', 'cs.CL'];
-const ARXIV_MAX = 5;
-
 export interface FeedItem {
   source: string;
   title: string;
@@ -24,63 +11,127 @@ export interface FeedItem {
   published: string;
 }
 
-// Fetch latest N items from a single RSS feed
-async function fetchRSS(name: string, url: string, max = 3): Promise<FeedItem[]> {
+// ── Curated high-quality essay & research sources ───────────────
+// Every source here publishes substantive, peer-reviewed, or expert-written content only.
+const ESSAY_FEEDS = [
+  {
+    name: 'The Gradient',
+    url:  'https://thegradient.pub/rss/',
+    desc: 'Long-form essays by AI researchers — one of the best in the field',
+  },
+  {
+    name: 'Ahead of AI',
+    url:  'https://magazine.sebastianraschka.com/feed',
+    desc: 'Sebastian Raschka — deep ML research breakdowns',
+  },
+  {
+    name: 'Anthropic Research',
+    url:  'https://www.anthropic.com/rss.xml',
+    desc: 'Original safety and capability research from Anthropic',
+  },
+  {
+    name: 'Google DeepMind',
+    url:  'https://deepmind.google/blog/rss.xml',
+    desc: 'Flagship research from DeepMind',
+  },
+  {
+    name: 'OpenAI Research',
+    url:  'https://openai.com/blog/rss.xml',
+    desc: 'Research papers and technical posts from OpenAI',
+  },
+  {
+    name: 'Google Research',
+    url:  'https://research.google/blog/rss/',
+    desc: 'Applied ML research from Google Brain / Research',
+  },
+  {
+    name: 'AI Alignment Forum',
+    url:  'https://www.alignmentforum.org/feed.xml',
+    desc: 'Rigorous alignment and safety research essays',
+  },
+];
+
+// ── Hugging Face Daily Papers ───────────────────────────────────
+// Community-upvoted papers — trending = worth reading
+async function fetchHFPapers(): Promise<FeedItem[]> {
+  try {
+    const { data } = await axios.get('https://huggingface.co/api/daily_papers', {
+      params: { limit: 8 },
+      timeout: 10000,
+    });
+
+    return (data as Array<{
+      paper: { title: string; id: string; summary: string; publishedAt: string };
+      upvotes: number;
+    }>)
+      .filter(d => d.upvotes >= 10)   // only papers with real community interest
+      .map(d => ({
+        source:    'Hugging Face Papers',
+        title:     d.paper.title,
+        link:      `https://huggingface.co/papers/${d.paper.id}`,
+        summary:   d.paper.summary,
+        published: d.paper.publishedAt,
+      }));
+  } catch (err) {
+    console.warn('⚠️  Could not fetch HF daily papers:', (err as Error).message);
+    return [];
+  }
+}
+
+// ── Papers With Code — trending (sorted by GitHub stars) ────────
+async function fetchPapersWithCode(): Promise<FeedItem[]> {
+  try {
+    const { data } = await axios.get('https://paperswithcode.com/api/v1/papers/', {
+      params: { ordering: '-github_stars', items_per_page: 6 },
+      timeout: 10000,
+    });
+
+    return (data.results as Array<{
+      title: string; url_abs: string; abstract: string;
+      published: string; github_stars: number;
+    }>)
+      .filter(p => p.github_stars >= 50)  // must have real traction
+      .map(p => ({
+        source:    'Papers With Code',
+        title:     p.title,
+        link:      p.url_abs,
+        summary:   p.abstract ?? '',
+        published: p.published ?? new Date().toISOString(),
+      }));
+  } catch (err) {
+    console.warn('⚠️  Could not fetch Papers With Code:', (err as Error).message);
+    return [];
+  }
+}
+
+// ── RSS feed fetcher ─────────────────────────────────────────────
+async function fetchRSS(name: string, url: string, max = 4): Promise<FeedItem[]> {
   try {
     const feed = await parser.parseURL(url);
     return feed.items.slice(0, max).map(item => ({
-      source: name,
-      title: item.title ?? 'Untitled',
-      link: item.link ?? '',
-      summary: item.contentSnippet ?? item.content ?? '',
+      source:    name,
+      title:     item.title ?? 'Untitled',
+      link:      item.link ?? '',
+      summary:   item.contentSnippet ?? item.content ?? '',
       published: item.pubDate ?? item.isoDate ?? new Date().toISOString(),
     }));
   } catch (err) {
-    console.warn(`⚠️  Could not fetch ${name} RSS:`, (err as Error).message);
+    console.warn(`⚠️  Could not fetch ${name}:`, (err as Error).message);
     return [];
   }
 }
 
-// Fetch latest papers from ArXiv across categories
-async function fetchArXiv(): Promise<FeedItem[]> {
-  const query = ARXIV_CATEGORIES.map(c => `cat:${c}`).join('+OR+');
-  const url = `https://export.arxiv.org/api/query?search_query=${query}&sortBy=submittedDate&sortOrder=descending&max_results=${ARXIV_MAX}`;
-
-  try {
-    const { data } = await axios.get<string>(url);
-
-    const entries = [...data.matchAll(/<entry>([\s\S]*?)<\/entry>/g)];
-
-    return entries.map(([, body]) => {
-      const title     = body.match(/<title>([\s\S]*?)<\/title>/)?.[1].trim() ?? 'Untitled';
-      const link      = body.match(/<id>([\s\S]*?)<\/id>/)?.[1].trim() ?? '';
-      const summary   = body.match(/<summary>([\s\S]*?)<\/summary>/)?.[1].trim() ?? '';
-      const published = body.match(/<published>([\s\S]*?)<\/published>/)?.[1].trim() ?? '';
-      return { source: 'ArXiv', title, link, summary, published };
-    });
-  } catch (err) {
-    console.warn('⚠️  Could not fetch ArXiv:', (err as Error).message);
-    return [];
-  }
-}
-
-// Main export: returns all items combined
+// ── Main export ──────────────────────────────────────────────────
 export async function fetchAll(): Promise<FeedItem[]> {
-  console.log('🔍 Fetching sources...');
+  console.log('🔍 Fetching high-quality AI sources...\n');
 
-  const rssResults = await Promise.all(
-    RSS_FEEDS.map(f => fetchRSS(f.name, f.url))
-  );
-  const arxivResults = await fetchArXiv();
+  const [rssResults, hfPapers, pwcPapers] = await Promise.all([
+    Promise.all(ESSAY_FEEDS.map(f => fetchRSS(f.name, f.url))),
+    fetchHFPapers(),
+    fetchPapersWithCode(),
+  ]);
 
-  const all = [...rssResults.flat(), ...arxivResults];
-  console.log(`✅ Fetched ${all.length} items total`);
+  const all = [...rssResults.flat(), ...hfPapers, ...pwcPapers];
+  console.log(`✅ Fetched ${all.length} items from ${ESSAY_FEEDS.length + 2} sources`);
   return all;
-}
-
-// Run directly: npx tsx scripts/fetch-digest.ts
-if (process.argv[1].endsWith('fetch-digest.ts')) {
-  fetchAll().then(items => {
-    items.forEach(i => console.log(`[${i.source}] ${i.title}`));
-  });
 }
