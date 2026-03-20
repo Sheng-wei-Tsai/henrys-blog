@@ -9,6 +9,7 @@ const navLinks = [
   { href: '/digest', label: 'AI Digest' },
   { href: '/jobs', label: 'Jobs' },
   { href: '/cover-letter', label: 'Cover Letter' },
+  { href: '/resume', label: 'Resume' },
   { href: '/about', label: 'About' },
 ];
 
