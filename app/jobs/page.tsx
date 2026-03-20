@@ -70,6 +70,16 @@ function JobCard({ job, savedIds, onSaveToggle }: {
             >
               {isSaved ? '♥ Saved' : '♡ Save'}
             </button>
+            <a
+              href={`/cover-letter?title=${encodeURIComponent(job.title)}&company=${encodeURIComponent(job.company)}&desc=${encodeURIComponent(job.description)}`}
+              style={{
+                background: 'white', color: 'var(--terracotta)',
+                padding: '0.4rem 0.8rem', borderRadius: '99px',
+                border: '1px solid var(--terracotta)',
+                fontSize: '0.85rem', fontWeight: 500, textDecoration: 'none',
+              }}>
+              ✍️ Cover Letter
+            </a>
             <a href={job.url} target="_blank" rel="noopener noreferrer" style={{
               background: 'var(--terracotta)', color: 'white',
               padding: '0.4rem 1rem', borderRadius: '99px',

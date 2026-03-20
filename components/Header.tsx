@@ -8,6 +8,7 @@ const navLinks = [
   { href: '/blog', label: 'Blog' },
   { href: '/digest', label: 'AI Digest' },
   { href: '/jobs', label: 'Jobs' },
+  { href: '/cover-letter', label: 'Cover Letter' },
   { href: '/about', label: 'About' },
 ];
 
