@@ -75,14 +75,25 @@ h1, h2, h3, h4 {
 .tool-card > div { transition: transform 0.18s, box-shadow 0.18s; }
 .tool-card:hover > div { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(44,31,20,0.08); }
 
-/* Mobile nav: allow horizontal scroll if items overflow */
+/* ── Desktop/Mobile nav visibility ── */
+.desktop-nav { display: flex; }
+.auth-btn    { display: inline-flex; }
+
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 1.2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 2.4rem);
+  max-width: 420px;
+  z-index: 100;
+}
+
 @media (max-width: 640px) {
-  nav.main-nav {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    max-width: calc(100vw - 140px);
-  }
-  nav.main-nav::-webkit-scrollbar { display: none; }
-  nav.main-nav a { white-space: nowrap; font-size: 0.82rem !important; padding: 0.3em 0.65em !important; }
+  .desktop-nav { display: none !important; }
+  .auth-btn    { display: none !important; }
+  .mobile-bottom-nav { display: block; }
+  /* push content up so bottom nav doesn't cover it */
+  main { padding-bottom: 6rem !important; }
 }
