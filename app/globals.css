@@ -134,6 +134,11 @@ h1, h2, h3, h4 {
   box-shadow: 0 0 12px rgba(255, 61, 61, 0.35);
 }
 
+/* ── Path cards on learn page ── */
+.path-card-link .card { transition: transform 0.18s, box-shadow 0.18s; }
+.path-card-link:hover .card { transform: translateY(-2px); box-shadow: 0 8px 28px var(--shadow-color); }
+[data-theme="dark"] .path-card-link:hover .card { box-shadow: 0 8px 28px rgba(255,61,61,0.1), 0 0 0 1px rgba(255,61,61,0.15); }
+
 /* ── Tool cards on homepage ── */
 .tool-card > div { transition: transform 0.18s, box-shadow 0.18s; }
 .tool-card:hover > div {

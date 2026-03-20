@@ -8,6 +8,7 @@ const navLinks = [
   { href: '/',        label: 'Home',   icon: IconHome },
   { href: '/blog',    label: 'Blog',   icon: IconBlog },
   { href: '/digest',  label: 'Digest', icon: IconDigest },
+  { href: '/learn',   label: 'Learn',  icon: IconLearn },
   { href: '/resume',  label: 'Resume', icon: IconResume },
   { href: '/about',   label: 'About',  icon: IconAbout },
 ];
@@ -206,6 +207,15 @@ function IconResume({ active }: { active: boolean }) {
       <line x1="16" y1="13" x2="8" y2="13" />
       <line x1="16" y1="17" x2="8" y2="17" />
       <polyline points="10 9 9 9 8 9" />
+    </svg>
+  );
+}
+function IconLearn({ active }: { active: boolean }) {
+  const c = active ? 'white' : 'var(--text-muted)';
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+      <path d="M6 12v5c3 3 9 3 12 0v-5" />
     </svg>
   );
 }
