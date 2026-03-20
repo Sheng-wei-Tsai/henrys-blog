@@ -3,9 +3,9 @@ import Link from 'next/link';
 import { Post } from '@/lib/posts';
 import { format } from 'date-fns';
 
-export default function PostCard({ post, index = 0 }: { post: Post; index?: number }) {
+export default function PostCard({ post, index = 0, basePath = '/blog' }: { post: Post; index?: number; basePath?: string }) {
   return (
-    <Link href={`/blog/${post.slug}`} style={{ textDecoration: 'none' }}>
+    <Link href={`${basePath}/${post.slug}`} style={{ textDecoration: 'none' }}>
       <article
         className={`animate-fade-up delay-${Math.min(index + 1, 4)}`}
         style={{
