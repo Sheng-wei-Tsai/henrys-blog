@@ -59,7 +59,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
           alignItems: 'center', marginBottom: '2.5rem',
           color: 'var(--text-muted)', fontSize: '0.85rem',
         }}>
-          <span>{format(new Date(post.date), 'MMMM d, yyyy')}</span>
+          <span>{format(new Date(post.date), 'd MMMM yyyy')}</span>
           <span>·</span>
           <span>{post.readingTime}</span>
           {post.tags.map(tag => <span key={tag} className="tag">{tag}</span>)}

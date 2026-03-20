@@ -39,7 +39,7 @@ export default function PostCard({ post, index = 0, basePath = '/blog' }: { post
         {/* Content */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
-            {format(new Date(post.date), 'MMM d, yyyy')} · {post.readingTime}
+            {format(new Date(post.date), 'd MMM yyyy')} · {post.readingTime}
           </div>
           <h2 style={{
             fontFamily: "'Lora', serif",

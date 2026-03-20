@@ -6,14 +6,6 @@ tags: ["AI"]
 coverEmoji: ""
 ---
 
-<!--
-  Writing prompt — AI news edition:
-  1. What happened? (the news in one sentence)
-  2. Why does it matter? (what changes for developers / society)
-  3. My take — what do I actually think about this?
-  4. What I'm going to try or watch next
--->
-
 ## What happened
 
 <!-- Summarise the news in 2–3 sentences. Link to the source. -->
@@ -24,8 +16,8 @@ coverEmoji: ""
 
 ## My take
 
-<!-- Your honest opinion. Not a press release. -->
+<!-- Your honest opinion. -->
 
-## What to watch
+## What you can build with this
 
-<!-- One thing to follow up on in the next week. -->
+<!-- One concrete project idea a developer can start this week. -->

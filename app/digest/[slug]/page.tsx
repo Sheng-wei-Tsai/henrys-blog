@@ -57,7 +57,7 @@ export default async function DigestPostPage({ params }: { params: Promise<{ slu
           alignItems: 'center', marginBottom: '1rem',
           color: 'var(--text-muted)', fontSize: '0.85rem',
         }}>
-          <span>{format(new Date(digest.date), 'MMMM d, yyyy')}</span>
+          <span>{format(new Date(digest.date), 'd MMMM yyyy')}</span>
           <span>·</span>
           <span>{digest.readingTime}</span>
           {digest.tags.map(tag => <span key={tag} className="tag">{tag}</span>)}
