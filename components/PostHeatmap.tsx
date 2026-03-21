@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 
 interface Props { dates: string[] }
 
@@ -10,8 +10,13 @@ const DAY_LABEL_W = 28;
 const MONTH_H     = 16;
 const DAY_LABELS  = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
 
-function cellColor(count: number, isFuture: boolean, isOutOfYear: boolean): string {
-  if (isFuture || isOutOfYear) return 'rgba(196,98,58,0.04)';
+type Cell = {
+  date: string; count: number;
+  isToday: boolean; isFuture: boolean; isOutOfRange: boolean;
+};
+
+function cellColor(count: number, isFuture: boolean, isOutOfRange: boolean): string {
+  if (isFuture || isOutOfRange) return 'rgba(196,98,58,0.04)';
   if (count === 0) return 'rgba(196,98,58,0.09)';
   if (count === 1) return 'rgba(196,98,58,0.28)';
   if (count === 2) return 'rgba(196,98,58,0.55)';
@@ -29,67 +34,132 @@ function buildYearGrid(dates: string[], year: number) {
   const countMap: Record<string, number> = {};
   for (const d of dates) countMap[d] = (countMap[d] ?? 0) + 1;
 
-  // Start from Sunday on or before Jan 1
   const jan1 = new Date(year, 0, 1);
   const start = new Date(jan1);
   start.setDate(jan1.getDate() - jan1.getDay());
-
   const end = new Date(year, 11, 31);
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const todayStr = today.toISOString().split('T')[0];
 
-  type Cell = { date: string; count: number; isToday: boolean; isFuture: boolean; isOutOfYear: boolean };
   const weeks: Cell[][] = [];
   const months: { label: string; col: number }[] = [];
-
-  let cur = new Date(start);
-  let lastMonth = -1;
-  let col = 0;
+  let cur = new Date(start), lastMonth = -1, col = 0;
 
   while (cur <= end) {
     const week: Cell[] = [];
     for (let d = 0; d < 7; d++) {
       const iso = cur.toISOString().split('T')[0];
-      const isOutOfYear = cur.getFullYear() !== year;
-      if (d === 0 && !isOutOfYear && cur.getMonth() !== lastMonth) {
+      const isOutOfRange = cur.getFullYear() !== year;
+      if (d === 0 && !isOutOfRange && cur.getMonth() !== lastMonth) {
         months.push({ label: cur.toLocaleDateString('en-AU', { month: 'short' }), col });
         lastMonth = cur.getMonth();
       }
-      week.push({ date: iso, count: countMap[iso] ?? 0, isToday: iso === todayStr, isFuture: cur > today, isOutOfYear });
+      week.push({ date: iso, count: countMap[iso] ?? 0, isToday: iso === todayStr, isFuture: cur > today, isOutOfRange });
       cur.setDate(cur.getDate() + 1);
     }
-    weeks.push(week);
-    col++;
+    weeks.push(week); col++;
   }
+  return { weeks, months };
+}
 
-  // Streak
+// Mobile: prev month + current month + next month
+function buildMonthGrid(dates: string[]) {
+  const countMap: Record<string, number> = {};
+  for (const d of dates) countMap[d] = (countMap[d] ?? 0) + 1;
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split('T')[0];
+
+  const rangeStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const rangeEnd   = new Date(today.getFullYear(), today.getMonth() + 2, 0); // last day of next month
+
+  // back to Sunday
+  const start = new Date(rangeStart);
+  start.setDate(rangeStart.getDate() - rangeStart.getDay());
+
+  const weeks: Cell[][] = [];
+  const months: { label: string; col: number }[] = [];
+  let cur = new Date(start), lastMonth = -1, col = 0;
+
+  while (cur <= rangeEnd) {
+    const week: Cell[] = [];
+    for (let d = 0; d < 7; d++) {
+      const iso = cur.toISOString().split('T')[0];
+      const isOutOfRange = cur < rangeStart || cur > rangeEnd;
+      if (d === 0 && !isOutOfRange && cur.getMonth() !== lastMonth) {
+        months.push({ label: cur.toLocaleDateString('en-AU', { month: 'long' }), col });
+        lastMonth = cur.getMonth();
+      }
+      week.push({ date: iso, count: countMap[iso] ?? 0, isToday: iso === todayStr, isFuture: cur > today, isOutOfRange });
+      cur.setDate(cur.getDate() + 1);
+    }
+    weeks.push(week); col++;
+  }
+  return { weeks, months };
+}
+
+function computeStats(dates: string[], year: number) {
+  const countMap: Record<string, number> = {};
+  for (const d of dates) countMap[d] = (countMap[d] ?? 0) + 1;
+
   let streak = 0;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
   const check = new Date(today);
   while (countMap[check.toISOString().split('T')[0]]) {
     streak++;
     check.setDate(check.getDate() - 1);
   }
-
   const totalYear = Object.entries(countMap)
     .filter(([d]) => d.startsWith(String(year)))
     .reduce((s, [, c]) => s + c, 0);
 
-  return { weeks, months, streak, totalYear };
+  return { streak, totalYear };
 }
 
 export default function PostHeatmap({ dates }: Props) {
   const year = new Date().getFullYear();
-  const svgRef = useRef<SVGSVGElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<{
     text: string; count: number; x: number; y: number;
   } | null>(null);
+  const tooltipTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { weeks, months, streak, totalYear } = useMemo(
-    () => buildYearGrid(dates, year), [dates, year]
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  const { weeks, months } = useMemo(
+    () => isMobile ? buildMonthGrid(dates) : buildYearGrid(dates, year),
+    [dates, year, isMobile]
   );
+  const { streak, totalYear } = useMemo(() => computeStats(dates, year), [dates, year]);
 
   const svgW = DAY_LABEL_W + weeks.length * STEP;
   const svgH = MONTH_H + 7 * STEP;
+
+  function showTooltip(e: React.MouseEvent | React.TouchEvent, cell: Cell) {
+    if (!cell.count || cell.isFuture || cell.isOutOfRange) return;
+    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    if (tooltipTimeout.current) clearTimeout(tooltipTimeout.current);
+    setTooltip({
+      text: formatDisplay(cell.date),
+      count: cell.count,
+      x: clientX - rect.left,
+      y: clientY - rect.top,
+    });
+    // Auto-dismiss on mobile after 2s
+    if ('touches' in e) {
+      tooltipTimeout.current = setTimeout(() => setTooltip(null), 2000);
+    }
+  }
 
   return (
     <div style={{ marginBottom: '3rem' }}>
@@ -113,17 +183,16 @@ export default function PostHeatmap({ dates }: Props) {
         </div>
       </div>
 
-      {/* Full-width SVG — no card, no scroll, scales to container */}
-      <div style={{ position: 'relative' }}>
+      {/* Grid */}
+      <div ref={containerRef} style={{ position: 'relative' }} onClick={() => setTooltip(null)}>
         <svg
-          ref={svgRef}
           viewBox={`0 0 ${svgW} ${svgH}`}
           style={{ width: '100%', height: 'auto', display: 'block', overflow: 'visible' }}
         >
           {/* Month labels */}
           {months.map((m, i) => (
             <text key={i} x={DAY_LABEL_W + m.col * STEP} y={MONTH_H - 3}
-              fontSize={9} fill="var(--text-muted)">
+              fontSize={isMobile ? 8 : 9} fill="var(--text-muted)">
               {m.label}
             </text>
           ))}
@@ -146,47 +215,45 @@ export default function PostHeatmap({ dates }: Props) {
                 x={DAY_LABEL_W + wi * STEP}
                 y={MONTH_H + di * STEP}
                 width={CELL} height={CELL} rx={2}
-                fill={cellColor(cell.count, cell.isFuture, cell.isOutOfYear)}
+                fill={cellColor(cell.count, cell.isFuture, cell.isOutOfRange)}
                 stroke={cell.isToday ? '#c4623a' : 'none'}
                 strokeWidth={cell.isToday ? 1.5 : 0}
                 style={{ cursor: cell.count > 0 ? 'pointer' : 'default' }}
-                onMouseEnter={e => {
-                  if (!cell.count || cell.isFuture || cell.isOutOfYear) return;
-                  const svg = svgRef.current;
-                  if (!svg) return;
-                  const pt = svg.createSVGPoint();
-                  pt.x = e.clientX; pt.y = e.clientY;
-                  const { x, y } = pt.matrixTransform(svg.getScreenCTM()!.inverse());
-                  setTooltip({ text: formatDisplay(cell.date), count: cell.count, x, y });
-                }}
-                onMouseLeave={() => setTooltip(null)}
+                onMouseEnter={e => { e.stopPropagation(); showTooltip(e, cell); }}
+                onMouseLeave={() => { if (!('ontouchstart' in window)) setTooltip(null); }}
+                onTouchStart={e => { e.stopPropagation(); showTooltip(e, cell); }}
               />
             ))
           )}
-
-          {/* Tooltip */}
-          {tooltip && (() => {
-            const TW = 108;
-            const clampedX = Math.max(TW / 2, Math.min(tooltip.x, svgW - TW / 2));
-            return (
-              <g>
-                <rect
-                  x={clampedX - TW / 2} y={tooltip.y - 38}
-                  width={TW} height={30} rx={5}
-                  fill="var(--brown-dark)"
-                />
-                <text x={clampedX} y={tooltip.y - 22} fontSize={10} fontWeight={700}
-                  fill="#c4623a" textAnchor="middle">
-                  {tooltip.count} post{tooltip.count > 1 ? 's' : ''}
-                </text>
-                <text x={clampedX} y={tooltip.y - 11} fontSize={8.5}
-                  fill="var(--cream)" opacity={0.8} textAnchor="middle">
-                  {tooltip.text}
-                </text>
-              </g>
-            );
-          })()}
         </svg>
+
+        {/* HTML tooltip — large enough to read on mobile */}
+        {tooltip && (
+          <div
+            style={{
+              position:      'absolute',
+              left:          `${tooltip.x}px`,
+              top:           `${tooltip.y - 56}px`,
+              transform:     'translateX(-50%)',
+              background:    'var(--brown-dark)',
+              color:         'var(--cream)',
+              borderRadius:  '8px',
+              padding:       '0.4em 0.85em',
+              pointerEvents: 'none',
+              zIndex:        30,
+              textAlign:     'center',
+              whiteSpace:    'nowrap',
+              boxShadow:     '0 4px 16px rgba(0,0,0,0.18)',
+            }}
+          >
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--terracotta)', lineHeight: 1.3 }}>
+              {tooltip.count} post{tooltip.count > 1 ? 's' : ''}
+            </div>
+            <div style={{ fontSize: '0.78rem', opacity: 0.75, lineHeight: 1.3 }}>
+              {tooltip.text}
+            </div>
+          </div>
+        )}
 
         {/* Legend */}
         <div style={{
