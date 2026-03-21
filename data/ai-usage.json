@@ -1,12 +1,12 @@
 {
-  "updatedAt": "2026-03-21T10:47:00+10:00",
+  "updatedAt": "2026-03-21T12:15:00+10:00",
   "tools": [
     {
       "name": "Claude",
       "plan": "Max plan",
-      "usage": 17,
+      "usage": 33,
       "limit": 100,
-      "resetAt": "2026-03-21T14:00:00+10:00",
+      "resetAt": "2026-03-21T13:59:00+10:00",
       "accent": "#c4623a"
     },
     {
