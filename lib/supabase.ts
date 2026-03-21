@@ -1,7 +1,8 @@
 import { createBrowserClient } from '@supabase/ssr';
 
-const supabaseUrl     = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// Fallback to placeholder during static build — real values are baked in at deploy time
+const supabaseUrl     = process.env.NEXT_PUBLIC_SUPABASE_URL     || 'https://placeholder.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
 
 // Use this in client components ('use client')
 export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
