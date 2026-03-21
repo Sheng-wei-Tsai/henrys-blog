@@ -160,16 +160,20 @@ export default function PostHeatmap({ dates }: Props) {
                     <div
                       key={di}
                       onMouseEnter={e => {
-                        if (!hasPost) return;   // only tooltip on active days
+                        if (!hasPost) return;
                         const el    = e.currentTarget as HTMLElement;
                         const cRect = containerRef.current?.getBoundingClientRect();
                         const eRect = el.getBoundingClientRect();
+                        const rawX  = eRect.left - (cRect?.left ?? 0) + CELL / 2;
+                        const cW    = cRect?.width ?? 600;
+                        // clamp so tooltip (≈160px wide) never bleeds outside the card
+                        const x = Math.max(80, Math.min(rawX, cW - 80));
                         setTooltip({
                           text:  formatDisplay(cell.date),
                           date:  cell.date,
                           count: cell.count,
-                          x: eRect.left - (cRect?.left ?? 0) + CELL / 2,
-                          y: eRect.top  - (cRect?.top  ?? 0) - 6,
+                          x,
+                          y: eRect.top - (cRect?.top ?? 0) - 6,
                         });
                       }}
                       onMouseLeave={() => setTooltip(null)}
