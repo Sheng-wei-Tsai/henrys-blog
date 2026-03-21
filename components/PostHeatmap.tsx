@@ -30,16 +30,29 @@ function formatDisplay(dateStr: string): string {
   });
 }
 
+/** YYYY-MM-DD in local timezone — avoids UTC offset bugs */
+function localStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function localToday(): { today: Date; todayStr: string } {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return { today, todayStr: localStr(today) };
+}
+
 function buildYearGrid(dates: string[], year: number) {
   const countMap: Record<string, number> = {};
   for (const d of dates) countMap[d] = (countMap[d] ?? 0) + 1;
 
+  const { today, todayStr } = localToday();
   const jan1 = new Date(year, 0, 1);
   const start = new Date(jan1);
   start.setDate(jan1.getDate() - jan1.getDay());
   const end = new Date(year, 11, 31);
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().split('T')[0];
 
   const weeks: Cell[][] = [];
   const months: { label: string; col: number }[] = [];
@@ -48,7 +61,7 @@ function buildYearGrid(dates: string[], year: number) {
   while (cur <= end) {
     const week: Cell[] = [];
     for (let d = 0; d < 7; d++) {
-      const iso = cur.toISOString().split('T')[0];
+      const iso = localStr(cur);
       const isOutOfRange = cur.getFullYear() !== year;
       if (d === 0 && !isOutOfRange && cur.getMonth() !== lastMonth) {
         months.push({ label: cur.toLocaleDateString('en-AU', { month: 'short' }), col });
@@ -62,18 +75,14 @@ function buildYearGrid(dates: string[], year: number) {
   return { weeks, months };
 }
 
-// Mobile: prev month + current month + next month
 function buildMonthGrid(dates: string[]) {
   const countMap: Record<string, number> = {};
   for (const d of dates) countMap[d] = (countMap[d] ?? 0) + 1;
 
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().split('T')[0];
-
+  const { today, todayStr } = localToday();
   const rangeStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-  const rangeEnd   = new Date(today.getFullYear(), today.getMonth() + 2, 0); // last day of next month
+  const rangeEnd   = new Date(today.getFullYear(), today.getMonth() + 2, 0);
 
-  // back to Sunday
   const start = new Date(rangeStart);
   start.setDate(rangeStart.getDate() - rangeStart.getDay());
 
@@ -84,7 +93,7 @@ function buildMonthGrid(dates: string[]) {
   while (cur <= rangeEnd) {
     const week: Cell[] = [];
     for (let d = 0; d < 7; d++) {
-      const iso = cur.toISOString().split('T')[0];
+      const iso = localStr(cur);
       const isOutOfRange = cur < rangeStart || cur > rangeEnd;
       if (d === 0 && !isOutOfRange && cur.getMonth() !== lastMonth) {
         months.push({ label: cur.toLocaleDateString('en-AU', { month: 'long' }), col });
@@ -102,13 +111,14 @@ function computeStats(dates: string[], year: number) {
   const countMap: Record<string, number> = {};
   for (const d of dates) countMap[d] = (countMap[d] ?? 0) + 1;
 
+  const { today } = localToday();
   let streak = 0;
-  const today = new Date(); today.setHours(0, 0, 0, 0);
   const check = new Date(today);
-  while (countMap[check.toISOString().split('T')[0]]) {
+  while (countMap[localStr(check)]) {
     streak++;
     check.setDate(check.getDate() - 1);
   }
+
   const totalYear = Object.entries(countMap)
     .filter(([d]) => d.startsWith(String(year)))
     .reduce((s, [, c]) => s + c, 0);
@@ -147,15 +157,8 @@ export default function PostHeatmap({ dates }: Props) {
     const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-
     if (tooltipTimeout.current) clearTimeout(tooltipTimeout.current);
-    setTooltip({
-      text: formatDisplay(cell.date),
-      count: cell.count,
-      x: clientX - rect.left,
-      y: clientY - rect.top,
-    });
-    // Auto-dismiss on mobile after 2s
+    setTooltip({ text: formatDisplay(cell.date), count: cell.count, x: clientX - rect.left, y: clientY - rect.top });
     if ('touches' in e) {
       tooltipTimeout.current = setTimeout(() => setTooltip(null), 2000);
     }
@@ -163,7 +166,6 @@ export default function PostHeatmap({ dates }: Props) {
 
   return (
     <div style={{ marginBottom: '3rem' }}>
-      {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'baseline',
         justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.4rem',
@@ -183,13 +185,11 @@ export default function PostHeatmap({ dates }: Props) {
         </div>
       </div>
 
-      {/* Grid */}
       <div ref={containerRef} style={{ position: 'relative' }} onClick={() => setTooltip(null)}>
         <svg
           viewBox={`0 0 ${svgW} ${svgH}`}
           style={{ width: '100%', height: 'auto', display: 'block', overflow: 'visible' }}
         >
-          {/* Month labels */}
           {months.map((m, i) => (
             <text key={i} x={DAY_LABEL_W + m.col * STEP} y={MONTH_H - 3}
               fontSize={isMobile ? 8 : 9} fill="var(--text-muted)">
@@ -197,7 +197,6 @@ export default function PostHeatmap({ dates }: Props) {
             </text>
           ))}
 
-          {/* Day labels */}
           {DAY_LABELS.map((label, i) =>
             label ? (
               <text key={i} x={DAY_LABEL_W - 4} y={MONTH_H + i * STEP + CELL - 1}
@@ -207,13 +206,11 @@ export default function PostHeatmap({ dates }: Props) {
             ) : null
           )}
 
-          {/* Cells */}
           {weeks.map((week, wi) =>
             week.map((cell, di) => (
               <rect
                 key={`${wi}-${di}`}
-                x={DAY_LABEL_W + wi * STEP}
-                y={MONTH_H + di * STEP}
+                x={DAY_LABEL_W + wi * STEP} y={MONTH_H + di * STEP}
                 width={CELL} height={CELL} rx={2}
                 fill={cellColor(cell.count, cell.isFuture, cell.isOutOfRange)}
                 stroke={cell.isToday ? '#c4623a' : 'none'}
@@ -227,25 +224,14 @@ export default function PostHeatmap({ dates }: Props) {
           )}
         </svg>
 
-        {/* HTML tooltip — large enough to read on mobile */}
         {tooltip && (
-          <div
-            style={{
-              position:      'absolute',
-              left:          `${tooltip.x}px`,
-              top:           `${tooltip.y - 56}px`,
-              transform:     'translateX(-50%)',
-              background:    'var(--brown-dark)',
-              color:         'var(--cream)',
-              borderRadius:  '8px',
-              padding:       '0.4em 0.85em',
-              pointerEvents: 'none',
-              zIndex:        30,
-              textAlign:     'center',
-              whiteSpace:    'nowrap',
-              boxShadow:     '0 4px 16px rgba(0,0,0,0.18)',
-            }}
-          >
+          <div style={{
+            position: 'absolute', left: `${tooltip.x}px`, top: `${tooltip.y - 56}px`,
+            transform: 'translateX(-50%)', background: 'var(--brown-dark)', color: 'var(--cream)',
+            borderRadius: '8px', padding: '0.4em 0.85em', pointerEvents: 'none',
+            zIndex: 30, textAlign: 'center', whiteSpace: 'nowrap',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+          }}>
             <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--terracotta)', lineHeight: 1.3 }}>
               {tooltip.count} post{tooltip.count > 1 ? 's' : ''}
             </div>
@@ -255,17 +241,10 @@ export default function PostHeatmap({ dates }: Props) {
           </div>
         )}
 
-        {/* Legend */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-          gap: '4px', marginTop: '0.3rem',
-        }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '0.3rem' }}>
           <span style={{ fontSize: '0.67rem', color: 'var(--text-muted)', marginRight: '2px' }}>Less</span>
           {[0, 1, 2, 3, 4].map(n => (
-            <div key={n} style={{
-              width: '10px', height: '10px', borderRadius: '2px',
-              background: cellColor(n, false, false),
-            }} />
+            <div key={n} style={{ width: '10px', height: '10px', borderRadius: '2px', background: cellColor(n, false, false) }} />
           ))}
           <span style={{ fontSize: '0.67rem', color: 'var(--text-muted)', marginLeft: '2px' }}>More</span>
         </div>

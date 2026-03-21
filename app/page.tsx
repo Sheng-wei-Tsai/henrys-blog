@@ -3,6 +3,8 @@ import { getAllPosts, getAllDigests, getAllGithot } from '@/lib/posts';
 import PostCard from '@/components/PostCard';
 import PostHeatmap from '@/components/PostHeatmap';
 
+export const dynamic = 'force-dynamic'; // always read fresh posts from filesystem
+
 const tools = [
   {
     href: '/jobs',
