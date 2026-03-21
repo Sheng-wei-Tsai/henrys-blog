@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { getAllPosts } from '@/lib/posts';
+import { getAllPosts, getAllDigests, getAllGithot } from '@/lib/posts';
 import PostCard from '@/components/PostCard';
+import PostHeatmap from '@/components/PostHeatmap';
 
 const tools = [
   {
@@ -25,6 +26,13 @@ const tools = [
 
 export default function HomePage() {
   const posts = getAllPosts().slice(0, 3);
+
+  // Collect all post dates across blog, digest, and githot
+  const allDates = [
+    ...getAllPosts(),
+    ...getAllDigests(),
+    ...getAllGithot(),
+  ].map(p => p.date.slice(0, 10));  // normalise to YYYY-MM-DD
   return (
     <div style={{ maxWidth: '720px', margin: '0 auto', padding: '0 1.5rem' }}>
 
@@ -77,6 +85,9 @@ export default function HomePage() {
           pointerEvents: 'none',
         }} />
       </section>
+
+      {/* Writing activity heatmap */}
+      <PostHeatmap dates={allDates} />
 
       {/* Recent Posts */}
       {posts.length > 0 && (

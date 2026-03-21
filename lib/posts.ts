@@ -5,6 +5,7 @@ import readingTime from 'reading-time';
 
 const postsDir   = path.join(process.cwd(), 'content/posts');
 const digestsDir = path.join(process.cwd(), 'content/digests');
+const githotDir  = path.join(process.cwd(), 'content/githot');
 
 export interface Post {
   slug: string;
@@ -105,6 +106,29 @@ export function getDigestBySlug(slug: string): Post | null {
     excerpt: data.excerpt || '',
     tags: data.tags || [],
     coverEmoji: data.coverEmoji || '🤖',
+    readingTime: readingTime(content).text,
+    content,
+  };
+}
+
+export function getAllGithot(): Post[] {
+  return readDir(githotDir);
+}
+
+export function getGithotBySlug(slug: string): Post | null {
+  const filePath = path.join(githotDir, `${slug}.mdx`);
+  const fallback = path.join(githotDir, `${slug}.md`);
+  const target = fs.existsSync(filePath) ? filePath : fs.existsSync(fallback) ? fallback : null;
+  if (!target) return null;
+  const raw = fs.readFileSync(target, 'utf8');
+  const { data, content } = matter(raw);
+  return {
+    slug,
+    title: data.title || 'Untitled',
+    date: data.date || new Date().toISOString(),
+    excerpt: data.excerpt || '',
+    tags: data.tags || [],
+    coverEmoji: data.coverEmoji || '🔥',
     readingTime: readingTime(content).text,
     content,
   };
