@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "digest": "npx tsx --env-file=.env.local scripts/run-digest.ts",
-    "githot": "npx tsx --env-file=.env.local scripts/run-githot.ts"
+    "githot": "npx tsx --env-file=.env.local scripts/run-githot.ts",
+    "post": "npx tsx --env-file=.env.local scripts/run-post.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",

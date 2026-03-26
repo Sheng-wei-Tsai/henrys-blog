@@ -121,17 +121,53 @@ async function fetchRSS(name: string, url: string, max = 4): Promise<FeedItem[]>
   }
 }
 
+// ── Hacker News — top trending stories (Algolia API) ────────────
+// High points + high comments = the tech community is genuinely discussing it.
+async function fetchHackerNews(): Promise<FeedItem[]> {
+  try {
+    const { data } = await axios.get('https://hn.algolia.com/api/v1/search', {
+      params: {
+        tags:           'story',
+        numericFilters: 'points>150,num_comments>30',
+        hitsPerPage:    10,
+      },
+      timeout: 10000,
+    });
+
+    return (data.hits as Array<{
+      title:       string;
+      url:         string | null;
+      story_text:  string | null;
+      points:      number;
+      num_comments: number;
+      created_at:  string;
+    }>)
+      .filter(h => h.url)   // skip Ask HN / text-only posts
+      .map(h => ({
+        source:    'Hacker News',
+        title:     h.title,
+        link:      h.url!,
+        summary:   h.story_text ?? `${h.points} points · ${h.num_comments} comments on Hacker News`,
+        published: h.created_at,
+      }));
+  } catch (err) {
+    console.warn('⚠️  Could not fetch Hacker News:', (err as Error).message);
+    return [];
+  }
+}
+
 // ── Main export ──────────────────────────────────────────────────
 export async function fetchAll(): Promise<FeedItem[]> {
   console.log('🔍 Fetching high-quality AI sources...\n');
 
-  const [rssResults, hfPapers, pwcPapers] = await Promise.all([
+  const [rssResults, hfPapers, pwcPapers, hnStories] = await Promise.all([
     Promise.all(ESSAY_FEEDS.map(f => fetchRSS(f.name, f.url))),
     fetchHFPapers(),
     fetchPapersWithCode(),
+    fetchHackerNews(),
   ]);
 
-  const all = [...rssResults.flat(), ...hfPapers, ...pwcPapers];
-  console.log(`✅ Fetched ${all.length} items from ${ESSAY_FEEDS.length + 2} sources`);
+  const all = [...rssResults.flat(), ...hfPapers, ...pwcPapers, ...hnStories];
+  console.log(`✅ Fetched ${all.length} items from ${ESSAY_FEEDS.length + 3} sources`);
   return all;
 }

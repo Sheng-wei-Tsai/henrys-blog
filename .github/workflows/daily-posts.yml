@@ -1,0 +1,57 @@
+name: Daily Posts
+
+# Runs every day at 9am AEST (UTC+10) = 23:00 UTC
+# During AEDT (summer, Oct-Apr) this fires at 10am — close enough.
+on:
+  schedule:
+    - cron: '0 23 * * *'
+  workflow_dispatch: # allows manual trigger from GitHub Actions UI
+
+permissions:
+  contents: write  # needed so git push inside the scripts can write to the repo
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure git identity
+        run: |
+          git config user.name "henry-blog-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      # ── Step 1: Deep-dive post on today's trending topic ────────
+      - name: Run Daily Post
+        run: npm run post
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Step 2: AI Research Digest ──────────────────────────────
+      - name: Run AI Digest
+        run: npm run digest
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      # ── Step 3: GitHub Hot ──────────────────────────────────────
+      - name: Run GitHub Hot
+        run: npm run githot
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
