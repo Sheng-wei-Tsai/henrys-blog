@@ -59,7 +59,9 @@ async function main() {
   console.log('\n✅ Digest pipeline complete!');
 }
 
-main().catch(err => {
-  console.error('❌ Pipeline failed:', err);
-  process.exit(1);
-});
+main()
+  .then(() => process.exit(0))
+  .catch(err => {
+    console.error('❌ Pipeline failed:', err);
+    process.exit(1);
+  });
