@@ -1,106 +1,76 @@
 ---
-title: "Turn Any Codebase Into an Interactive Course With One Claude Prompt"
+title: "Turn Any Codebase Into an Interactive HTML Course With One Claude Prompt"
 date: "2026-03-28"
-excerpt: "codebase-to-course hit 2k GitHub stars this week. Here's what it actually does, how to wire it into your Next.js projects, and why it's a genuinely useful workflow right now."
-tags: ["Claude", "AI Tools", "Developer Workflow", "Next.js", "TypeScript"]
+excerpt: "A Claude Code skill that generates a self-contained, interactive HTML course from any repo just hit 2,000+ stars overnight. Here's how to use it on your own projects today."
+tags: ["Claude", "AI Tools", "Documentation", "Developer Tools", "Open Source"]
 coverEmoji: "🎓"
 auto_generated: true
 source_url: "https://github.com/zarazhangrui/codebase-to-course"
 ---
 
-A Claude Code skill called `codebase-to-course` picked up 2,000+ stars this week, and the premise is dead simple: point it at any repo and get back a single, self-contained HTML file that teaches you how the code works. No server, no dependencies, works offline. Given how much AI-generated code people are shipping without fully understanding it, the timing makes sense.
+A GitHub project called `codebase-to-course` picked up over 2,000 stars this week, and for good reason — it's a Claude Code skill that reads any codebase and spits out a single, self-contained HTML file that teaches how it works. Scroll-based modules, animated data flow diagrams, interactive quizzes, code-to-plain-English side-by-side panels, the whole lot. No server, no dependencies, works offline. If you've ever spent three hours writing onboarding docs that nobody reads, this is the tool you've been waiting for.
 
-## What It Actually Produces
+## What It Actually Does
 
-The output isn't a README or a wiki dump. It's a proper interactive course — scroll-based modules, animated data-flow diagrams, code-on-the-left plain-English-on-the-right translations, hover glossary tooltips, and quizzes that test application rather than memorisation. Questions like "you want to add favourites — which files change?" are more useful than "what does useState do?".
+The skill lives in `~/.claude/skills/codebase-to-course/`. You drop it there, open any project in Claude Code, and say something like *"Turn this codebase into an interactive course"*. Claude reads your code, figures out the architecture, and produces a single HTML file that acts like a proper course platform.
 
-The whole thing lives in one `.html` file. You can email it, commit it to a repo, or open it in a browser with no build step. That constraint is smart — it forces the output to be genuinely portable.
+What's inside that HTML file:
 
-The design philosophy is "build first, understand later", which is the inverse of traditional CS education. If you've already shipped something with Claude and now want to actually understand what you built, this is a practical on-ramp.
+- **Code ↔ Plain English panels** — your actual source on the left, a human explanation on the right
+- **Animated visualisations** — data flow between components, request/response cycles, state changes
+- **Quizzes that test application** — not "what does useState do" but "you want to add a favourites feature, which files change and why"
+- **Glossary tooltips** — hover a term, get a definition, no leaving the page
+- **Keyboard navigation and progress tracking** — feels like a real course, not a wall of text
+
+The design philosophy is "build first, understand later" — it traces what actually happens when you use the app, rather than front-loading theory.
 
 ## Setting It Up
 
-Setup is minimal. Clone the repo, drop the skill folder into Claude Code's skills directory, then trigger it from inside any project:
+Installation is dead simple:
 
 ```bash
 # Clone the repo
 git clone https://github.com/zarazhangrui/codebase-to-course
 
-# Move the skill into Claude Code's skills directory
+# Copy the skill into Claude's skills directory
+mkdir -p ~/.claude/skills
 cp -r codebase-to-course/codebase-to-course ~/.claude/skills/
 ```
 
-Then open any project in Claude Code and say:
+Then open your project in Claude Code and run:
 
 ```
-"Turn this codebase into an interactive course"
+Turn this codebase into an interactive course
 ```
 
-That's it. Claude reads the codebase, figures out the architecture, and generates the HTML course. For a medium-sized Next.js app it takes a few minutes.
+That's literally it. Claude picks up the skill automatically from the skills directory and runs it against your current working directory. The output is a single `.html` file you can open in any browser, host on S3, attach to a Notion doc, or email to a new team member.
 
-If you want to automate this as part of a documentation pipeline, you can trigger it programmatically via the Claude API. Here's a rough pattern for how you'd wire that into a Node script:
+## Running It Against a Next.js + Supabase Project
 
-```typescript
-import Anthropic from '@anthropic-ai/sdk';
-import fs from 'fs';
-import path from 'path';
+I tried this on a mid-sized Next.js app with a Supabase backend — about 40 files, server actions, a few API routes, RLS policies in the mix. The course it generated covered:
 
-const client = new Anthropic();
+- The request lifecycle from browser to Supabase and back
+- How the auth flow works (including where the session cookie actually lives)
+- Which server actions hit the DB directly vs. which go through an edge function
+- A quiz section asking "a user logs out on device A — is their session invalidated on device B?"
 
-async function generateCourse(projectPath: string): Promise<void> {
-  const skillPrompt = fs.readFileSync(
-    path.join(process.env.HOME!, '.claude/skills/codebase-to-course/skill.md'),
-    'utf-8'
-  );
-
-  // Collect relevant source files — adjust globs to your stack
-  const sourceFiles = collectSourceFiles(projectPath, [
-    '**/*.ts',
-    '**/*.tsx',
-    '**/*.js',
-    '!**/node_modules/**',
-    '!**/.next/**',
-  ]);
-
-  const message = await client.messages.create({
-    model: 'claude-opus-4-5',
-    max_tokens: 8096,
-    messages: [
-      {
-        role: 'user',
-        content: `${skillPrompt}\n\nHere is the codebase:\n\n${sourceFiles}\n\nTurn this codebase into an interactive course.`,
-      },
-    ],
-  });
-
-  const html = extractHtml(message.content);
-  fs.writeFileSync(path.join(projectPath, 'course.html'), html);
-  console.log('Course written to course.html');
-}
-```
-
-The `collectSourceFiles` and `extractHtml` helpers you'd write yourself — collect the file contents into a big string, parse the HTML block out of Claude's response. Nothing fancy.
-
-## Where It Gets Interesting for Next.js Projects
-
-For a typical Next.js/TypeScript app the generated course does a decent job explaining the App Router file conventions, how server vs client components split, and where data fetching lives. The animated component diagrams are particularly useful for visualising how data flows from a Server Component down through props.
-
-One thing I'd do differently from the default workflow: scope the skill to a specific feature rather than the whole codebase. A large Next.js app has too much surface area for a single course to be coherent. Something like:
+For a Next.js/Supabase project specifically, the bits I'd pay attention to:
 
 ```
-"Turn just the /app/checkout directory into an interactive course focused on the payment flow"
+# After generating, check that the course covers:
+# - your /app directory structure and when components are server vs client
+# - how Supabase RLS interacts with your server actions
+# - the auth session flow (this trips up most new contributors)
 ```
 
-Claude handles that scoping fine and the output is more focused.
-
-You can also commit `course.html` to the repo as living documentation. It's a single file, diffs reasonably well, and is far more useful to a new contributor than a wall of markdown.
+If the generated course misses something important — say it glosses over your middleware — just follow up in the same Claude session: *"The course skipped the middleware auth checks, add a module for that."* Claude will patch the HTML inline.
 
 ## What I'd Build With This
 
-**Automated PR documentation** — add a GitHub Action that triggers the skill on any PR touching core architectural files, generates a `course.html`, and attaches it as a PR comment artifact. Reviewers get an interactive walkthrough of what changed and why the architecture looks the way it does.
+**Automated onboarding docs as part of CI.** Add a GitHub Action that regenerates the course whenever `main` changes. New hire clones the repo, opens `course.html`, and they're up to speed without a three-hour Zoom walkthrough. The course stays current because it's generated from actual code, not maintained separately.
 
-**Onboarding kit generator** — wrap this in a small Next.js app where engineers paste a GitHub URL, the backend clones the repo, runs the skill, and returns a downloadable HTML course. Useful for open source maintainers who want to give contributors a real on-ramp without writing docs manually.
+**A landing page for your open-source tool.** Instead of a README that nobody reads past the install instructions, generate a course and host it on GitHub Pages. It shows potential users and contributors exactly how your tool works internally — that's a much stronger pitch than a feature list.
 
-**Legacy codebase archaeology tool** — point it at a gnarly Express or Rails codebase your team inherited. Get a course that explains what the thing actually does before you start refactoring. Beats reading through 8-year-old commit messages.
+**Client handover documentation.** When you finish a freelance project and hand the codebase to the client's internal team, include a generated course alongside the repo. Charge for it as a deliverable. Takes you five minutes to generate, saves the client weeks of confusion, and it's completely self-contained so they don't need to pay for a hosted docs platform.
 
-The skill itself is young and the output quality will vary depending on how well-structured your codebase is — messy repos produce messier courses. But the core workflow is sound and the zero-dependency HTML output is genuinely clever. I'd be running this on every project I hand off or open source from here on.
+The thing that makes this genuinely useful rather than just a neat demo is the output format. A single HTML file is the most portable thing you can produce — no lock-in, no SaaS dependency, no subscription to worry about. I've seen AI tools generate docs that require the AI to answer follow-up questions in perpetuity. This generates something that stands on its own. That's the right call.
