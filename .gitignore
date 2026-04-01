@@ -8,3 +8,11 @@ henry-blog/
 .obsidian/
 context/screenshots/
 context/.DS_Store
+
+# Vercel — machine-specific, contains org/project IDs
+.vercel/
+
+# Python bytecode
+.claude/skills/**/__pycache__/
+*.pyc
+*.pyo
