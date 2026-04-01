@@ -11,14 +11,20 @@ export default function GithotPage() {
     <div style={{ maxWidth: '720px', margin: '0 auto', padding: '0 1.5rem' }}>
       <div style={{ paddingTop: '3.5rem', paddingBottom: '2rem' }}>
         <h1 className="animate-fade-up" style={{
-          fontFamily: "'Lora', serif", fontSize: '2.4rem', fontWeight: 700,
-          color: 'var(--brown-dark)', marginBottom: '0.5rem',
+          fontFamily: "'Lora', serif",
+          fontSize: 'clamp(2.4rem, 6vw, 3.4rem)',
+          fontWeight: 700, color: 'var(--brown-dark)',
+          marginBottom: '0.6rem', letterSpacing: '-0.03em', lineHeight: 1.1,
         }}>
           GitHub Hot
         </h1>
-        <p className="animate-fade-up delay-1" style={{ color: 'var(--text-secondary)', fontSize: '1rem', lineHeight: 1.7 }}>
-          Top trending repos every week — use case, why it matters, how to use it,
-          and how I could use it in my own projects.
+        <div style={{
+          width: '48px', height: '4px', borderRadius: '2px',
+          background: 'var(--jade)', boxShadow: '2px 2px 0 rgba(20,10,5,0.2)',
+          marginBottom: '0.75rem',
+        }} />
+        <p className="animate-fade-up delay-1" style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 500 }}>
+          Top trending repos — use case, why it matters, how to apply it.
         </p>
       </div>
 
@@ -26,10 +32,11 @@ export default function GithotPage() {
         {posts.length === 0 ? (
           <div style={{
             textAlign: 'center', padding: '4rem 2rem',
-            background: 'var(--warm-white)', borderRadius: '14px',
-            border: '1px dashed var(--parchment)',
+            background: 'var(--warm-white)',
+            border: 'var(--panel-border)', boxShadow: 'var(--panel-shadow)',
+            borderRadius: '8px',
           }}>
-            <p style={{ fontFamily: "'Caveat', cursive", fontSize: '1.4rem', color: 'var(--brown-light)' }}>
+            <p style={{ fontFamily: "'Caveat', cursive", fontSize: '1.4rem', color: 'var(--text-muted)' }}>
               First issue coming soon
             </p>
           </div>

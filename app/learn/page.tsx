@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { SKILL_PATHS } from '@/lib/skill-paths';
+import { INTERVIEW_ROLES } from '@/lib/interview-roles';
 
 export const metadata: Metadata = { title: 'IT Career Pathways' };
 
@@ -64,6 +65,36 @@ export default function LearnPage() {
           This is based on the Ebbinghaus forgetting curve — memory fades fast unless revisited at increasing intervals.
           The same method is used by Anki, Duolingo, and medical students worldwide.
         </p>
+      </section>
+
+      {/* Interview Prep cross-promo */}
+      <section className="animate-fade-up" style={{ marginBottom: '3rem' }}>
+        <div style={{
+          background: 'var(--warm-white)', border: '1px solid var(--parchment)',
+          borderRadius: '14px', padding: '1.4rem 1.6rem',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: '1.5rem', flexWrap: 'wrap',
+        }}>
+          <div>
+            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem' }}>
+              Also available
+            </p>
+            <h3 style={{ fontFamily: "'Lora', serif", fontSize: '1rem', fontWeight: 700, color: 'var(--brown-dark)', marginBottom: '0.3rem' }}>
+              Interview Prep — Gamified
+            </h3>
+            <p style={{ fontSize: '0.83rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              Practice the most common interview questions for {INTERVIEW_ROLES.length} Australian IT roles. Get AI feedback and earn XP.
+            </p>
+          </div>
+          <Link href="/interview-prep" style={{
+            background: 'var(--terracotta)', color: 'white',
+            padding: '0.55rem 1.25rem', borderRadius: '99px',
+            textDecoration: 'none', fontSize: '0.88rem', fontWeight: 600,
+            whiteSpace: 'nowrap', flexShrink: 0,
+          }}>
+            Start practising →
+          </Link>
+        </div>
       </section>
 
       {/* Path list */}
