@@ -9,23 +9,9 @@ export const metadata: Metadata = {
   description: 'Thoughts on tech, design, life, and everything in between.',
 };
 
-// Prevents flash of wrong theme on load
-const themeScript = `
-(function() {
-  try {
-    var stored = localStorage.getItem('theme');
-    var system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    document.documentElement.setAttribute('data-theme', stored || system);
-  } catch(e) {}
-})();
-`;
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
       <body>
         <AuthProvider>
           <Header />
