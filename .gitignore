@@ -6,3 +6,5 @@ out/
 .DS_Store
 henry-blog/
 .obsidian/
+context/screenshots/
+context/.DS_Store
