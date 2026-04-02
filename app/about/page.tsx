@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import AIUsage from '@/components/AIUsage';
+import BoulderingSection from '@/components/BoulderingSection';
 
 export const metadata: Metadata = { title: 'About — Henry Tsai' };
 
@@ -61,9 +61,21 @@ export default function AboutPage() {
         </p>
       </section>
 
-      {/* AI Usage */}
+      {/* Bouldering mini-game */}
       <div style={{ marginBottom: '3rem' }}>
-        <AIUsage />
+        <h2 style={{
+          fontFamily: "'Lora', serif", fontSize: '1.4rem',
+          fontWeight: 700, color: 'var(--brown-dark)',
+          marginBottom: '0.5rem',
+          display: 'flex', alignItems: 'center', gap: '0.5rem',
+        }}>
+          {sectionMarker('var(--jade)')}
+          Try a problem
+        </h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1rem', lineHeight: 1.6 }}>
+          Arrow keys (or tap) to climb. Send 3 problems → unlock the next grade. Space to dyno. R to restart.
+        </p>
+        <BoulderingSection />
       </div>
 
       {/* My Story */}

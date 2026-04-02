@@ -509,6 +509,7 @@ h1, h2, h3, h4 {
 /* ── Responsive nav ── */
 .desktop-nav { display: flex; }
 .auth-btn    { display: inline-flex; }
+.mobile-only { display: none; }
 
 .mobile-bottom-nav {
   display: none;
@@ -522,6 +523,7 @@ h1, h2, h3, h4 {
   .desktop-nav        { display: none !important; }
   .auth-btn           { display: none !important; }
   .mobile-bottom-nav  { display: block; }
+  .mobile-only        { display: block; }
   main                { padding-bottom: 6rem !important; }
 }
 
