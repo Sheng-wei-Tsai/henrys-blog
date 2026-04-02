@@ -5,7 +5,7 @@ import { useAuth } from '@/components/AuthProvider';
 import ThemeToggle from '@/components/ThemeToggle';
 import { useState, useRef, useEffect } from 'react';
 
-/* ── Content sub-links (Blog / Digest / Githot) ── */
+/* ── Posts sub-links (Blog / Digest / Githot) ── */
 const contentLinks = [
   {
     href: '/blog',
@@ -30,9 +30,8 @@ const contentLinks = [
   },
 ];
 
-/* ── Main nav (Content dropdown replaces the three individual links) ── */
+/* ── Main nav (Posts dropdown replaces the three individual links) ── */
 const navLinks = [
-  { href: '/',               label: 'Home',      icon: IconHome,      mobile: true  },
   { href: '/learn',          label: 'Learn',     icon: IconLearn,     mobile: true  },
   { href: '/interview-prep', label: 'Interview', icon: IconInterview, mobile: false },
   { href: '/resume',         label: 'Resume',    icon: IconResume,    mobile: false },
@@ -47,28 +46,43 @@ export default function Header() {
   const { user, loading, signInWithGithub, signOut } = useAuth();
 
   const [moreOpen,          setMoreOpen]          = useState(false);
-  const [contentOpen,       setContentOpen]       = useState(false);
-  const [contentMobileOpen, setContentMobileOpen] = useState(false);
+  const [contentOpen,       setPostsOpen]         = useState(false);
+  const [contentMobileOpen, setPostsMobileOpen]   = useState(false);
+  const [avatarOpen,        setAvatarOpen]        = useState(false);
 
   const contentBtnRef = useRef<HTMLDivElement>(null);
+  const avatarBtnRef  = useRef<HTMLDivElement>(null);
 
-  /* Close desktop dropdown on outside click */
+  /* Close Posts dropdown on outside click */
   useEffect(() => {
     if (!contentOpen) return;
     function handleClick(e: MouseEvent) {
       if (contentBtnRef.current && !contentBtnRef.current.contains(e.target as Node)) {
-        setContentOpen(false);
+        setPostsOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [contentOpen]);
 
+  /* Close avatar popover on outside click */
+  useEffect(() => {
+    if (!avatarOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (avatarBtnRef.current && !avatarBtnRef.current.contains(e.target as Node)) {
+        setAvatarOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [avatarOpen]);
+
   /* Close everything on route change */
   useEffect(() => {
-    setContentOpen(false);
-    setContentMobileOpen(false);
+    setPostsOpen(false);
+    setPostsMobileOpen(false);
     setMoreOpen(false);
+    setAvatarOpen(false);
   }, [pathname]);
 
   const handleSignOut = async () => {
@@ -79,22 +93,23 @@ export default function Header() {
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href);
 
-  const isContentActive = contentLinks.some(l => isActive(l.href));
+  const isPostsActive = contentLinks.some(l => isActive(l.href));
 
   return (
     <>
       {/* ── Top bar ── */}
       <header style={{
         position: 'sticky', top: 0, zIndex: 50,
-        padding: '0.75rem 1.5rem',
+        padding: '0.75rem 0',
         background: 'transparent',
       }}>
+        {/* maxWidth + padding matches page content wrapper so pill edges align with "I build things" */}
         <div style={{
-          maxWidth: '900px', margin: '0 auto',
+          maxWidth: '720px', margin: '0 auto', padding: '0 1.5rem',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
 
-          {/* Desktop nav pill */}
+          {/* ── Left: main nav pill — Home + Posts ── */}
           <nav className="desktop-nav" style={{
             background: 'rgba(253,245,228,0.88)',
             backdropFilter: 'blur(20px)',
@@ -117,23 +132,23 @@ export default function Header() {
               whiteSpace: 'nowrap',
             }}>Home</Link>
 
-            {/* ── Content dropdown ── */}
+            {/* ── Posts dropdown ── */}
             <div ref={contentBtnRef} style={{ position: 'relative' }}>
               <button
-                onClick={() => setContentOpen(o => !o)}
+                onClick={() => setPostsOpen(o => !o)}
                 style={{
                   padding: '0.3em 0.9em', borderRadius: '4px',
                   fontSize: '0.88rem', fontWeight: 600,
-                  background: isContentActive || contentOpen ? 'var(--vermilion)' : 'transparent',
-                  color: isContentActive || contentOpen ? 'white' : 'var(--text-secondary)',
-                  boxShadow: isContentActive || contentOpen ? '2px 2px 0 rgba(20,10,5,0.3)' : 'none',
+                  background: isPostsActive || contentOpen ? 'var(--vermilion)' : 'transparent',
+                  color: isPostsActive || contentOpen ? 'white' : 'var(--text-secondary)',
+                  boxShadow: isPostsActive || contentOpen ? '2px 2px 0 rgba(20,10,5,0.3)' : 'none',
                   border: 'none', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', gap: '0.3em',
                   transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)',
                   whiteSpace: 'nowrap',
                 }}
               >
-                Content
+                Posts
                 <svg
                   width="10" height="10" viewBox="0 0 10 10" fill="none"
                   style={{
@@ -237,7 +252,7 @@ export default function Header() {
               )}
             </div>
 
-            {/* Remaining nav links */}
+            {/* Secondary links — all in the same pill */}
             {navLinks.map(link => {
               const active = isActive(link.href);
               return (
@@ -249,49 +264,46 @@ export default function Header() {
                   boxShadow: active ? '2px 2px 0 rgba(20,10,5,0.3)' : 'none',
                   transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)',
                   whiteSpace: 'nowrap',
-                }}>
-                  {link.label}
-                </Link>
+                }}>{link.label}</Link>
               );
             })}
           </nav>
 
-          {/* Auth + theme */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-            <ThemeToggle />
-            {!loading && (
-              user ? (
-                <>
-                  <Link href="/dashboard" title="Dashboard" style={{
-                    width: '30px', height: '30px', borderRadius: '50%',
+          {/* ── Right: theme toggle (icon-only) + avatar ── */}
+          {!loading && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+
+              {/* Theme toggle — icon only, tooltip on hover */}
+              <ThemeToggle />
+
+            <div ref={avatarBtnRef} style={{ position: 'relative' }}>
+              {user ? (
+                <button
+                  onClick={() => setAvatarOpen(o => !o)}
+                  aria-label="Account menu"
+                  style={{
+                    width: '34px', height: '34px', borderRadius: '50%',
                     background: 'var(--terracotta)', color: 'white',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '0.8rem', fontWeight: 600, textDecoration: 'none',
+                    fontSize: '0.8rem', fontWeight: 600,
                     overflow: 'hidden', flexShrink: 0,
-                  }}>
-                    {user.user_metadata?.avatar_url
-                      ? <img src={user.user_metadata.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : user.email?.[0].toUpperCase()
-                    }
-                  </Link>
-                  <button onClick={handleSignOut} className="auth-btn" style={{
-                    background: 'none',
-                    border: '1px solid var(--parchment)',
-                    borderRadius: '99px', padding: '0.25rem 0.75rem',
-                    fontSize: '0.8rem', color: 'var(--text-muted)', cursor: 'pointer',
-                  }}>
-                    Sign out
-                  </button>
-                </>
+                    border: avatarOpen ? '2px solid var(--vermilion)' : '2px solid transparent',
+                    boxShadow: avatarOpen ? '0 0 0 2px rgba(192,40,28,0.3)' : '2px 2px 0 rgba(20,10,5,0.2)',
+                    cursor: 'pointer', padding: 0,
+                    transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
+                  }}
+                >
+                  {user.user_metadata?.avatar_url
+                    ? <img src={user.user_metadata.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : user.email?.[0].toUpperCase()
+                  }
+                </button>
               ) : (
                 <button onClick={signInWithGithub} style={{
                   background: 'rgba(255,253,249,0.82)',
-                  backdropFilter: 'blur(16px)',
-                  WebkitBackdropFilter: 'blur(16px)',
-                  border: '1px solid rgba(242,235,224,0.9)',
-                  borderRadius: '99px',
-                  padding: '0.3rem 1rem',
-                  fontSize: '0.83rem', fontWeight: 500,
+                  backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+                  border: '1px solid rgba(242,235,224,0.9)', borderRadius: '99px',
+                  padding: '0.3rem 1rem', fontSize: '0.83rem', fontWeight: 500,
                   color: 'var(--brown-dark)', cursor: 'pointer',
                   boxShadow: '0 2px 10px rgba(44,31,20,0.06)',
                   display: 'flex', alignItems: 'center', gap: '0.4rem',
@@ -301,9 +313,43 @@ export default function Header() {
                   </svg>
                   Sign in
                 </button>
-              )
-            )}
-          </div>
+              )}
+
+              {/* Avatar popover — theme toggle + secondary links + sign out */}
+              {avatarOpen && user && (
+                <div
+                  className="content-dropdown"
+                  style={{
+                    position: 'absolute', top: 'calc(100% + 10px)', right: 0,
+                    width: '200px',
+                    background: 'rgba(255,254,246,0.97)',
+                    backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+                    border: '2.5px solid rgba(20,10,5,0.16)', borderRadius: '10px',
+                    boxShadow: '4px 4px 0 rgba(20,10,5,0.14), 0 12px 32px rgba(20,10,5,0.08)',
+                    padding: '0.5rem',
+                    zIndex: 60,
+                  }}
+                >
+                  {/* User email */}
+                  <div style={{
+                    padding: '0.3rem 0.6rem 0.5rem',
+                    fontSize: '0.72rem', color: 'var(--text-muted)',
+                    borderBottom: '1px solid var(--parchment)', marginBottom: '0.3rem',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>{user.email}</div>
+
+                  {/* Sign out */}
+                  <button onClick={() => { setAvatarOpen(false); handleSignOut(); }} style={{
+                    width: '100%', padding: '0.45rem 0.6rem', borderRadius: '6px',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)',
+                    textAlign: 'left', transition: 'background 0.12s ease',
+                  }}>Sign out</button>
+                </div>
+              )}
+            </div>
+            </div>
+          )}
         </div>
       </header>
 
@@ -350,10 +396,10 @@ export default function Header() {
           </>
         )}
 
-        {/* Content sub-sheet — slides up above the bottom bar */}
+        {/* Posts sub-sheet — slides up above the bottom bar */}
         {contentMobileOpen && (
           <>
-            <div onClick={() => setContentMobileOpen(false)} style={{
+            <div onClick={() => setPostsMobileOpen(false)} style={{
               position: 'fixed', inset: 0, zIndex: 90,
               background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(2px)',
             }} />
@@ -379,7 +425,7 @@ export default function Header() {
                 fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em',
                 color: 'var(--text-muted)', textTransform: 'uppercase',
                 padding: '0 0.5rem', marginBottom: '0.4rem',
-              }}>Content</p>
+              }}>Posts</p>
 
               {contentLinks.map(link => {
                 const active = isActive(link.href);
@@ -388,7 +434,7 @@ export default function Header() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    onClick={() => setContentMobileOpen(false)}
+                    onClick={() => setPostsMobileOpen(false)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '0.9rem',
                       padding: '0.75rem 0.75rem', borderRadius: '10px',
@@ -448,21 +494,21 @@ export default function Header() {
             </span>
           </Link>
 
-          {/* Content tab — opens sub-sheet */}
+          {/* Posts tab — opens sub-sheet */}
           <button
-            onClick={() => { setContentMobileOpen(o => !o); setMoreOpen(false); }}
+            onClick={() => { setPostsMobileOpen(o => !o); setMoreOpen(false); }}
             style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',
               gap: '0.2rem', padding: '0.35rem 0.6rem', borderRadius: '4px',
-              background: isContentActive || contentMobileOpen ? 'var(--vermilion)' : 'transparent',
-              boxShadow: isContentActive || contentMobileOpen ? '2px 2px 0 rgba(20,10,5,0.3)' : 'none',
+              background: isPostsActive || contentMobileOpen ? 'var(--vermilion)' : 'transparent',
+              boxShadow: isPostsActive || contentMobileOpen ? '2px 2px 0 rgba(20,10,5,0.3)' : 'none',
               border: 'none', cursor: 'pointer',
               transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)', minWidth: '48px',
             }}
           >
-            <IconContent active={isContentActive || contentMobileOpen} />
-            <span style={{ fontSize: '0.62rem', fontWeight: isContentActive || contentMobileOpen ? 600 : 500, color: isContentActive || contentMobileOpen ? 'white' : 'var(--text-muted)' }}>
-              Content
+            <IconPosts active={isPostsActive || contentMobileOpen} />
+            <span style={{ fontSize: '0.62rem', fontWeight: isPostsActive || contentMobileOpen ? 600 : 500, color: isPostsActive || contentMobileOpen ? 'white' : 'var(--text-muted)' }}>
+              Posts
             </span>
           </button>
 
@@ -483,7 +529,7 @@ export default function Header() {
 
           {/* More */}
           <button
-            onClick={() => { setMoreOpen(o => !o); setContentMobileOpen(false); }}
+            onClick={() => { setMoreOpen(o => !o); setPostsMobileOpen(false); }}
             style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',
               gap: '0.2rem', padding: '0.35rem 0.6rem', borderRadius: '4px',
@@ -584,8 +630,8 @@ function IconInterview({ active }: { active: boolean }) {
     </svg>
   );
 }
-/* Content tab icon — layers/stack */
-function IconContent({ active }: { active: boolean }) {
+/* Posts tab icon — layers/stack */
+function IconPosts({ active }: { active: boolean }) {
   const c = active ? 'white' : 'var(--text-muted)';
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
