@@ -103,13 +103,13 @@ export default function Header() {
         padding: '0.75rem 0',
         background: 'transparent',
       }}>
-        {/* maxWidth + padding matches page content wrapper so pill edges align with "I build things" */}
+        {/* Inner wrapper aligns with page content column (maxWidth 720px + 1.5rem padding) */}
         <div style={{
           maxWidth: '720px', margin: '0 auto', padding: '0 1.5rem',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          display: 'flex', alignItems: 'center', gap: '0.5rem',
         }}>
 
-          {/* ── Left: main nav pill — Home + Posts ── */}
+          {/* ── Nav pill — Home + Posts + nav links ── */}
           <nav className="desktop-nav" style={{
             background: 'rgba(253,245,228,0.88)',
             backdropFilter: 'blur(20px)',
@@ -124,7 +124,7 @@ export default function Header() {
             {/* Home */}
             <Link href="/" style={{
               padding: '0.3em 0.9em', borderRadius: '4px',
-              fontSize: '0.88rem', fontWeight: 600, textDecoration: 'none',
+              fontSize: '0.88rem', fontWeight: 600, lineHeight: 1.2, textDecoration: 'none',
               background: isActive('/') ? 'var(--vermilion)' : 'transparent',
               color: isActive('/') ? 'white' : 'var(--text-secondary)',
               boxShadow: isActive('/') ? '2px 2px 0 rgba(20,10,5,0.3)' : 'none',
@@ -139,10 +139,12 @@ export default function Header() {
                 style={{
                   padding: '0.3em 0.9em', borderRadius: '4px',
                   fontSize: '0.88rem', fontWeight: 600,
-                  background: isPostsActive || contentOpen ? 'var(--vermilion)' : 'transparent',
-                  color: isPostsActive || contentOpen ? 'white' : 'var(--text-secondary)',
-                  boxShadow: isPostsActive || contentOpen ? '2px 2px 0 rgba(20,10,5,0.3)' : 'none',
-                  border: 'none', cursor: 'pointer',
+                  fontFamily: 'inherit', lineHeight: 1.2,
+                  background: isPostsActive ? 'var(--vermilion)' : contentOpen ? 'rgba(192,40,28,0.08)' : 'transparent',
+                  color: isPostsActive ? 'white' : 'var(--text-secondary)',
+                  boxShadow: isPostsActive ? '2px 2px 0 rgba(20,10,5,0.3)' : 'none',
+                  border: contentOpen && !isPostsActive ? '1px solid rgba(192,40,28,0.35)' : '1px solid transparent',
+                  cursor: 'pointer',
                   display: 'flex', alignItems: 'center', gap: '0.3em',
                   transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)',
                   whiteSpace: 'nowrap',
@@ -258,7 +260,7 @@ export default function Header() {
               return (
                 <Link key={link.href} href={link.href} style={{
                   padding: '0.3em 0.9em', borderRadius: '4px',
-                  fontSize: '0.88rem', fontWeight: 600, textDecoration: 'none',
+                  fontSize: '0.88rem', fontWeight: 600, lineHeight: 1.2, textDecoration: 'none',
                   background: active ? 'var(--vermilion)' : 'transparent',
                   color: active ? 'white' : 'var(--text-secondary)',
                   boxShadow: active ? '2px 2px 0 rgba(20,10,5,0.3)' : 'none',
@@ -269,14 +271,14 @@ export default function Header() {
             })}
           </nav>
 
-          {/* ── Right: theme toggle (icon-only) + avatar ── */}
-          {!loading && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+          {/* Theme toggle — beside nav pill, inside 720px column */}
+          <ThemeToggle />
 
-              {/* Theme toggle — icon only, tooltip on hover */}
-              <ThemeToggle />
+        </div>{/* end inner 720px wrapper */}
 
-            <div ref={avatarBtnRef} style={{ position: 'relative' }}>
+        {/* ── Avatar — absolute far top-right corner of viewport ── */}
+        {!loading && (
+          <div ref={avatarBtnRef} style={{ position: 'absolute', right: '1.5rem', top: '50%', transform: 'translateY(-50%)' }}>
               {user ? (
                 <button
                   onClick={() => setAvatarOpen(o => !o)}
@@ -338,19 +340,40 @@ export default function Header() {
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>{user.email}</div>
 
+                  {/* Dashboard */}
+                  <Link href="/dashboard" onClick={() => setAvatarOpen(false)} style={{
+                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                    padding: '0.45rem 0.6rem', borderRadius: '6px',
+                    textDecoration: 'none',
+                    fontSize: '0.85rem', fontWeight: 600, color: 'var(--brown-dark)',
+                    transition: 'background 0.12s ease',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--parchment)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                      <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                    </svg>
+                    Dashboard
+                  </Link>
+
+                  <div style={{ height: '1px', background: 'var(--parchment)', margin: '0.2rem 0.4rem' }} />
+
                   {/* Sign out */}
                   <button onClick={() => { setAvatarOpen(false); handleSignOut(); }} style={{
                     width: '100%', padding: '0.45rem 0.6rem', borderRadius: '6px',
                     background: 'none', border: 'none', cursor: 'pointer',
                     fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)',
                     textAlign: 'left', transition: 'background 0.12s ease',
-                  }}>Sign out</button>
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--parchment)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                  >Sign out</button>
                 </div>
               )}
-            </div>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </header>
 
       {/* ── Mobile bottom nav ── */}
@@ -500,14 +523,15 @@ export default function Header() {
             style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',
               gap: '0.2rem', padding: '0.35rem 0.6rem', borderRadius: '4px',
-              background: isPostsActive || contentMobileOpen ? 'var(--vermilion)' : 'transparent',
-              boxShadow: isPostsActive || contentMobileOpen ? '2px 2px 0 rgba(20,10,5,0.3)' : 'none',
-              border: 'none', cursor: 'pointer',
+              background: isPostsActive ? 'var(--vermilion)' : contentMobileOpen ? 'rgba(192,40,28,0.08)' : 'transparent',
+              boxShadow: isPostsActive ? '2px 2px 0 rgba(20,10,5,0.3)' : 'none',
+              border: contentMobileOpen && !isPostsActive ? '1px solid rgba(192,40,28,0.35)' : '1px solid transparent',
+              cursor: 'pointer',
               transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)', minWidth: '48px',
             }}
           >
-            <IconPosts active={isPostsActive || contentMobileOpen} />
-            <span style={{ fontSize: '0.62rem', fontWeight: isPostsActive || contentMobileOpen ? 600 : 500, color: isPostsActive || contentMobileOpen ? 'white' : 'var(--text-muted)' }}>
+            <IconPosts active={isPostsActive} />
+            <span style={{ fontSize: '0.62rem', fontWeight: isPostsActive ? 600 : 500, color: isPostsActive ? 'white' : 'var(--text-muted)' }}>
               Posts
             </span>
           </button>
