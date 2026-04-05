@@ -1,4 +1,6 @@
 import 'dotenv/config';
+import fs from 'fs';
+import path from 'path';
 import { execSync } from 'child_process';
 import { fetchAll } from './fetch-digest';
 import { filterItems } from './filter';
@@ -7,6 +9,14 @@ import { writeDigestPost } from './generate-post';
 
 async function main() {
   console.log('🚀 AI Research Digest pipeline\n');
+
+  // 0. Skip if today's digest already exists (prevents duplicate on double-run)
+  const todayStr = new Date().toISOString().split('T')[0];
+  const digestPath = path.join(process.cwd(), 'content', 'digests', `${todayStr}.md`);
+  if (fs.existsSync(digestPath)) {
+    console.log(`✅ Digest for ${todayStr} already exists — skipping.`);
+    process.exit(0);
+  }
 
   // 1. Fetch from curated high-quality sources
   const items = await fetchAll();

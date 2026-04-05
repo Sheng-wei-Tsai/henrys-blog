@@ -190,6 +190,16 @@ Return JSON only:
 async function main() {
   console.log('🚀 Daily Post pipeline\n');
 
+  // 0. Skip if today's post already exists (prevents duplicate on double-run)
+  const todayStr  = new Date().toISOString().split('T')[0];
+  const postsDir  = path.join(process.cwd(), 'content', 'posts');
+  const alreadyExists = fs.existsSync(postsDir) &&
+    fs.readdirSync(postsDir).some(f => f.startsWith(todayStr));
+  if (alreadyExists) {
+    console.log(`✅ Post for ${todayStr} already exists — skipping.`);
+    process.exit(0);
+  }
+
   // 1. Fetch trending signals in parallel
   console.log('🔍 Fetching trending topics...');
   const [hnStories, githubTrending] = await Promise.all([

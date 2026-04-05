@@ -217,6 +217,14 @@ auto_generated: true
 async function main() {
   console.log('🚀 GitHub Hot pipeline\n');
 
+  // 0. Skip if today's file already exists (prevents duplicate on double-run)
+  const todayStr = formatDate(new Date());
+  const todayFile = path.join(process.cwd(), 'content', 'githot', `${todayStr}.md`);
+  if (fs.existsSync(todayFile)) {
+    console.log(`✅ GitHub Hot for ${todayStr} already exists — skipping.`);
+    process.exit(0);
+  }
+
   const repos = await fetchTrendingRepos();
 
   console.log(`\n🤖 Analysing top ${repos.length} repos with Claude...\n`);
