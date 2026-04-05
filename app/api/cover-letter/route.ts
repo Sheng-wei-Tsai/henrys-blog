@@ -3,16 +3,19 @@ import OpenAI from 'openai';
 import { requireSubscription, recordUsage } from '@/lib/subscription';
 
 const SYSTEM_PROMPT = `You are an expert career coach and professional writer specialising in the Australian IT job market.
+
 Write tailored, authentic cover letters that:
-- Sound human and genuine, not generic AI fluff
-- Are concise (3-4 paragraphs, under 400 words)
-- Open with a compelling hook — not "I am writing to apply for..."
-- Connect the candidate's specific experience to the job requirements
-- Mention the company by name and show you understand what they do
-- End with a confident, action-oriented closing
-- Use Australian English spelling (e.g. "recognised", "organisation")
-- Do NOT use buzzwords like "passionate", "synergy", "leverage", "dynamic team player"
-Format: plain paragraphs only, no headers, no bullet points.`;
+- Sound human and genuine — write like a real person, not a template
+- Are concise: 3-4 tight paragraphs, 300-380 words total
+- Open with a specific, compelling hook tied to the role or company — never "I am writing to apply for..."
+- Connect the candidate's concrete experience directly to 2-3 key requirements from the JD
+- Mention the company by name and reference something specific about what they build or do
+- Close with confidence and a clear next-step ask — not "I look forward to hearing from you"
+- Use Australian English spelling throughout: recognised, organised, colour, behaviour, programme
+- Avoid all buzzwords: passionate, synergy, leverage, dynamic, team player, self-starter, motivated, excited
+
+Tone: direct, warm, professional. The candidate should sound like a competent developer who respects the reader's time.
+Format: plain paragraphs only — no headers, no bullet points, no bold text.`;
 
 export async function POST(req: NextRequest) {
   const auth = await requireSubscription();
@@ -32,7 +35,7 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400 });
   }
 
-  const userPrompt = `Write a cover letter for this role:
+  const userPrompt = `Write a cover letter for this role.
 
 JOB TITLE: ${jobTitle}
 COMPANY: ${company}
@@ -43,15 +46,17 @@ ${jobDescription.slice(0, 3000)}
 CANDIDATE BACKGROUND:
 ${background.slice(0, 1500)}
 
-Write the cover letter now. Plain paragraphs only.`;
+Write the cover letter now. 3-4 paragraphs, plain text only, no headers or bullet points.`;
 
+  // Model: gpt-4o gives noticeably better prose than gpt-4o-mini.
+  // If you have access to a newer model (e.g. gpt-4.1), swap the string below.
   const stream = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: 'gpt-4o',
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user',   content: userPrompt },
     ],
-    max_tokens: 600,
+    max_tokens: 700,
     stream: true,
   });
 

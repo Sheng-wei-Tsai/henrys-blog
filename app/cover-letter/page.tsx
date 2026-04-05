@@ -329,21 +329,23 @@ function CoverLetterContent() {
             {(output || generating) && (
               <textarea
                 ref={outputRef}
-                readOnly
+                readOnly={generating}
                 value={generating && !output ? 'Writing...' : output}
+                onChange={e => setOutput(e.target.value)}
                 style={{
                   flex: 1, border: 'none', outline: 'none', resize: 'none',
                   background: 'transparent', fontSize: '0.92rem',
                   lineHeight: 1.8, color: 'var(--brown-dark)',
                   fontFamily: 'Georgia, serif', minHeight: '420px',
+                  cursor: generating ? 'default' : 'text',
                 }}
               />
             )}
           </div>
 
-          {output && (
+          {output && !generating && (
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-              Always review and personalise before sending. AI-generated content should be a starting point, not a final draft.
+              ✏️ Click the letter to edit directly — copy will capture your changes.
             </p>
           )}
         </div>

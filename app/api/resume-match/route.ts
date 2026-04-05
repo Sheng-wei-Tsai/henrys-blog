@@ -66,11 +66,13 @@ Rules:
 - score: be honest — 60-80 is good for a grad role, 80+ is excellent
 - Return valid JSON only`;
 
+  // Model: gpt-4o gives more accurate gap analysis than gpt-4o-mini.
+  // Swap to a newer model string if available on your plan.
   const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: 'gpt-4o',
     messages: [{ role: 'user', content: prompt }],
     response_format: { type: 'json_object' },
-    max_tokens: 800,
+    max_tokens: 900,
   });
 
   const raw = response.choices[0].message.content ?? '{}';
