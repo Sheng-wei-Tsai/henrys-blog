@@ -166,12 +166,21 @@ body::before {
 /* All content above texture */
 body > * { position: relative; z-index: 1; }
 
-h1, h2, h3, h4 {
-  font-family: 'Space Grotesk', system-ui, sans-serif;
+/* Editorial headings — Lora serif for h1/h2 */
+h1, h2 {
+  font-family: 'Lora', serif;
   color: var(--brown-dark);
   line-height: 1.15;
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
+}
+/* UI headings — Space Grotesk for h3/h4 */
+h3, h4 {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  color: var(--brown-dark);
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .font-handwritten { font-family: 'Caveat', cursive; font-weight: 600; }
@@ -299,12 +308,16 @@ h1, h2, h3, h4 {
   100% { opacity: 0; transform: translateY(100px) translateX(40px) rotate(360deg); }
 }
 
-/* Yin-yang spin — on toggle click */
-@keyframes yinYangToggle {
-  0%   { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+/* Yin-yang roll — physical rolling ball effect on theme toggle */
+@keyframes yinYangRoll {
+  0%   { transform: rotate(0deg)    scale(1);    }
+  20%  { transform: rotate(80deg)   scale(0.88); }
+  50%  { transform: rotate(200deg)  scale(0.82); }
+  75%  { transform: rotate(340deg)  scale(0.94); }
+  88%  { transform: rotate(380deg)  scale(1.06); }
+  100% { transform: rotate(360deg)  scale(1);    }
 }
-.yin-yang-spin { animation: yinYangToggle 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.yin-yang-roll { animation: yinYangRoll 0.65s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
 /* Energy ripple — chi pulse on interaction */
 @keyframes chiRipple {
@@ -547,7 +560,7 @@ h1, h2, h3, h4 {
   .desktop-nav        { display: none !important; }
   .auth-btn           { display: none !important; }
   .mobile-bottom-nav  { display: block; }
-  .mobile-only        { display: block; }
+  .mobile-only        { display: flex; }
   .interview-sidebar  { display: none !important; }
   main                { padding-bottom: 6rem !important; }
 }
@@ -616,4 +629,44 @@ h1, h2, h3, h4 {
   letter-spacing: 0.05em;
   transform: rotate(-5deg);
   opacity: 0.8;
+}
+
+/* ── Cover Letter page — responsive layout ── */
+.cl-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  padding-bottom: 4rem;
+}
+
+/* Desktop: show inline button, hide fixed bar */
+.cl-generate-bar { display: none; }
+.cl-desktop-btn  { display: block; width: 100%; }
+
+@media (max-width: 768px) {
+  .cl-grid {
+    grid-template-columns: 1fr;
+    padding-bottom: 5.5rem; /* room for fixed bar */
+  }
+
+  .cl-output-area {
+    min-height: 320px !important;
+  }
+
+  /* Hide inline button, show fixed bar */
+  .cl-desktop-btn { display: none !important; }
+  .cl-generate-bar {
+    display: block;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    padding: 0.75rem 1rem;
+    background: var(--warm-white);
+    border-top: 1px solid var(--parchment);
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+    z-index: 50;
+  }
+
+  .cl-generate-bar button {
+    width: 100%;
+  }
 }
