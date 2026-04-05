@@ -172,12 +172,12 @@ export default function Header() {
                     left: '50%',
                     transform: 'translateX(-50%)',
                     width: '240px',
-                    background: 'rgba(255,254,246,0.97)',
+                    background: 'var(--warm-white)',
                     backdropFilter: 'blur(24px)',
                     WebkitBackdropFilter: 'blur(24px)',
-                    border: '2.5px solid rgba(20,10,5,0.16)',
+                    border: '2px solid var(--parchment)',
                     borderRadius: '10px',
-                    boxShadow: '4px 4px 0 rgba(20,10,5,0.14), 0 12px 32px rgba(20,10,5,0.08)',
+                    boxShadow: 'var(--panel-shadow), 0 12px 32px var(--shadow-color)',
                     padding: '0.4rem',
                     zIndex: 60,
                     overflow: 'hidden',
@@ -235,13 +235,13 @@ export default function Header() {
                         <div>
                           <div style={{
                             fontSize: '0.87rem', fontWeight: 700,
-                            color: active ? link.accent : 'var(--brown-dark)',
+                            color: active ? link.accent : 'var(--text-primary)',
                             lineHeight: 1.2,
                           }}>
                             {link.label}
                           </div>
                           <div style={{
-                            fontSize: '0.72rem', color: 'var(--text-muted)',
+                            fontSize: '0.72rem', color: 'var(--text-secondary)',
                             lineHeight: 1.3, marginTop: '1px',
                           }}>
                             {link.desc}
@@ -324,10 +324,10 @@ export default function Header() {
                   style={{
                     position: 'absolute', top: 'calc(100% + 10px)', right: 0,
                     width: '200px',
-                    background: 'rgba(255,254,246,0.97)',
+                    background: 'var(--warm-white)',
                     backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-                    border: '2.5px solid rgba(20,10,5,0.16)', borderRadius: '10px',
-                    boxShadow: '4px 4px 0 rgba(20,10,5,0.14), 0 12px 32px rgba(20,10,5,0.08)',
+                    border: '2px solid var(--parchment)', borderRadius: '10px',
+                    boxShadow: 'var(--panel-shadow), 0 12px 32px var(--shadow-color)',
                     padding: '0.5rem',
                     zIndex: 60,
                   }}
@@ -358,6 +358,40 @@ export default function Header() {
                     Dashboard
                   </Link>
 
+                  {/* Jobs */}
+                  <Link href="/jobs" onClick={() => setAvatarOpen(false)} style={{
+                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                    padding: '0.45rem 0.6rem', borderRadius: '6px',
+                    textDecoration: 'none',
+                    fontSize: '0.85rem', fontWeight: 500, color: 'var(--brown-dark)',
+                    transition: 'background 0.12s ease',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--parchment)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+                    </svg>
+                    Jobs
+                  </Link>
+
+                  {/* Upgrade to Pro */}
+                  <Link href="/pricing" onClick={() => setAvatarOpen(false)} style={{
+                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                    padding: '0.45rem 0.6rem', borderRadius: '6px',
+                    textDecoration: 'none',
+                    fontSize: '0.85rem', fontWeight: 600, color: 'var(--terracotta)',
+                    transition: 'background 0.12s ease',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--parchment)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                    Upgrade to Pro
+                  </Link>
+
                   <div style={{ height: '1px', background: 'var(--parchment)', margin: '0.2rem 0.4rem' }} />
 
                   {/* Sign out */}
@@ -379,7 +413,7 @@ export default function Header() {
       {/* ── Mobile bottom nav ── */}
       <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
 
-        {/* More sheet */}
+        {/* More / Account sheet */}
         {moreOpen && (
           <>
             <div onClick={() => setMoreOpen(false)} style={{
@@ -391,30 +425,52 @@ export default function Header() {
               transform: 'translateX(-50%)',
               width: 'calc(100% - 2.4rem)', maxWidth: '420px',
               background: 'var(--warm-white)',
-              border: '1px solid var(--parchment)',
-              borderRadius: '20px', padding: '1rem', zIndex: 95,
-              boxShadow: '0 -4px 32px rgba(44,31,20,0.12)',
-              display: 'flex', flexDirection: 'column', gap: '0.3rem',
+              border: '2px solid var(--parchment)',
+              borderRadius: '20px', padding: '0.75rem', zIndex: 95,
+              boxShadow: 'var(--panel-shadow), 0 -4px 32px var(--shadow-color)',
             }}>
+              {/* Account section */}
+              {user && (
+                <>
+                  <div style={{ padding: '0.5rem 0.75rem 0.4rem', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Account</div>
+                  <Link href="/dashboard" onClick={() => setMoreOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', padding: '0.75rem 1rem', borderRadius: '12px', textDecoration: 'none', background: isActive('/dashboard') ? 'var(--vermilion)' : 'transparent', transition: 'background 0.15s', marginBottom: '0.15rem' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isActive('/dashboard') ? 'white' : 'var(--text-muted)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 500, color: isActive('/dashboard') ? 'white' : 'var(--text-primary)' }}>Dashboard</span>
+                  </Link>
+                  <div style={{ height: '1px', background: 'var(--parchment)', margin: '0.2rem 0.5rem 0.4rem' }} />
+                </>
+              )}
+              {/* Nav links */}
+              <div style={{ padding: '0.2rem 0.75rem 0.4rem', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>More</div>
               {moreLinks.map(link => {
                 const active = isActive(link.href);
                 const Icon = link.icon;
                 return (
                   <Link key={link.href} href={link.href} onClick={() => setMoreOpen(false)} style={{
                     display: 'flex', alignItems: 'center', gap: '0.9rem',
-                    padding: '0.8rem 1rem', borderRadius: '12px',
+                    padding: '0.75rem 1rem', borderRadius: '12px',
                     textDecoration: 'none',
-                    background: active ? 'var(--terracotta)' : 'transparent',
-                    transition: 'background 0.15s',
+                    background: active ? 'var(--vermilion)' : 'transparent',
+                    transition: 'background 0.15s', marginBottom: '0.1rem',
                   }}>
                     <Icon active={active} />
-                    <span style={{
-                      fontSize: '0.95rem', fontWeight: 500,
-                      color: active ? 'white' : 'var(--text-primary)',
-                    }}>{link.label}</span>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 500, color: active ? 'white' : 'var(--text-primary)' }}>{link.label}</span>
                   </Link>
                 );
               })}
+              {/* Sign out / sign in */}
+              <div style={{ height: '1px', background: 'var(--parchment)', margin: '0.2rem 0.5rem 0.4rem' }} />
+              {user ? (
+                <button onClick={() => { setMoreOpen(false); handleSignOut(); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.9rem', padding: '0.75rem 1rem', borderRadius: '12px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  <span style={{ fontSize: '0.95rem', fontWeight: 500, color: 'var(--text-muted)' }}>Sign out</span>
+                </button>
+              ) : (
+                <Link href="/login" onClick={() => setMoreOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', padding: '0.75rem 1rem', borderRadius: '12px', textDecoration: 'none', background: 'var(--vermilion)', transition: 'background 0.15s' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                  <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'white' }}>Sign in</span>
+                </Link>
+              )}
             </div>
           </>
         )}
@@ -495,84 +551,82 @@ export default function Header() {
         {/* Main tab bar */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-around',
-          background: 'rgba(253,245,228,0.92)',
+          background: 'var(--warm-white)',
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          border: '2.5px solid rgba(20,10,5,0.2)',
-          borderRadius: '8px', padding: '0.55rem 0.5rem',
-          boxShadow: '3px 3px 0 rgba(20,10,5,0.15)', width: '100%',
+          border: '2.5px solid var(--parchment)',
+          borderRadius: '8px', padding: '0.55rem 0.25rem',
+          boxShadow: 'var(--panel-shadow)', width: '100%',
         }}>
 
           {/* Home */}
-          <Link href="/" style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            gap: '0.2rem', textDecoration: 'none',
-            padding: '0.35rem 0.6rem', borderRadius: '4px',
-            background: isActive('/') ? 'var(--vermilion)' : 'transparent',
-            boxShadow: isActive('/') ? '2px 2px 0 rgba(20,10,5,0.3)' : 'none',
-            transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)', minWidth: '48px',
-          }}>
-            <IconHome active={isActive('/')} />
-            <span style={{ fontSize: '0.62rem', fontWeight: isActive('/') ? 600 : 500, color: isActive('/') ? 'white' : 'var(--text-muted)' }}>
-              Home
-            </span>
-          </Link>
+          <MobileTab href="/" active={isActive('/')} label="Home" icon={<IconHome active={isActive('/')} />} />
+
+          {/* Jobs */}
+          <MobileTab href="/jobs" active={isActive('/jobs')} label="Jobs" icon={<IconJobs active={isActive('/jobs')} />} />
 
           {/* Posts tab — opens sub-sheet */}
           <button
             onClick={() => { setPostsMobileOpen(o => !o); setMoreOpen(false); }}
             style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',
-              gap: '0.2rem', padding: '0.35rem 0.6rem', borderRadius: '4px',
+              gap: '0.2rem', padding: '0.35rem 0.5rem', borderRadius: '4px',
               background: isPostsActive ? 'var(--vermilion)' : contentMobileOpen ? 'rgba(192,40,28,0.08)' : 'transparent',
               boxShadow: isPostsActive ? '2px 2px 0 rgba(20,10,5,0.3)' : 'none',
               border: contentMobileOpen && !isPostsActive ? '1px solid rgba(192,40,28,0.35)' : '1px solid transparent',
-              cursor: 'pointer',
-              transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)', minWidth: '48px',
+              cursor: 'pointer', fontFamily: 'inherit',
+              transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)', minWidth: '44px',
             }}
           >
             <IconPosts active={isPostsActive} />
-            <span style={{ fontSize: '0.62rem', fontWeight: isPostsActive ? 600 : 500, color: isPostsActive ? 'white' : 'var(--text-muted)' }}>
+            <span style={{ fontSize: '0.6rem', fontWeight: isPostsActive ? 600 : 500, color: isPostsActive ? 'white' : 'var(--text-muted)' }}>
               Posts
             </span>
           </button>
 
           {/* Learn */}
-          <Link href="/learn" style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            gap: '0.2rem', textDecoration: 'none',
-            padding: '0.35rem 0.6rem', borderRadius: '4px',
-            background: isActive('/learn') ? 'var(--vermilion)' : 'transparent',
-            boxShadow: isActive('/learn') ? '2px 2px 0 rgba(20,10,5,0.3)' : 'none',
-            transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)', minWidth: '48px',
-          }}>
-            <IconLearn active={isActive('/learn')} />
-            <span style={{ fontSize: '0.62rem', fontWeight: isActive('/learn') ? 600 : 500, color: isActive('/learn') ? 'white' : 'var(--text-muted)' }}>
-              Learn
-            </span>
-          </Link>
+          <MobileTab href="/learn" active={isActive('/learn')} label="Learn" icon={<IconLearn active={isActive('/learn')} />} />
 
-          {/* More */}
-          <button
-            onClick={() => { setMoreOpen(o => !o); setPostsMobileOpen(false); }}
-            style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center',
-              gap: '0.2rem', padding: '0.35rem 0.6rem', borderRadius: '4px',
-              background: moreOpen ? 'var(--vermilion)' : 'transparent',
-              boxShadow: moreOpen ? '2px 2px 0 rgba(20,10,5,0.3)' : 'none',
-              border: 'none', cursor: 'pointer',
-              transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)', minWidth: '48px',
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <circle cx="5"  cy="12" r="1.5" fill={moreOpen ? 'white' : 'var(--text-muted)'} />
-              <circle cx="12" cy="12" r="1.5" fill={moreOpen ? 'white' : 'var(--text-muted)'} />
-              <circle cx="19" cy="12" r="1.5" fill={moreOpen ? 'white' : 'var(--text-muted)'} />
-            </svg>
-            <span style={{ fontSize: '0.62rem', fontWeight: 500, color: moreOpen ? 'white' : 'var(--text-muted)' }}>
-              More
-            </span>
-          </button>
-
+          {/* Account — sign in or avatar */}
+          {!loading && (
+            user ? (
+              <button
+                onClick={() => { setMoreOpen(o => !o); setPostsMobileOpen(false); }}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  gap: '0.2rem', padding: '0.35rem 0.5rem', borderRadius: '4px',
+                  background: moreOpen ? 'var(--vermilion)' : 'transparent',
+                  border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                  transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)', minWidth: '44px',
+                }}
+              >
+                <div style={{
+                  width: '22px', height: '22px', borderRadius: '50%',
+                  overflow: 'hidden', flexShrink: 0,
+                  background: moreOpen ? 'white' : 'var(--vermilion)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '0.65rem', fontWeight: 700, color: 'white',
+                }}>
+                  {user.user_metadata?.avatar_url
+                    ? <img src={user.user_metadata.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : user.email?.[0].toUpperCase()}
+                </div>
+                <span style={{ fontSize: '0.6rem', fontWeight: 500, color: moreOpen ? 'white' : 'var(--text-muted)' }}>Me</span>
+              </button>
+            ) : (
+              <Link href="/login" style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                gap: '0.2rem', padding: '0.35rem 0.5rem', borderRadius: '4px',
+                textDecoration: 'none',
+                background: isActive('/login') ? 'var(--vermilion)' : 'transparent',
+                transition: 'all 0.15s', minWidth: '44px',
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={isActive('/login') ? 'white' : 'var(--text-muted)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                </svg>
+                <span style={{ fontSize: '0.6rem', fontWeight: 500, color: isActive('/login') ? 'white' : 'var(--text-muted)' }}>Sign in</span>
+              </Link>
+            )
+          )}
         </div>
       </nav>
     </>
@@ -663,5 +717,33 @@ function IconPosts({ active }: { active: boolean }) {
       <rect x="2" y="10" width="20" height="5" rx="1" />
       <rect x="2" y="17" width="20" height="4" rx="1" />
     </svg>
+  );
+}
+function IconJobs({ active }: { active: boolean }) {
+  const c = active ? 'white' : 'var(--text-muted)';
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="7" width="20" height="14" rx="2"/>
+      <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
+    </svg>
+  );
+}
+
+/* Reusable mobile bottom tab button */
+function MobileTab({ href, active, label, icon }: { href: string; active: boolean; label: string; icon: React.ReactNode }) {
+  return (
+    <Link href={href} style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      gap: '0.2rem', textDecoration: 'none',
+      padding: '0.35rem 0.5rem', borderRadius: '4px',
+      background: active ? 'var(--vermilion)' : 'transparent',
+      boxShadow: active ? '2px 2px 0 rgba(20,10,5,0.3)' : 'none',
+      transition: 'all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)', minWidth: '44px',
+    }}>
+      {icon}
+      <span style={{ fontSize: '0.6rem', fontWeight: active ? 600 : 500, color: active ? 'white' : 'var(--text-muted)' }}>
+        {label}
+      </span>
+    </Link>
   );
 }
