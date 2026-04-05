@@ -16,3 +16,5 @@ context/.DS_Store
 .claude/skills/**/__pycache__/
 *.pyc
 *.pyo
+.claude/settings.local.json
+tsconfig.tsbuildinfo
