@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import BoulderingSection from '@/components/BoulderingSection';
+import TamaSection from '@/components/tama/TamaSection';
 
 export const metadata: Metadata = { title: 'About — Henry Tsai' };
 
@@ -61,7 +61,7 @@ export default function AboutPage() {
         </p>
       </section>
 
-      {/* Bouldering mini-game */}
+      {/* TamaAussie virtual pet */}
       <div style={{ marginBottom: '3rem' }}>
         <h2 style={{
           fontFamily: "'Lora', serif", fontSize: '1.4rem',
@@ -70,12 +70,14 @@ export default function AboutPage() {
           display: 'flex', alignItems: 'center', gap: '0.5rem',
         }}>
           {sectionMarker('var(--jade)')}
-          Try a problem
+          TamaAussie
         </h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1rem', lineHeight: 1.6 }}>
-          Arrow keys (or tap) to climb. Send 3 problems → unlock the next grade. Space to dyno. R to restart.
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1.25rem', lineHeight: 1.6 }}>
+          A 90s-style virtual pet handheld. Hatch an egg, feed it by reading posts,
+          play mini-games, and evolve it into an Australian native — Quokka, Platypus,
+          Kookaburra and more. Neglect it at your peril.
         </p>
-        <BoulderingSection />
+        <TamaSection />
       </div>
 
       {/* My Story */}
