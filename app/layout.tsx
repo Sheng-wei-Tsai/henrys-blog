@@ -3,22 +3,34 @@ import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { AuthProvider } from '@/components/AuthProvider';
+import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
-  title: { default: 'My Little Corner', template: '%s · My Little Corner' },
-  description: 'Thoughts on tech, design, life, and everything in between.',
+  title: { default: 'Henry Tsai — Full Stack Developer', template: '%s · Henry Tsai' },
+  description: 'Henry Tsai — Full stack developer in Brisbane. Job search tools, AI interview prep, cover letter generator, and writing about web development and AI.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
+    <html lang="en" data-theme="light" suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <AuthProvider>
           <Header />
           <main style={{ minHeight: '70vh' }}>
             {children}
           </main>
           <Footer />
+          <Toaster
+            position="bottom-right"
+            toastOptions={{
+              style: {
+                fontFamily: 'inherit',
+                fontSize: '0.88rem',
+                borderRadius: '10px',
+                border: '1px solid var(--parchment)',
+              },
+            }}
+          />
         </AuthProvider>
       </body>
     </html>
