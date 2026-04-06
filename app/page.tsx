@@ -216,21 +216,25 @@ export default function HomePage() {
                 transition: 'transform 0.15s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.15s ease',
               }}>
                 <div style={{
-                  width: '36px', height: '36px',
-                  borderRadius: '6px', marginBottom: '0.8rem',
-                  background: `${tool.accent}18`,
-                  border: `2px solid ${tool.accent}40`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: tool.accent,
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  gap: '0.6rem', marginBottom: '0.6rem',
                 }}>
-                  {tool.icon}
-                </div>
-                <div style={{
-                  fontFamily: "'Lora', serif", fontWeight: 700,
-                  fontSize: '0.97rem', color: 'var(--brown-dark)',
-                  marginBottom: '0.4rem',
-                }}>
-                  {tool.title}
+                  <div style={{
+                    fontFamily: "'Lora', serif", fontWeight: 700,
+                    fontSize: '0.97rem', color: 'var(--brown-dark)',
+                  }}>
+                    {tool.title}
+                  </div>
+                  <div style={{
+                    width: '36px', height: '36px', flexShrink: 0,
+                    borderRadius: '6px',
+                    background: `${tool.accent}18`,
+                    border: `2px solid ${tool.accent}40`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: tool.accent,
+                  }}>
+                    {tool.icon}
+                  </div>
                 </div>
                 <div style={{
                   fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.55,
