@@ -202,11 +202,7 @@ export default function HomePage() {
             Free to use — designed for developers job-hunting in Australia.
           </p>
         </div>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-          gap: '1rem',
-        }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {tools.map(tool => (
             <Link key={tool.href} href={tool.href} className="tool-card" style={{ textDecoration: 'none' }}>
               <div style={{

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 import { YoutubeTranscript } from 'youtube-transcript';
-import { requireSubscription, recordUsage } from '@/lib/subscription';
+import { requireSubscription, recordUsage, checkEndpointRateLimit } from '@/lib/subscription';
+import { rateLimitResponse } from '@/lib/auth-server';
 
 const SCHEMA = `{
   "summary": "3-4 sentence plain-English overview of what this video teaches and who it is for",
@@ -40,6 +41,9 @@ const SCHEMA = `{
 export async function POST(req: NextRequest) {
   const auth = await requireSubscription();
   if (auth instanceof NextResponse) return auth;
+
+  // Per-endpoint daily limit (20 calls — most expensive route at ~$0.035/call)
+  if (!(await checkEndpointRateLimit(auth.user.id, 'learn/analyse'))) return rateLimitResponse();
 
   let body: { videoId?: string; videoTitle?: string; channelTitle?: string };
   try { body = await req.json(); }

@@ -13,8 +13,14 @@ import {
   rateLimitResponse,
 } from './auth-server';
 
-// Pro users: max AI calls per 24-hour rolling window
-const PRO_DAILY_LIMIT = 100;
+// Pro users: max AI calls per 24-hour rolling window (global across all endpoints)
+const PRO_DAILY_LIMIT = 50;
+
+// Per-endpoint daily limits for expensive operations (checked separately in those routes)
+export const ENDPOINT_LIMITS: Record<string, number> = {
+  'learn/analyse': 20,   // ~$0.035/call — most expensive
+  'resume-match':  30,   // ~$0.020/call
+};
 
 // ── Subscription status ───────────────────────────────────────────────
 interface SubStatus {
@@ -50,14 +56,27 @@ export async function getSubscriptionStatus(userId: string): Promise<SubStatus> 
 export async function checkRateLimit(userId: string): Promise<boolean> {
   const sb = createSupabaseService();
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
   const { count } = await sb
     .from('api_usage')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', userId)
     .gte('called_at', since);
-
   return (count ?? 0) < PRO_DAILY_LIMIT;
+}
+
+// ── Per-endpoint rate limit (for expensive routes) ────────────────────
+export async function checkEndpointRateLimit(userId: string, endpoint: string): Promise<boolean> {
+  const limit = ENDPOINT_LIMITS[endpoint];
+  if (!limit) return true;            // no per-endpoint limit defined
+  const sb = createSupabaseService();
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count } = await sb
+    .from('api_usage')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('endpoint', endpoint)
+    .gte('called_at', since);
+  return (count ?? 0) < limit;
 }
 
 // ── Record a single API call ──────────────────────────────────────────

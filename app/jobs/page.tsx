@@ -73,8 +73,9 @@ function JobCard({ job, savedIds, onSaveToggle, onApply }: {
       onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 6px 24px rgba(44,31,20,0.08)')}
       onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1 }}>
+      {/* Top row: title/meta + age badge */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.75rem' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <h3 style={{ fontFamily: "'Lora', serif", fontSize: '1.05rem', fontWeight: 600, color: 'var(--brown-dark)', marginBottom: '0.3rem' }}>
             {job.title}
           </h3>
@@ -92,45 +93,44 @@ function JobCard({ job, savedIds, onSaveToggle, onApply }: {
             )}
           </div>
         </div>
+        <span style={{ fontSize: '0.78rem', fontWeight: 600, color: ageColor, flexShrink: 0 }}>{ageLabel}</span>
+      </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem', flexShrink: 0 }}>
-          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: ageColor }}>{ageLabel}</span>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button
-              onClick={() => onSaveToggle(job)}
-              title={isSaved ? 'Remove from saved' : 'Save job'}
-              style={{
-                background: isSaved ? '#fff3f0' : 'var(--warm-white)',
-                border: `1px solid ${isSaved ? 'var(--terracotta)' : 'var(--parchment)'}`,
-                borderRadius: '99px', padding: '0.4rem 0.8rem',
-                fontSize: '0.85rem', cursor: 'pointer',
-                color: isSaved ? 'var(--terracotta)' : 'var(--text-muted)',
-                transition: 'all 0.2s',
-              }}
-            >
-              {isSaved ? '♥ Saved' : '♡ Save'}
-            </button>
-            <a
-              href={`/cover-letter?title=${encodeURIComponent(job.title)}&company=${encodeURIComponent(job.company)}&desc=${encodeURIComponent(job.description)}`}
-              style={{
-                background: 'white', color: 'var(--terracotta)',
-                padding: '0.4rem 0.8rem', borderRadius: '99px',
-                border: '1px solid var(--terracotta)',
-                fontSize: '0.85rem', fontWeight: 500, textDecoration: 'none',
-              }}>
-              ✍️ Cover Letter
-            </a>
-            <a href={job.url} target="_blank" rel="noopener noreferrer"
-              onClick={() => onApply(job)}
-              style={{
-                background: 'var(--terracotta)', color: 'white',
-                padding: '0.4rem 1rem', borderRadius: '99px',
-                fontSize: '0.85rem', fontWeight: 500, textDecoration: 'none',
-              }}>
-              Apply →
-            </a>
-          </div>
-        </div>
+      {/* Action buttons — always visible, wrap on mobile */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+        <button
+          onClick={() => onSaveToggle(job)}
+          title={isSaved ? 'Remove from saved' : 'Save job'}
+          style={{
+            background: isSaved ? '#fff3f0' : 'var(--warm-white)',
+            border: `1px solid ${isSaved ? 'var(--terracotta)' : 'var(--parchment)'}`,
+            borderRadius: '99px', padding: '0.4rem 0.8rem',
+            fontSize: '0.85rem', cursor: 'pointer',
+            color: isSaved ? 'var(--terracotta)' : 'var(--text-muted)',
+            transition: 'all 0.2s',
+          }}
+        >
+          {isSaved ? '♥ Saved' : '♡ Save'}
+        </button>
+        <a
+          href={`/cover-letter?title=${encodeURIComponent(job.title)}&company=${encodeURIComponent(job.company)}&desc=${encodeURIComponent(job.description)}`}
+          style={{
+            background: 'white', color: 'var(--terracotta)',
+            padding: '0.4rem 0.8rem', borderRadius: '99px',
+            border: '1px solid var(--terracotta)',
+            fontSize: '0.85rem', fontWeight: 500, textDecoration: 'none',
+          }}>
+          ✍️ Cover Letter
+        </a>
+        <a href={job.url} target="_blank" rel="noopener noreferrer"
+          onClick={() => onApply(job)}
+          style={{
+            background: 'var(--terracotta)', color: 'white',
+            padding: '0.4rem 1rem', borderRadius: '99px',
+            fontSize: '0.85rem', fontWeight: 500, textDecoration: 'none',
+          }}>
+          Apply →
+        </a>
       </div>
 
       <div style={{ marginTop: '0.8rem', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>

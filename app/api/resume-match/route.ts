@@ -1,8 +1,8 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { resume } from '@/lib/resume-data';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { requireSubscription, recordUsage, checkEndpointRateLimit } from '@/lib/subscription';
+import { rateLimitResponse } from '@/lib/auth-server';
 
 const resumeText = `
 Name: ${resume.name}
@@ -14,18 +14,15 @@ Education: ${resume.education.map(e => `${e.degree} from ${e.institution}`).join
 `.trim();
 
 export async function POST(req: NextRequest) {
-  // Require authentication — this endpoint calls a paid API
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
-  );
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-  }
+  const auth = await requireSubscription();
+  if (auth instanceof NextResponse) return auth;
 
+  // Per-endpoint daily limit (30 calls — expensive route at ~$0.020/call)
+  if (!(await checkEndpointRateLimit(auth.user.id, 'resume-match'))) return rateLimitResponse();
+
+  if (!process.env.OPENAI_API_KEY) {
+    return new Response(JSON.stringify({ error: 'OpenAI API not configured' }), { status: 503 });
+  }
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   let body: { jobDescription?: string };
@@ -75,6 +72,7 @@ Rules:
     max_tokens: 900,
   });
 
+  void recordUsage(auth.user.id, 'resume-match');
   const raw = response.choices[0].message.content ?? '{}';
   return new Response(raw, { headers: { 'Content-Type': 'application/json' } });
 }
