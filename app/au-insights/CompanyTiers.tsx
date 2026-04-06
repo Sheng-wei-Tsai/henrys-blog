@@ -1,4 +1,20 @@
 'use client';
+import Link from 'next/link';
+
+// Map company display name → detail page slug
+const COMPANY_SLUGS: Record<string, string> = {
+  'Optiver': 'optiver',
+  'Atlassian': 'atlassian',
+  'Canva': 'canva',
+  'SafetyCulture': 'safetyCulture',
+  'Google AU': 'google-au',
+  'AWS': 'amazon-aws',
+  'Accenture': 'accenture',
+  'Deloitte Tech': 'deloitte-digital',
+  'IBM AU': 'ibm-au',
+  'TCS': 'tcs',
+  'CBA / CommBank': 'cba',
+};
 
 const TIERS = [
   {
@@ -148,16 +164,26 @@ export default function CompanyTiers() {
           {/* Companies */}
           {tier.companies.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.9rem' }}>
-              {tier.companies.map(c => (
-                <span key={c} style={{
+              {tier.companies.map(c => {
+                const slug = COMPANY_SLUGS[c];
+                const chipStyle = {
                   fontSize: '0.78rem', fontWeight: 600,
                   padding: '0.2rem 0.6rem', borderRadius: '4px',
                   background: 'rgba(255,255,255,0.7)', border: `1px solid ${tier.border}`,
                   color: tier.color,
-                }}>
-                  {c}
-                </span>
-              ))}
+                  textDecoration: 'none',
+                  display: 'inline-block',
+                  cursor: slug ? 'pointer' : 'default',
+                  transition: 'background 0.1s ease',
+                };
+                return slug ? (
+                  <Link key={c} href={`/au-insights/companies/${slug}`} style={chipStyle}>
+                    {c} →
+                  </Link>
+                ) : (
+                  <span key={c} style={chipStyle}>{c}</span>
+                );
+              })}
             </div>
           )}
 

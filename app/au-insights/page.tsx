@@ -3,13 +3,15 @@ import { useState } from 'react';
 import CompanyTiers from './CompanyTiers';
 import ITEcosystem from './ITEcosystem';
 import CareerGuide from './CareerGuide';
+import Sponsorship from './Sponsorship';
 
-type Tab = 'tiers' | 'ecosystem' | 'guide';
+type Tab = 'tiers' | 'ecosystem' | 'guide' | 'sponsorship';
 
 const TABS: { id: Tab; label: string; icon: string; desc: string }[] = [
-  { id: 'tiers',     label: 'Company Tiers',  icon: '🏆', desc: 'From God Tier to Avoid — ranked by eng culture, growth & comp' },
-  { id: 'ecosystem', label: 'IT Ecosystem',   icon: '🗂',  desc: 'How the 4 layers of AU IT connect — and which one to target' },
-  { id: 'guide',     label: 'Career Guide',   icon: '🚀', desc: 'Grad programs, resume rules, job market, offers & career path' },
+  { id: 'tiers',       label: 'Company Tiers',  icon: '🏆', desc: 'From God Tier to Avoid — ranked by eng culture, growth & comp. Click any company for a full profile.' },
+  { id: 'ecosystem',   label: 'IT Ecosystem',   icon: '🗂',  desc: 'How the 4 layers of AU IT connect — and which one to target' },
+  { id: 'sponsorship', label: 'Visa Sponsors',  icon: '🛂', desc: 'Top 20 IT companies ranked by 482 visa sponsorship volume — with data sources' },
+  { id: 'guide',       label: 'Career Guide',   icon: '🚀', desc: 'Grad programs, resume rules, job market, offers & career path' },
 ];
 
 export default function AUInsightsPage() {
@@ -74,9 +76,10 @@ export default function AUInsightsPage() {
       ))}
 
       {/* Tab content */}
-      {activeTab === 'tiers'     && <CompanyTiers />}
-      {activeTab === 'ecosystem' && <ITEcosystem />}
-      {activeTab === 'guide'     && <CareerGuide />}
+      {activeTab === 'tiers'       && <CompanyTiers />}
+      {activeTab === 'ecosystem'   && <ITEcosystem />}
+      {activeTab === 'sponsorship' && <Sponsorship />}
+      {activeTab === 'guide'       && <CareerGuide />}
 
     </div>
   );
