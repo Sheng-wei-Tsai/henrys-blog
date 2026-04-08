@@ -46,7 +46,7 @@ function Dashboard() {
         Admin Panel
       </h1>
       <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem', fontSize: '0.9rem' }}>
-        Overview · <Link href="/admin/users" style={{ color: 'var(--terracotta)' }}>Manage users</Link> · <Link href="/admin/comments" style={{ color: 'var(--terracotta)' }}>Manage comments</Link>
+        Overview · <Link href="/admin/users" style={{ color: 'var(--terracotta)' }}>Manage users</Link> · <Link href="/admin/comments" style={{ color: 'var(--terracotta)' }}>Manage comments</Link> · <Link href="/admin/analytics" style={{ color: 'var(--terracotta)' }}>Analytics</Link>
       </p>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '3rem' }}>

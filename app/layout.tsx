@@ -3,6 +3,7 @@ import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { AuthProvider } from '@/components/AuthProvider';
+import Analytics from '@/components/Analytics';
 import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
@@ -16,6 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" data-theme="light" suppressHydrationWarning>
       <body suppressHydrationWarning>
         <AuthProvider>
+          <Analytics />
           <Header />
           <main style={{ minHeight: '70vh' }}>
             {children}
