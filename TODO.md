@@ -1,181 +1,172 @@
 # TODO — Henry Blog Feature Backlog
 
-Ordered highest → lowest priority. Maps to specs in `features/`.
-Last updated: 2026-04-05
+Last updated: 2026-04-08
 
 ---
 
-## 🏃 Sprint 1 — Ship quality (do this week)
+## 🏃 In Progress / Next Up
 
-### 1. Sitemap + robots.txt — `features/site-ux.md` ✅
-**Why:** Google can't index the site without these. `app/sitemap.ts` and `app/robots.ts` are already untracked in git — check if they're written, wire them in.
-- [x] `app/sitemap.ts` — all static pages + blog/digest/githot slugs
-- [x] `app/robots.ts` — allow all, Sitemap directive
-- [x] Verify `/sitemap.xml` and `/robots.txt` return 200 in production
-- [ ] **Manual step:** Set `NEXT_PUBLIC_APP_URL=https://henrys-blog.vercel.app` in Vercel → Settings → Environment Variables (Production only)
+### 2. ~~Upgrade cover letter model~~ ✅
+- Upgraded both `cover-letter` and `resume-match` routes from `gpt-4o` → `gpt-4.1`
+- Tightened system prompts: 4-paragraph structure, AU English rules, banned buzzwords, scoring guide
+- Inline editing + copy-edits already built
 
-### 2. Duplicate post detection — `features/ai-pipelines.md` ✅
-**Why:** Cron runs twice a day → duplicate MDX files piling up. 15-minute fix.
-- [x] `scripts/run-post.ts` — exits early if any file with today's date prefix exists in `content/posts/`
-- [x] `scripts/run-githot.ts` — exits early if `content/githot/${today}.md` exists
-- [x] `scripts/run-digest.ts` — exits early if `content/digests/${today}.md` exists
-- [ ] **Manual:** Check all three content dirs for existing duplicates and delete them
-
-### 3. Mobile: cover letter page broken at 375px — `features/site-ux.md` ✅
-**Why:** Most AU job seekers browse on mobile. The main monetizable feature is unusable on iPhone.
-- [x] Two-panel grid → single column stack on ≤ 768px (CSS moved to globals.css)
-- [x] Fixed "Generate" bar pinned to bottom of viewport on mobile
-- [x] Desktop button hidden on mobile, mobile bar hidden on desktop
-- [ ] **Manual:** Test at 375px (iPhone SE) + 430px (iPhone 15 Pro Max) in Chrome DevTools
-
-### 4. Interview prep polish — `features/interview-prep.md` ✅
-**Why:** Session progress lost on refresh, score has no context. Breaks trust in the feature.
-- [x] Save `completedStages` + `currentIndex` to `localStorage('interview-session-{roleId}')` — already implemented
-- [x] Score benchmark bands in debrief (Exceptional / Strong / Interview-ready / Needs work) — already implemented
-- [x] `Cmd+Enter` / `Ctrl+Enter` submits answer in PRACTICE stage (text + code)
-- [x] Mobile sidebar hidden on ≤768px, progress dots shown — fixed inline `display:none` overriding CSS class
+### 3. ~~Learning platform — Supabase sync~~ ✅
+- Already fully implemented: PathTracker reads/writes `skill_progress` on mount + every tick
+- localStorage fallback for guests in both PathTracker and PathProgress
+- `/learn` index shows `X / Y topics` via PathProgress component
 
 ---
 
-## 🔨 Sprint 2 — Higher quality output (next week)
+## 🔨 AU Insights — Remaining Work
 
-### 5. Upgrade OpenAI model + cover letter polish — `features/resume-cover-letter.md`
-**Why:** Currently using `gpt-4o-mini` — you're on OpenAI Pro, upgrade to the latest model on your plan for noticeably better output. Check `platform.openai.com/docs/models` for the current model name before starting.
-- [ ] `app/api/cover-letter/route.ts` — upgrade model string, tighten system prompt (AU English, tone, length)
-- [ ] `app/api/resume-match/route.ts` — same model upgrade
-- [ ] Inline editing of generated cover letter (output textarea becomes editable after streaming completes)
-- [ ] Copy button copies the edited version, not the original generated string
-- [ ] Test streaming still works after model upgrade
+### 4. Framer Motion — extend animations beyond Company Tiers ✅ (Tiers done)
+- [ ] Skill Map — animate match bars with `motion` on `whileInView`
+- [ ] Company Compare — radar chart draws in on load (SVG `pathLength` animation)
+- [ ] Visa Guide — step expand/collapse with `AnimatePresence`
+- [ ] Grad Programs — card entrance stagger on tab reveal
 
-### 6. Learning platform — Supabase sync — `features/learning-platform.md`
-**Why:** Logged-in users lose all progress when they switch devices. The DB migration (`skill_progress` table) already exists — just wire up the writes.
-- [ ] `PathTracker.tsx` reads initial state from `skill_progress` on mount (auth users)
-- [ ] Every checkbox tick → upsert to Supabase
-- [ ] `localStorage` kept as fallback for guests
-- [ ] `/learn` index shows `X / Y topics` completion per path
+### 5. Visa Journey Tracker — `features/visa-journey-tracker.md`
+**Why:** Public VisaGuide tab is built. Personal auth-gated tracker is the logical next step.
+- [ ] `supabase/007_visa_tracker.sql` — user progress table
+- [ ] `app/api/visa-tracker/route.ts` — save/load progress
+- [ ] `app/dashboard/visa-tracker/page.tsx` — step-by-step tracker with date inputs + doc checklists
+- [ ] Dashboard card linking to it
+- [ ] Link from VisaGuide tab: "Track your journey →"
+
+### 6. Framer — Company Tiers chip interaction polish
+- [ ] Ghost logo: increase size on high-res displays (srcset or `sz=128`)
+- [ ] Tier card: add subtle gradient shimmer on hover for God/S+ tiers
+
+---
+
+## 🚀 New Features (High Impact)
 
 ### 7. Open Graph images — `features/site-ux.md`
-**Why:** LinkedIn shares from the blog show a blank preview. LinkedIn is the primary growth channel for an AU dev blog.
-- [ ] `app/opengraph-image.tsx` — default site OG (name + tagline + colour)
+**Why:** LinkedIn shares show blank preview. LinkedIn = primary growth channel for AU dev blog.
+- [ ] `app/opengraph-image.tsx` — site-wide OG (name + tagline + palette)
 - [ ] `app/blog/[slug]/opengraph-image.tsx` — per-post OG with title + date
 
----
+### 8. Blog search + filters — `features/blog-content.md`
+**Why:** Growing content library with no way to navigate it.
+- [ ] Client-side search/filter on `/blog` (title + tag, no backend)
+- [ ] "AI-generated" badge on digest/githot posts
+- [ ] Estimated reading time (package already installed)
 
-## 🚀 Sprint 3 — New value (week 3)
-
-### 8. Resume Career Coach v1 — `features/resume-career-coach.md`
-**Why:** Highest-value new feature. Tools like Jobscan charge $50/month for this. With AU localisation + Claude, you can offer it as part of your paid tier.
-- [ ] Resume upload (PDF or paste text)
-- [ ] JD input textarea
-- [ ] Claude gap analysis → structured report: matched skills, missing skills, specific action items
-- [ ] Supabase cache layer (don't re-analyse same JD twice)
-- [ ] Gate behind subscription (Pro tier)
-
-### 9. Learning platform — streaks + more paths — `features/learning-platform.md`
-**Why:** Streaks turn a checklist into a habit. Once Supabase sync is done (Sprint 2), streaks are a small addition.
-- [ ] Daily streak counter in Supabase (`last_active_date` + `streak_days`)
+### 9. Learning streaks + new paths — `features/learning-platform.md`
+Depends on #3 (Supabase sync) first.
+- [ ] Daily streak counter (`last_active_date` + `streak_days` in Supabase)
 - [ ] Streak display on `/learn` index
 - [ ] Data Engineer path (8+ topics)
 - [ ] DevOps/Cloud path (8+ topics)
 
----
-
-## 🟡 Medium Priority (queue for later)
-
-### 10. Blog search + AI badge — `features/blog-content.md`
-**Why:** Returning visitors can't find older posts. Growing content = growing need for search.
-- [ ] Client-side search/filter on `/blog` (filter by title/tag, no backend needed)
-- [ ] "AI-generated" badge on automated digest/githot posts
-- [ ] Estimated reading time per post (already have `reading-time` package installed)
+### 10. Jobs — working rights filter — `features/job-search.md`
+**Why:** 485 visa holders need sponsorship-friendly roles.
+- [ ] "Full Working Rights Only" toggle in job search
+- [ ] Persist filter to localStorage
 
 ### 11. Interview prep — company career links — `features/interview-prep.md`
-**Why:** Company pills are decorative. Users expect them to navigate to actual AU careers pages.
-- [ ] Map companies to AU careers page URLs in `lib/interview-roles.ts`
-- [ ] Pills → `<a target="_blank">` links
+- [ ] Map companies → AU careers page URLs in `lib/interview-roles.ts`
+- [ ] Company pills → `<a target="_blank">` links
 
-### 12. Jobs — working rights filter — `features/job-search.md`
-**Why:** 485 visa holders + international grads need to filter for sponsorship-friendly roles.
-- [ ] "Full Working Rights Only" toggle → appends to keyword query
-- [ ] Filter persisted to localStorage
-
-### 13. AI Pipelines — ArXiv digest + GitHub Hot nav — `features/ai-pipelines.md`
-- [ ] `scripts/run-digest.ts` — add ArXiv same-day papers, timeout 10s, fail gracefully
-- [ ] GitHub Hot added to header nav
-
-### 14. Post cover images — `features/post-cover-images.md`
-- [ ] Auto-select or generate cover images for blog posts in feed
+### 12. YouTube Video Learning — `features/learn-youtube.md`
+**Why:** Already partially built (`/learn/youtube` route exists). Gemini integration pending.
+- [ ] Wire Gemini 1.5 Flash to analyse YouTube videos directly (multimodal URL support)
+- [ ] Study guide streaming: summary, key concepts, AU market context, study tips
+- [ ] Quiz generation from video content
+- [ ] "Open in NotebookLM" escape hatch button
+- [ ] Progress tracking per video
 
 ---
 
-## 🌏 Showcase Features (build when foundations are solid)
+## 🌏 Showcase Features (When Foundations Are Solid)
 
-### 15. Claude Lab — interactive terminal learning — `features/learn-anthropic-claude.md`
-**Why:** Flagship showpiece feature — gamified terminal with xterm.js, 15 missions covering Anthropic + Claude Code + AI workflows. High build cost, high wow factor.
-- [ ] Install `@xterm/xterm` + `@xterm/addon-fit`
-- [ ] `ClaudeLab.tsx` — xterm mount in Next.js Client Component
-- [ ] `commandParser.ts` — command state machine
-- [ ] `missions.ts` — 15 mission definitions
-- [ ] `fakeFs.ts` — fake filesystem for `ls`, `cat`, `pwd`
+### 13. Claude Lab — interactive terminal learning — `features/learn-anthropic-claude.md`
+**Why:** Flagship showpiece. Gamified xterm.js terminal with 15 missions covering Claude Code + AI workflows.
+- [ ] `@xterm/xterm` + `@xterm/addon-fit` installed
+- [ ] `ClaudeLab.tsx` — xterm mount in Client Component
+- [ ] `commandParser.ts` + `missions.ts` + `fakeFs.ts`
 - [ ] `/api/learn/claude-lab` — Claude API proxy, rate-limited
 - [ ] XP / badges / streak system
-- [ ] Link from `/learn` page
 
-### 16. Traditional Chinese translation — `features/i18n-zh-tw.md`
-**Why:** Serves Taiwanese/HK Brisbane community. ~80 strings, `next-intl` library.
-- [ ] Install `next-intl`
-- [ ] `messages/en.json` + `messages/zh-TW.json`
-- [ ] `LangToggle.tsx` component (mirrors ThemeToggle pattern)
-- [ ] Wire into Header + all pages
+### 14. Traditional Chinese translation — `features/i18n-zh-tw.md`
+**Why:** Serves Taiwanese/HK Brisbane community.
+- [ ] `next-intl` installed
+- [ ] `messages/en.json` + `messages/zh-TW.json` (~80 strings)
+- [ ] `LangToggle.tsx` in header
 
 ---
 
 ## 🟢 Nice to Have
 
-### 17. Session share card — `features/interview-prep.md`
-- [ ] PNG card on interview session complete (role, score, date) → LinkedIn share
+### 15. Interview session share card
+- [ ] PNG share card on session complete (role, score, date) → LinkedIn share
 
-### 18. RSS feed — `features/site-ux.md`
+### 16. RSS feed
 - [ ] `app/feed.xml/route.ts` → RSS 2.0 for blog + digests
 
-### 19. Reading progress bar — `features/site-ux.md`
+### 17. Reading progress bar
 - [ ] Thin scroll-progress bar at top of blog post pages
+
+### 18. AI pipeline — ArXiv digest + GitHub Hot nav
+- [ ] `scripts/run-digest.ts` — add ArXiv same-day papers
+- [ ] GitHub Hot added to header nav
+
+### 19. Post cover images — `features/post-cover-images.md`
+- [ ] Auto-select or generate cover images for blog posts in feed
 
 ---
 
 ## ✅ Done
 
-- **Job search:** JSearch (Google for Jobs) replaces dead Indeed feed
-- **Job search:** Freshness colours (green/amber/red per age)
-- **Job search:** Salary range + IT category filters
-- **Job search:** localStorage preference persistence
-- **Job search:** Save Search → `job_alerts` table + `/api/alerts` CRUD
-- **Job search:** One-click Apply → `job_applications` row + "Track it →" toast
-- **Job search:** Default search fires on page load (no dead empty state)
-- **Job search:** Quick-start pills (Graduate Developer, Junior Full Stack etc.)
-- **Dashboard:** Alerts tab (view + delete saved searches)
-- **Dashboard:** "Prep for Interview" CTA when application status → interview
-- **Interview prep:** Streaming Alex mentor narration + question sidebar
-- **About page:** Petcho virtual pet (Claude Code buddy)
-- **Site metadata:** Title + description updated for SEO + recruiter trust
-- **Auth:** GitHub OAuth + Supabase SSR (proxy.ts replacing middleware.ts)
-- **Auth:** Login page — loading states, card layout, Suspense wrapper
-- **Mobile nav:** Jobs tab, Me/avatar tab, reorganised More sheet
-- **Theme:** Light mode default + localStorage persistence
-- **Theme:** Yin-yang rolling animation on toggle (Web Animations API)
-- **Theme:** Dropdown tab contrast fixed (CSS variable background)
-- **Typography:** h1/h2 consistent Lora serif throughout
-- **TamaAussie:** Redesigned as landscape WezTerm-style terminal interface
-- **Pre-push quality gate:** `npm run check` hook (npm audit + next build)
-- **Features specced:** i18n-zh-tw, learn-anthropic-claude (Claude Lab terminal)
+### AU Insights
+- **Company Interview Questions** — all 11 companies seeded with 5-7 real sourced questions, round chips, Glassdoor deeplinks (`interviewProcess` + `interviewQuestions` in data.ts, rendered on company detail pages)
+- **Company Tiers** — all 8 tiers, Framer scroll entrance + hover lift, favicon chips, ghost logo watermark
+- **IT Ecosystem** — 4-layer AU IT map
+- **Career Guide** — full guide, all palette-themed
+- **Visa Sponsors** — top 20 companies by 482 volume
+- **Job Market Charts** — ABS/ACS/QILT data
+- **Salary Checker** — AI verdict vs ACS benchmarks + negotiation script
+- **Grad Programs** — live status, deadlines, favicons, direct application links
+- **Skill Map** — OR-group skill matching, animated match bars, company chips
+- **Visa Guide** — 6-step 482/SID stepper (public, read-only)
+- **Company Compare** — multi-select, 8-row table, SVG radar chart
+- **Company detail pages** — `/au-insights/companies/[slug]` with website links, tier colours, culture data
+
+### Resume & Career
+- **Resume Analyser** — auth-gated, PDF upload, Claude AU recruiter prompt, score ring, action items, dashboard card
+
+### Dashboard
+- **Career Tools section** — Resume Analyser + Interview Prep + AU Insights cards
+- **Saved jobs** — save, unsave, add to tracker
+- **Application tracker** — status pipeline, "Prep for interview" CTA on interview status
+- **Job alerts** — saved searches, delete
+
+### Core
+- **Auth** — GitHub OAuth + Supabase SSR
+- **Stripe** — checkout + portal + webhook
+- **Job search** — JSearch API, filters, freshness colours, save/apply
+- **Interview prep** — streaming Alex mentor, question sidebar, score debrief
+- **Cover letter** — streaming generation, resume match scoring (gpt-4o-mini)
+- **Learning paths** — Frontend / Fullstack / Backend, checkbox progress, localStorage
+- **YouTube learning** — `/learn/youtube` route + video session page (Gemini integration pending)
+- **IBM learning** — `/learn/ibm` curated content
+- **Comments** — auth-gated, per-post, admin moderation
+- **Admin panel** — `/admin` stats, users, comment moderation
+- **Sitemap + robots.txt** — SEO ready
+- **Pre-push quality gate** — `npm run check` (audit + build)
+- **Mobile nav** — Jobs, Me/avatar, More sheet
+- **Theme** — light default, yin-yang toggle animation
+- **About page** — Petcho virtual pet
 
 ---
 
-## Honest priority rationale
+## Priority Rationale
 
-The product has strong bones — job search works, interview prep mostly works, cover letter is live with Stripe gating. The gap between "working" and "professional" is:
-
-1. **SEO** — no indexing = no organic growth (Sprint 1)
-2. **Mobile polish** — broken on the device most users have (Sprint 1)
-3. **Data quality** — latest OpenAI model > gpt-4o-mini for the core value prop (Sprint 2, staying on OpenAI Pro plan)
-4. **Persistence** — progress lost on device switch undermines trust (Sprint 2)
-5. **New value** — Resume Career Coach is the next monetizable feature (Sprint 3)
+| # | Item | Why now |
+|---|------|---------|
+| 1 | Interview questions on company pages | Unique AU data, high SEO value, low complexity |
+| 2 | Cover letter model upgrade | Immediate quality win for paying users |
+| 3 | Learning Supabase sync | Trust — progress loss = churn |
+| 4 | OG images | LinkedIn share = free distribution |
+| 5 | Visa Journey Tracker | Natural follow-on to VisaGuide, high value for target users |

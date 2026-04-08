@@ -123,6 +123,57 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Career Tools */}
+      <div style={{ marginBottom: '2rem' }}>
+        <h2 style={{ fontFamily: "'Lora', serif", fontSize: '1rem', fontWeight: 600, color: 'var(--brown-dark)', marginBottom: '0.8rem' }}>
+          Career Tools
+        </h2>
+        <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
+          <a href="/dashboard/resume-analyser" style={{
+            display: 'flex', alignItems: 'center', gap: '0.75rem',
+            flex: 1, minWidth: '200px',
+            background: 'var(--warm-white)', border: '1px solid var(--parchment)',
+            borderLeft: '3px solid var(--terracotta)',
+            borderRadius: '10px', padding: '1rem 1.2rem',
+            textDecoration: 'none',
+          }}>
+            <span style={{ fontSize: '1.6rem' }}>📄</span>
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--brown-dark)', fontSize: '0.92rem' }}>Resume Analyser</div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>AI feedback for the AU IT job market</div>
+            </div>
+          </a>
+          <a href="/interview-prep/junior-fullstack" style={{
+            display: 'flex', alignItems: 'center', gap: '0.75rem',
+            flex: 1, minWidth: '200px',
+            background: 'var(--warm-white)', border: '1px solid var(--parchment)',
+            borderLeft: '3px solid var(--jade)',
+            borderRadius: '10px', padding: '1rem 1.2rem',
+            textDecoration: 'none',
+          }}>
+            <span style={{ fontSize: '1.6rem' }}>🎯</span>
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--brown-dark)', fontSize: '0.92rem' }}>Interview Prep</div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>Practice with Alex, your AI mentor</div>
+            </div>
+          </a>
+          <a href="/au-insights" style={{
+            display: 'flex', alignItems: 'center', gap: '0.75rem',
+            flex: 1, minWidth: '200px',
+            background: 'var(--warm-white)', border: '1px solid var(--parchment)',
+            borderLeft: '3px solid var(--gold)',
+            borderRadius: '10px', padding: '1rem 1.2rem',
+            textDecoration: 'none',
+          }}>
+            <span style={{ fontSize: '1.6rem' }}>🗺</span>
+            <div>
+              <div style={{ fontWeight: 600, color: 'var(--brown-dark)', fontSize: '0.92rem' }}>AU IT Insights</div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>Salaries, visas, skill map & more</div>
+            </div>
+          </a>
+        </div>
+      </div>
+
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
           {([

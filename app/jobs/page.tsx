@@ -159,7 +159,8 @@ export default function JobsPage() {
   const [keywords,  setKeywords]  = useState<string>(prefs.keywords  ?? 'software developer');
   const [location,  setLocation]  = useState<string>(prefs.location  ?? 'Brisbane');
   const [sortBy,    setSortBy]    = useState<string>(prefs.sortBy    ?? 'date');
-  const [fullTime,  setFullTime]  = useState<boolean>(prefs.fullTime ?? false);
+  const [fullTime,      setFullTime]      = useState<boolean>(prefs.fullTime      ?? false);
+  const [workingRights, setWorkingRights] = useState<boolean>(prefs.workingRights ?? false);
   const [category,  setCategory]  = useState<string>(prefs.category  ?? 'All');
   const [salaryMin, setSalaryMin] = useState<string>(prefs.salaryMin ?? '');
   const [salaryMax, setSalaryMax] = useState<string>(prefs.salaryMax ?? '');
@@ -191,16 +192,17 @@ export default function JobsPage() {
 
   // Persist prefs to localStorage whenever they change
   useEffect(() => {
-    savePrefs({ keywords, location, sortBy, fullTime, category, salaryMin, salaryMax });
-  }, [keywords, location, sortBy, fullTime, category, salaryMin, salaryMax]);
+    savePrefs({ keywords, location, sortBy, fullTime, workingRights, category, salaryMin, salaryMax });
+  }, [keywords, location, sortBy, fullTime, workingRights, category, salaryMin, salaryMax]);
 
   const search = useCallback(async (p = 1) => {
     setLoading(true);
     setError('');
     setAlertSaved(false);
     try {
-      const catKeyword = CATEGORIES.find(c => c.label === category)?.keyword ?? '';
-      const fullQuery  = catKeyword ? `${keywords} ${catKeyword}` : keywords;
+      const catKeyword    = CATEGORIES.find(c => c.label === category)?.keyword ?? '';
+      const rightsKeyword = workingRights ? 'full working rights' : '';
+      const fullQuery     = [keywords, catKeyword, rightsKeyword].filter(Boolean).join(' ');
       const params = new URLSearchParams({
         keywords: fullQuery, location, sort_by: sortBy, page: String(p),
         ...(fullTime    ? { full_time: '1' }      : {}),
@@ -222,7 +224,7 @@ export default function JobsPage() {
     } finally {
       setLoading(false);
     }
-  }, [keywords, location, sortBy, fullTime, salaryMin, salaryMax]);
+  }, [keywords, location, sortBy, fullTime, workingRights, salaryMin, salaryMax]);
 
   const handleSaveToggle = async (job: AdzunaJob) => {
     if (!user) { router.push('/login'); return; }
@@ -335,6 +337,12 @@ export default function JobsPage() {
             <input type="checkbox" checked={fullTime} onChange={e => setFullTime(e.target.checked)}
               style={{ accentColor: 'var(--terracotta)', width: '15px', height: '15px' }} />
             Full-time only
+          </label>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.88rem', color: 'var(--text-secondary)', cursor: 'pointer' }} title="Filters for roles that specify 'full working rights' — useful for 485 visa holders and citizens">
+            <input type="checkbox" checked={workingRights} onChange={e => setWorkingRights(e.target.checked)}
+              style={{ accentColor: 'var(--jade)', width: '15px', height: '15px' }} />
+            Full working rights
           </label>
 
           <button onClick={() => search(1)} disabled={loading} style={{

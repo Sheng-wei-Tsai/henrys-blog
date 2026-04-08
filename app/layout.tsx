@@ -6,6 +6,7 @@ import { AuthProvider } from '@/components/AuthProvider';
 import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://henrysdigitallife.com'),
   title: { default: 'Henry Tsai — Full Stack Developer', template: '%s · Henry Tsai' },
   description: 'Henry Tsai — Full stack developer in Brisbane. Job search tools, AI interview prep, cover letter generator, and writing about web development and AI.',
 };

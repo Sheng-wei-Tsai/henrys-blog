@@ -107,20 +107,18 @@ function StudyGuideTab({ guide }: { guide: StudyGuide }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
             {(guide.sections ?? []).map((s, i) => (
               <div key={i} style={{
-                display: 'flex', gap: '0.75rem', padding: '0.75rem 0',
+                padding: '0.75rem 0',
                 borderBottom: i < (guide.sections?.length ?? 0) - 1 ? '1px solid var(--parchment)' : 'none',
               }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--terracotta)',
-                  whiteSpace: 'nowrap', paddingTop: '1px', minWidth: '64px' }}>
+                <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'var(--terracotta)',
+                  marginBottom: '0.2rem' }}>
                   {s.timestamp}
                 </span>
-                <div>
-                  <p style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--brown-dark)',
-                    margin: '0 0 0.2rem' }}>{s.title}</p>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
-                    {s.summary}
-                  </p>
-                </div>
+                <p style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--brown-dark)',
+                  margin: '0 0 0.2rem' }}>{s.title}</p>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+                  {s.summary}
+                </p>
               </div>
             ))}
           </div>

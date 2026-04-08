@@ -9,7 +9,8 @@
     "check": "npm audit --audit-level=moderate && next build",
     "digest": "npx tsx --env-file=.env.local scripts/run-digest.ts",
     "githot": "npx tsx --env-file=.env.local scripts/run-githot.ts",
-    "post": "npx tsx --env-file=.env.local scripts/run-post.ts"
+    "post": "npx tsx --env-file=.env.local scripts/run-post.ts",
+    "refresh:jsa": "npx tsx scripts/fetch-jsa.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
@@ -22,6 +23,7 @@
     "d3": "^7.9.0",
     "date-fns": "^4.1.0",
     "dotenv": "^17.3.1",
+    "framer-motion": "^12.38.0",
     "gray-matter": "^4.0.3",
     "mermaid": "^10.9.5",
     "next": "16.2.0",

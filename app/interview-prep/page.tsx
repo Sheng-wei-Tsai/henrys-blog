@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { INTERVIEW_ROLES } from '@/lib/interview-roles';
+import CompanyLinks from '@/components/CompanyLinks';
 
 export const metadata: Metadata = {
   title: 'Interview Prep — Australian IT Roles',
@@ -147,26 +148,7 @@ export default function InterviewPrepPage() {
                 </div>
 
                 {/* Companies */}
-                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                  {role.companies.slice(0, 3).map(c => (
-                    <span key={c} style={{
-                      fontSize: '0.68rem', color: 'var(--text-muted)',
-                      background: 'var(--parchment)',
-                      padding: '0.2em 0.5em', borderRadius: '4px',
-                    }}>
-                      {c}
-                    </span>
-                  ))}
-                  {role.companies.length > 3 && (
-                    <span style={{
-                      fontSize: '0.68rem', color: 'var(--text-muted)',
-                      background: 'var(--parchment)',
-                      padding: '0.2em 0.5em', borderRadius: '4px',
-                    }}>
-                      +{role.companies.length - 3} more
-                    </span>
-                  )}
-                </div>
+                <CompanyLinks companies={role.companies} />
               </div>
             </Link>
           ))}

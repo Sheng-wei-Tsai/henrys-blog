@@ -37,9 +37,9 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Missing job description' }), { status: 400 });
   }
 
-  const prompt = `You are an ATS (Applicant Tracking System) expert and Australian recruitment specialist.
+  const prompt = `You are an ATS expert and Australian IT recruitment specialist with 15+ years placing engineers at Atlassian, CBA, Accenture, and AWS.
 
-Analyse how well this resume matches the job description. Be specific and practical.
+Analyse how well this resume matches the job description for the Australian IT market. Be specific — name actual terms from both documents.
 
 RESUME:
 ${resumeText}
@@ -50,26 +50,30 @@ ${jobDescription.slice(0, 3000)}
 Return a JSON object with exactly this structure:
 {
   "score": <number 0-100>,
-  "summary": "<2 sentence assessment>",
-  "matched": ["<keyword or skill found in both>", ...],
-  "missing": ["<important keyword/skill from JD not in resume>", ...],
-  "suggestions": ["<specific actionable tip to improve match>", ...]
+  "summary": "<2 sentence honest assessment — mention the strongest match AND the biggest gap>",
+  "matched": ["<exact keyword, skill, or tool found in both documents>", ...],
+  "missing": ["<important keyword/skill/tool from JD that is absent or weak in resume>", ...],
+  "suggestions": ["<specific, actionable tip — quote the JD term and where to add it in the resume>", ...]
 }
 
-Rules:
-- matched: list actual keywords/skills/tools that appear in both
-- missing: list important technical terms, tools, or soft skills from the JD that are absent
-- suggestions: 3-4 specific, actionable tips (e.g. "Add 'agile' to your summary", "Mention Docker in project 2")
-- score: be honest — 60-80 is good for a grad role, 80+ is excellent
-- Return valid JSON only`;
+Scoring guide (AU grad market):
+- 80–100: Strong match — likely to pass ATS and recruiter screen
+- 60–79: Good foundation — 2–3 targeted additions would get through
+- 40–59: Partial match — needs meaningful additions or rephrasing
+- below 40: Significant gap — consider whether this role is the right target
 
-  // Model: gpt-4o gives more accurate gap analysis than gpt-4o-mini.
-  // Swap to a newer model string if available on your plan.
+Rules:
+- matched: only list terms that genuinely appear in both — no hallucination
+- missing: prioritise technical tools/skills the JD lists as required, not just preferred
+- suggestions: 3–5 tips, each referencing a specific JD requirement and a specific resume section to update (e.g. "Add 'CI/CD pipelines' to the XYZ project bullet — JD requires it in 3 places")
+- Use AU English: organised, recognised, behaviour
+- Return valid JSON only — no markdown, no prose outside the JSON`;
+
   const response = await client.chat.completions.create({
-    model: 'gpt-4o',
+    model: 'gpt-4.1',
     messages: [{ role: 'user', content: prompt }],
     response_format: { type: 'json_object' },
-    max_tokens: 900,
+    max_tokens: 1000,
   });
 
   void recordUsage(auth.user.id, 'resume-match');

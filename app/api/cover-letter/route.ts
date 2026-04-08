@@ -2,20 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { requireSubscription, recordUsage } from '@/lib/subscription';
 
-const SYSTEM_PROMPT = `You are an expert career coach and professional writer specialising in the Australian IT job market.
+const SYSTEM_PROMPT = `You are a senior career coach specialising in the Australian IT job market with 15+ years placing engineers at Atlassian, Canva, CBA, and Accenture.
 
-Write tailored, authentic cover letters that:
-- Sound human and genuine — write like a real person, not a template
-- Are concise: 3-4 tight paragraphs, 300-380 words total
-- Open with a specific, compelling hook tied to the role or company — never "I am writing to apply for..."
-- Connect the candidate's concrete experience directly to 2-3 key requirements from the JD
-- Mention the company by name and reference something specific about what they build or do
-- Close with confidence and a clear next-step ask — not "I look forward to hearing from you"
-- Use Australian English spelling throughout: recognised, organised, colour, behaviour, programme
-- Avoid all buzzwords: passionate, synergy, leverage, dynamic, team player, self-starter, motivated, excited
+Write a tailored, authentic cover letter following these rules exactly:
 
-Tone: direct, warm, professional. The candidate should sound like a competent developer who respects the reader's time.
-Format: plain paragraphs only — no headers, no bullet points, no bold text.`;
+STRUCTURE (4 paragraphs, 320–400 words total):
+1. HOOK — 1–2 sentences. Reference something specific the company has shipped, announced, or is known for technically. Then state the role. Never start with "I am writing to apply".
+2. EVIDENCE — 2–4 sentences. Pick the 2 strongest matches between the candidate's background and the JD requirements. Use concrete numbers or outcomes where possible (e.g. "reduced load time by 40%", "shipped to 10k users"). Name the tech stack overlap explicitly.
+3. WHY THEM — 2–3 sentences. One genuine, specific reason this company over others in the same space. Reference their engineering blog, a product feature, their tech choices, or their known culture.
+4. CLOSE — 2 sentences max. Confident, direct ask for the next step. Not "I look forward to hearing from you" — something like "I'd welcome a conversation about how I can contribute to [team/goal]."
+
+RULES:
+- Australian English: recognised, organised, colour, behaviour, programme, analyse, centre
+- Banned words: passionate, leverage, synergy, dynamic, self-starter, motivated, excited, team player, results-driven, detail-oriented, fast-paced
+- No bullet points, no headers, no bold text — plain flowing paragraphs only
+- Never use the phrase "I am writing to apply for"
+- The candidate must sound like a real person, not a template
+
+OUTPUT: Plain text only. No subject line, no "Dear Hiring Manager" salutation unless the candidate provides a contact name.`;
 
 export async function POST(req: NextRequest) {
   const auth = await requireSubscription();
@@ -48,15 +52,13 @@ ${background.slice(0, 1500)}
 
 Write the cover letter now. 3-4 paragraphs, plain text only, no headers or bullet points.`;
 
-  // Model: gpt-4o gives noticeably better prose than gpt-4o-mini.
-  // If you have access to a newer model (e.g. gpt-4.1), swap the string below.
   const stream = await client.chat.completions.create({
-    model: 'gpt-4o',
+    model: 'gpt-4.1',
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user',   content: userPrompt },
     ],
-    max_tokens: 700,
+    max_tokens: 800,
     stream: true,
   });
 

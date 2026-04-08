@@ -1,3 +1,32 @@
+// AU careers page URLs for companies shown on interview prep cards
+export const COMPANY_CAREERS_URLS: Record<string, string> = {
+  'Atlassian':          'https://www.atlassian.com/company/careers',
+  'Canva':              'https://www.canva.com/careers/',
+  'REA Group':          'https://www.rea-group.com/about-us/careers/',
+  'Seek':               'https://www.seek.com.au/work-for-seek/',
+  'Afterpay':           'https://careers.afterpay.com/',
+  'Xero':               'https://www.xero.com/careers/',
+  'MYOB':               'https://www.myob.com/au/about/careers',
+  'Envato':             'https://envato.com/careers/',
+  'Culture Amp':        'https://www.cultureamp.com/about/careers',
+  'Commonwealth Bank':  'https://www.commbank.com.au/about-us/careers.html',
+  'ANZ':                'https://www.anz.com.au/about-us/careers/',
+  'Telstra':            'https://careers.telstra.com/',
+  'AWS':                'https://www.amazon.jobs/en/teams/aws',
+  'NAB':                'https://www.nab.com.au/about-us/careers',
+  'Optus':              'https://www.optus.com.au/about/careers',
+  'Deloitte':           'https://www2.deloitte.com/au/en/pages/careers/articles/home.html',
+  'Domain':             'https://domainholdings.com.au/careers/',
+  'Zip Co':             'https://zip.co/au/careers',
+  'Coles Digital':      'https://careers.colesgroup.com.au/',
+  'Datadog':            'https://www.datadoghq.com/careers/',
+  'HashiCorp':          'https://www.hashicorp.com/careers',
+  'Salesforce':         'https://careers.salesforce.com/',
+  'IBM':                'https://www.ibm.com/au-en/employment/',
+  'WiseTech Global':    'https://www.wisetechglobal.com/careers/',
+  'Macquarie Group':    'https://www.macquarie.com/au/en/careers.html',
+};
+
 export type InterviewRole = {
   readonly id:            string;
   readonly title:         string;

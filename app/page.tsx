@@ -16,7 +16,7 @@ const tools = [
   {
     href: '/cover-letter',
     icon: <IconCoverLetter />,
-    title: 'Cover Letter AI',
+    title: 'Cover Letter',
     desc: 'Paste a job description, get a tailored cover letter in seconds.',
     accent: 'var(--gold)',
   },

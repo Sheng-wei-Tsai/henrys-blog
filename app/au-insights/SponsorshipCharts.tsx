@@ -532,8 +532,8 @@ export default function SponsorshipCharts() {
         <TrendChart />
       </div>
 
-      {/* Charts 2 + 3 — side by side on desktop */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+      {/* Charts 2 + 3 — stacked */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div style={{
           background: 'var(--warm-white)', border: '1px solid var(--parchment)',
           borderRadius: '12px', padding: '1.2rem 1.4rem',
