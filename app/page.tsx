@@ -1,26 +1,48 @@
 import Link from 'next/link';
-import { getAllPosts, getAllDigests, getAllGithot } from '@/lib/posts';
+import { getAllPosts, getAllDigests, getAllGithot, getAllAINews, getAllVisaNews } from '@/lib/posts';
 import PostCard from '@/components/PostCard';
 import PostHeatmap from '@/components/PostHeatmap';
 import HomepageHero from '@/components/HomepageHero';
+import SocialProof from '@/components/SocialProof';
+import { createSupabaseService } from '@/lib/auth-server';
 
 // Static generation — homepage reads only filesystem markdown files.
 // Revalidate every hour so new posts appear without a full redeploy.
 export const revalidate = 3600;
 
-export default function HomePage() {
-  const posts = getAllPosts().slice(0, 3);
+export default async function HomePage() {
+  const posts    = getAllPosts().slice(0, 3);
   const allDates = [
     ...getAllPosts(),
     ...getAllDigests(),
     ...getAllGithot(),
   ].map(p => p.date.slice(0, 10));
 
+  const totalContent =
+    getAllPosts().length +
+    getAllAINews().length +
+    getAllVisaNews().length +
+    getAllGithot().length;
+
+  // Fetch aggregate stats — runs at ISR time, cached for 1 hour
+  const sb = createSupabaseService();
+  const [{ count: resumeCount }, { count: memberCount }] = await Promise.all([
+    sb.from('resume_analyses').select('id', { count: 'exact', head: true }),
+    sb.from('profiles').select('id', { count: 'exact', head: true }),
+  ]);
+
   return (
     <div style={{ maxWidth: '720px', margin: '0 auto', padding: '0 1.5rem' }}>
 
       {/* ── Hero — personalised for logged-in users, targeted for guests ── */}
       <HomepageHero />
+
+      {/* ── Social proof — stats + trust signals, guests only via client ── */}
+      <SocialProof
+        resumeCount={resumeCount ?? 0}
+        memberCount={memberCount ?? 0}
+        contentCount={totalContent}
+      />
 
       {/* Writing activity heatmap */}
       <PostHeatmap dates={allDates} />
