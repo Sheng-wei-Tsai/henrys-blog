@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { requireSubscription, recordUsage } from '@/lib/subscription';
+import { requireSubscription, recordUsage, checkEndpointRateLimit, rateLimitResponse } from '@/lib/subscription';
 
 const SYSTEM = `You are a friendly interview coach helping someone prepare for Australian IT job interviews.
 You give concise, practical advice. Keep responses under 150 words.
@@ -15,6 +15,9 @@ type ChatMessage = {
 export async function POST(req: NextRequest) {
   const auth = await requireSubscription();
   if (auth instanceof NextResponse) return auth;
+
+  const withinLimit = await checkEndpointRateLimit(auth.user.id, 'interview/chat');
+  if (!withinLimit) return rateLimitResponse();
 
   let body: { messages?: ChatMessage[]; roleTitle?: string };
   try {

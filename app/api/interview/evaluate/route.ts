@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { requireSubscription, recordUsage } from '@/lib/subscription';
+import { requireSubscription, recordUsage, checkEndpointRateLimit, rateLimitResponse } from '@/lib/subscription';
 
 const SYSTEM_TEXT = `You are an expert technical interviewer for Australian IT companies. Evaluate the candidate's answer honestly and constructively.
 
@@ -31,6 +31,9 @@ Keep it concise. Focus on correctness first, then style and efficiency.`;
 export async function POST(req: NextRequest) {
   const auth = await requireSubscription();
   if (auth instanceof NextResponse) return auth;
+
+  const withinLimit = await checkEndpointRateLimit(auth.user.id, 'interview/evaluate');
+  if (!withinLimit) return rateLimitResponse();
 
   let body: { question?: string; answer?: string; roleTitle?: string; questionType?: string };
   try {

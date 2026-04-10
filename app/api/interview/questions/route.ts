@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { getRoleById } from '@/lib/interview-roles';
-import { requireSubscription } from '@/lib/subscription';
-import { recordUsage } from '@/lib/subscription';
+import { requireSubscription, recordUsage, checkEndpointRateLimit, rateLimitResponse } from '@/lib/subscription';
 
 export async function POST(req: NextRequest) {
   const auth = await requireSubscription();
   if (auth instanceof NextResponse) return auth;
+
+  const withinLimit = await checkEndpointRateLimit(auth.user.id, 'interview/questions');
+  if (!withinLimit) return rateLimitResponse();
 
   let body: { roleId?: string };
   try {

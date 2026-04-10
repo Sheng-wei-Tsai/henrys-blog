@@ -4,7 +4,9 @@ import PostCard from '@/components/PostCard';
 import PostHeatmap from '@/components/PostHeatmap';
 import HomepageHero from '@/components/HomepageHero';
 
-export const dynamic = 'force-dynamic';
+// Static generation — homepage reads only filesystem markdown files.
+// Revalidate every hour so new posts appear without a full redeploy.
+export const revalidate = 3600;
 
 export default function HomePage() {
   const posts = getAllPosts().slice(0, 3);

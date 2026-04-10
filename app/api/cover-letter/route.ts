@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { requireSubscription, recordUsage } from '@/lib/subscription';
+import { requireSubscription, recordUsage, checkEndpointRateLimit, rateLimitResponse } from '@/lib/subscription';
 
 const SYSTEM_PROMPT = `You are a senior career coach specialising in the Australian IT job market with 15+ years placing engineers at Atlassian, Canva, CBA, and Accenture.
 
@@ -24,6 +24,9 @@ OUTPUT: Plain text only. No subject line, no "Dear Hiring Manager" salutation un
 export async function POST(req: NextRequest) {
   const auth = await requireSubscription();
   if (auth instanceof NextResponse) return auth;
+
+  const withinLimit = await checkEndpointRateLimit(auth.user.id, 'cover-letter');
+  if (!withinLimit) return rateLimitResponse();
 
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 

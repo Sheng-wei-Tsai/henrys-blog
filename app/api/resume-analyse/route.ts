@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { requireSubscription } from '@/lib/subscription';
+import { requireSubscription, checkEndpointRateLimit, rateLimitResponse } from '@/lib/subscription';
 import { createClient } from '@supabase/supabase-js';
 
 const sbService = createClient(
@@ -55,6 +55,9 @@ Return ONLY the JSON — no markdown fences, no preamble.`;
 export async function POST(req: NextRequest) {
   const auth = await requireSubscription();
   if (auth instanceof NextResponse) return auth;
+
+  const withinLimit = await checkEndpointRateLimit(auth.user.id, 'resume-analyse');
+  if (!withinLimit) return rateLimitResponse();
 
   const formData = await req.formData();
   const file = formData.get('resume') as File | null;

@@ -1,32 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Use service role key so RLS insert policy applies correctly
-// (anon insert works too, but service role avoids edge cases with JWT)
 const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
+// ── In-memory IP rate limiter — max 60 events per IP per minute ──────────────
+// Resets on cold start (serverless). Good enough to block naive spam.
+const ipCounts = new Map<string, { count: number; resetAt: number }>();
+
+function isRateLimited(ip: string): boolean {
+  const now    = Date.now();
+  const window = 60_000; // 1 minute
+  const limit  = 60;
+
+  const entry = ipCounts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    ipCounts.set(ip, { count: 1, resetAt: now + window });
+    return false;
+  }
+  if (entry.count >= limit) return true;
+  entry.count++;
+  return false;
+}
+
+// ── sessionId must be a 64-char hex or UUID-like string ──────────────────────
+const SESSION_RE = /^[a-f0-9-]{32,64}$/i;
+
 export async function POST(req: NextRequest) {
   try {
+    // IP from Vercel edge header; fall back to a placeholder in local dev
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '127.0.0.1';
+
+    if (isRateLimited(ip)) {
+      return NextResponse.json({ ok: false }, { status: 429 });
+    }
+
     const body = await req.json();
     const { path, referrer, device, sessionId } = body;
 
-    if (!path || !sessionId) {
+    // Validate required fields + sessionId format
+    if (!path || !sessionId || !SESSION_RE.test(sessionId)) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
 
-    // Country/city from Vercel edge headers (empty in local dev)
+    // Sanitise path — must start with /
+    const cleanPath = typeof path === 'string' && path.startsWith('/')
+      ? path.slice(0, 500)
+      : null;
+    if (!cleanPath) return NextResponse.json({ ok: false }, { status: 400 });
+
     const country = req.headers.get('x-vercel-ip-country') ?? null;
     const city    = req.headers.get('x-vercel-ip-city')    ?? null;
 
-    // Normalise referrer: strip query strings and keep only the origin
     let cleanReferrer: string | null = null;
     if (referrer) {
       try {
-        const url = new URL(referrer);
-        // Mark same-site referrers as 'direct'
+        const url     = new URL(referrer);
         const appHost = process.env.NEXT_PUBLIC_APP_URL
           ? new URL(process.env.NEXT_PUBLIC_APP_URL).host
           : 'henrysdigitallife.com';
@@ -36,11 +67,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // upsert — the UNIQUE index on (session_id, path, created_at::date)
-    // means duplicates within the same day are silently ignored
     await sb.from('page_views').upsert(
       {
-        path:       path.slice(0, 500),
+        path:       cleanPath,
         referrer:   cleanReferrer,
         country,
         city,

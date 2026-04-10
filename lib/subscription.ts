@@ -13,13 +13,27 @@ import {
   rateLimitResponse,
 } from './auth-server';
 
+// Re-export so route handlers only need one import from '@/lib/subscription'
+export { rateLimitResponse } from './auth-server';
+
 // Pro users: max AI calls per 24-hour rolling window (global across all endpoints)
 const PRO_DAILY_LIMIT = 50;
 
-// Per-endpoint daily limits for expensive operations (checked separately in those routes)
+// Per-endpoint daily limits — checked via checkEndpointRateLimit() in each route.
+// Every route that calls an AI API must be registered here.
 export const ENDPOINT_LIMITS: Record<string, number> = {
-  'learn/analyse': 20,   // ~$0.035/call — most expensive
-  'resume-match':  30,   // ~$0.020/call
+  // Claude (Anthropic) — most expensive
+  'learn/analyse':      20,  // ~$0.035/call
+  'resume-analyse':     10,  // ~$0.030/call (PDF vision)
+  'resume-match':       30,  // ~$0.020/call
+
+  // OpenAI (gpt-4o-mini) — cheaper, higher limits
+  'interview/questions': 15, // generates 10 questions per call
+  'interview/chat':      40, // conversational — frequent
+  'interview/evaluate':  30, // per answer submission
+  'interview/mentor':    30, // per mentor stage
+  'cover-letter':        15, // relatively expensive prompt
+  'learn/quiz':          25, // per video
 };
 
 // ── Subscription status ───────────────────────────────────────────────

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { requireSubscription, recordUsage } from '@/lib/subscription';
+import { requireSubscription, recordUsage, checkEndpointRateLimit, rateLimitResponse } from '@/lib/subscription';
 
 type MentorStage = 'scene' | 'why' | 'guide';
 
@@ -51,6 +51,9 @@ In 3-4 sentences, give your personal take on structuring the perfect answer. Sha
 export async function POST(req: NextRequest) {
   const auth = await requireSubscription();
   if (auth instanceof NextResponse) return auth;
+
+  const withinLimit = await checkEndpointRateLimit(auth.user.id, 'interview/mentor');
+  if (!withinLimit) return rateLimitResponse();
 
   let body: MentorData;
   try {
