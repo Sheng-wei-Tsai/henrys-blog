@@ -53,6 +53,7 @@ export default function OnboardingModal({ onComplete }: Props) {
   const [saving,     setSaving]     = useState(false);
   const [done,       setDone]       = useState(false);
   const [animKey,    setAnimKey]    = useState(0);  // remount content to trigger slide
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // Whether the current step has a valid selection
   const canContinue =
@@ -67,9 +68,33 @@ export default function OnboardingModal({ onComplete }: Props) {
     setStep(next);
   };
 
-  // ESC → skip
+  // ESC → skip + focus trap
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') handleSkip(); };
+    const modal = modalRef.current;
+    if (!modal) return;
+
+    // Move focus into modal on mount
+    const firstFocusable = modal.querySelector<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    firstFocusable?.focus();
+
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { handleSkip(); return; }
+
+      // Focus trap: keep Tab within modal
+      if (e.key === 'Tab') {
+        const focusable = Array.from(modal.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )).filter(el => el.offsetParent !== null);
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last  = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus();
+        }
+      }
+    };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -120,7 +145,7 @@ export default function OnboardingModal({ onComplete }: Props) {
 
   return (
     <div style={overlayStyle} role="dialog" aria-modal="true" aria-label="Personalise your experience">
-      <div style={modalStyle}>
+      <div ref={modalRef} style={modalStyle}>
 
         {/* ── Step 0: Welcome ────────────────────────────────── */}
         {step === 0 && (

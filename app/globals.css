@@ -619,6 +619,37 @@ h3, h4 {
   transform: translateY(0);
 }
 
+/* ── Skip-to-content link (accessibility) ── */
+.skip-to-content {
+  position: absolute;
+  top: -100%;
+  left: 1rem;
+  padding: 0.5rem 1rem;
+  background: var(--vermilion);
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-radius: 0 0 8px 8px;
+  text-decoration: none;
+  z-index: 9999;
+  transition: top 0.15s ease;
+}
+.skip-to-content:focus {
+  top: 0;
+}
+
+/* ── Dashboard tabs — horizontal scroll on mobile ── */
+.dashboard-tabs {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 2px; /* prevent shadow clip */
+}
+.dashboard-tabs::-webkit-scrollbar { display: none; }
+
 /* ── Dropdown item hover (works on both mouse and touch-tap) ── */
 .drop-item { background: transparent; }
 .drop-item:hover,

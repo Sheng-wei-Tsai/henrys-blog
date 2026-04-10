@@ -81,10 +81,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body suppressHydrationWarning>
         <AuthProvider>
+          <a href="#main-content" className="skip-to-content">Skip to content</a>
           <Analytics />
           <Header />
           <Breadcrumb />
-          <main style={{ minHeight: '70vh' }}>
+          <main id="main-content" style={{ minHeight: '70vh' }}>
             {children}
           </main>
           <Footer />

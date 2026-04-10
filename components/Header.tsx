@@ -348,8 +348,7 @@ export default function Header() {
                   fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)',
                   textAlign: 'left', transition: 'background 0.12s ease', fontFamily: 'inherit',
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--parchment)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                            className="drop-item"
                 >Sign out</button>
               </div>
             )}
@@ -520,15 +519,12 @@ export default function Header() {
 /* ── Avatar popover link ── */
 function AvatarLink({ href, label, onClick }: { href: string; label: string; onClick: () => void }) {
   return (
-    <Link href={href} onClick={onClick} style={{
+    <Link href={href} onClick={onClick} className="drop-item" style={{
       display: 'flex', alignItems: 'center', gap: '0.5rem',
       padding: '0.45rem 0.6rem', borderRadius: '6px',
       textDecoration: 'none', fontSize: '0.85rem', fontWeight: 500, color: 'var(--brown-dark)',
       transition: 'background 0.12s ease',
-    }}
-    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--parchment)'; }}
-    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-    >{label}</Link>
+    }}>{label}</Link>
   );
 }
 

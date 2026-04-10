@@ -211,7 +211,7 @@ export default function DashboardPage() {
       })()}
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+      <div className="dashboard-tabs" style={{ marginBottom: '1.5rem' }}>
           {([
             ['saved',        `♥ Saved (${savedJobs.length})`],
             ['applications', `📋 Applications (${applications.length})`],
