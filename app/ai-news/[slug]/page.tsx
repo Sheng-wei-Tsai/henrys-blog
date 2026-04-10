@@ -47,7 +47,7 @@ export default async function AINewsPostPage({ params }: { params: Promise<{ slu
   return (
     <div style={{ maxWidth: '720px', margin: '0 auto', padding: '0 1.5rem' }}>
       <div style={{ paddingTop: '3rem', paddingBottom: '1.5rem' }}>
-        <Link href="/blog?category=ai-news" style={{
+        <Link href="/posts/ai-news" style={{
           fontSize: '0.88rem', color: 'var(--text-muted)', textDecoration: 'none',
           display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginBottom: '2rem',
         }}>
@@ -117,7 +117,7 @@ export default async function AINewsPostPage({ params }: { params: Promise<{ slu
         borderTop: '1px solid var(--parchment)', paddingTop: '2rem', paddingBottom: '2rem',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
-        <Link href="/blog?category=ai-news" style={{ color: 'var(--terracotta)', textDecoration: 'none', fontSize: '0.9rem' }}>
+        <Link href="/posts/ai-news" style={{ color: 'var(--terracotta)', textDecoration: 'none', fontSize: '0.9rem' }}>
           ← All AI News
         </Link>
         <span style={{ fontFamily: "'Caveat', cursive", color: 'var(--brown-light)', fontSize: '1.1rem' }}>

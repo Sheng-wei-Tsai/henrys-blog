@@ -38,11 +38,11 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
   return (
     <div style={{ maxWidth: '720px', margin: '0 auto', padding: '0 1.5rem' }}>
       <div style={{ paddingTop: '3rem', paddingBottom: '1.5rem' }}>
-        <Link href="/blog" style={{
+        <Link href="/posts/blog" style={{
           fontSize: '0.88rem', color: 'var(--text-muted)', textDecoration: 'none',
           display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginBottom: '2rem',
         }}>
-          ← Back to blog
+          ← Blog
         </Link>
 
         <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{post.coverEmoji}</div>
@@ -81,7 +81,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
         borderTop: '1px solid var(--parchment)', paddingTop: '2rem', paddingBottom: '2rem',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
-        <Link href="/blog" style={{ color: 'var(--terracotta)', textDecoration: 'none', fontSize: '0.9rem' }}>
+        <Link href="/posts/blog" style={{ color: 'var(--terracotta)', textDecoration: 'none', fontSize: '0.9rem' }}>
           ← All posts
         </Link>
         <span style={{ fontFamily: "'Caveat', cursive", color: 'var(--brown-light)', fontSize: '1.1rem' }}>
