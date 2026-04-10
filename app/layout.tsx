@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Space_Grotesk, Lora, Caveat } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/Header';
@@ -32,6 +32,17 @@ const caveat = Caveat({
 });
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://henrysdigitallife.com';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#fdf5e4' },
+    { media: '(prefers-color-scheme: dark)',  color: '#07050f' },
+  ],
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),

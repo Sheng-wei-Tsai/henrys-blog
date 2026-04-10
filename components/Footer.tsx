@@ -35,7 +35,7 @@ export default function Footer() {
       <div style={{ maxWidth: '760px', margin: '0 auto', padding: '3rem 1.5rem 2rem' }}>
 
         {/* Top row: logo + columns */}
-        <div style={{ display: 'flex', gap: '3rem', flexWrap: 'wrap', marginBottom: '2.5rem' }}>
+        <div className="footer-cols" style={{ marginBottom: '2.5rem' }}>
 
           {/* Brand */}
           <div style={{ flex: '1 1 180px', minWidth: '160px' }}>
@@ -114,4 +114,9 @@ const navLink: React.CSSProperties = {
 const iconLink: React.CSSProperties = {
   color: 'var(--text-muted)',
   transition: 'color 0.15s ease',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '36px',
+  height: '36px',
 };

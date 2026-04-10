@@ -1,5 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import ReadinessScore from '@/components/ReadinessScore';
@@ -116,10 +118,10 @@ export default function DashboardPage() {
       <div style={{ paddingTop: '3.5rem', paddingBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
           {user.user_metadata?.avatar_url && (
-            <img src={user.user_metadata.avatar_url} alt="avatar" style={{ width: '48px', height: '48px', borderRadius: '50%' }} />
+            <Image src={user.user_metadata.avatar_url} alt="avatar" width={48} height={48} style={{ borderRadius: '50%' }} />
           )}
           <div>
-            <h1 style={{ fontFamily: "'Lora', serif", fontSize: '2rem', fontWeight: 700, color: 'var(--brown-dark)' }}>
+            <h1 style={{ fontFamily: "'Lora', serif", fontSize: 'clamp(1.5rem, 5vw, 2rem)', fontWeight: 700, color: 'var(--brown-dark)' }}>
               My Dashboard
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
@@ -160,63 +162,35 @@ export default function DashboardPage() {
         <h2 style={{ fontFamily: "'Lora', serif", fontSize: '1rem', fontWeight: 600, color: 'var(--brown-dark)', marginBottom: '0.8rem' }}>
           Career Tools
         </h2>
-        <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
-          <a href="/dashboard/resume-analyser" style={{
-            display: 'flex', alignItems: 'center', gap: '0.75rem',
-            flex: 1, minWidth: '200px',
-            background: 'var(--warm-white)', border: '1px solid var(--parchment)',
-            borderLeft: '3px solid var(--terracotta)',
-            borderRadius: '10px', padding: '1rem 1.2rem',
-            textDecoration: 'none',
-          }}>
+        <div className="career-tools-grid">
+          <Link href="/dashboard/resume-analyser" className="career-tool-card" style={{ borderLeft: '3px solid var(--terracotta)' }}>
             <span style={{ fontSize: '1.6rem' }}>📄</span>
             <div>
               <div style={{ fontWeight: 600, color: 'var(--brown-dark)', fontSize: '0.92rem' }}>Resume Analyser</div>
               <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>AI feedback for the AU IT job market</div>
             </div>
-          </a>
-          <a href={`/interview-prep/${onboardingRole ? (ROLE_TO_PREP[onboardingRole] ?? 'junior-fullstack') : 'junior-fullstack'}`} style={{
-            display: 'flex', alignItems: 'center', gap: '0.75rem',
-            flex: 1, minWidth: '200px',
-            background: 'var(--warm-white)', border: '1px solid var(--parchment)',
-            borderLeft: '3px solid var(--jade)',
-            borderRadius: '10px', padding: '1rem 1.2rem',
-            textDecoration: 'none',
-          }}>
+          </Link>
+          <Link href={`/interview-prep/${onboardingRole ? (ROLE_TO_PREP[onboardingRole] ?? 'junior-fullstack') : 'junior-fullstack'}`} className="career-tool-card" style={{ borderLeft: '3px solid var(--jade)' }}>
             <span style={{ fontSize: '1.6rem' }}>🎯</span>
             <div>
               <div style={{ fontWeight: 600, color: 'var(--brown-dark)', fontSize: '0.92rem' }}>Interview Prep</div>
               <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>Practice with Alex, your AI mentor</div>
             </div>
-          </a>
-          <a href="/au-insights" style={{
-            display: 'flex', alignItems: 'center', gap: '0.75rem',
-            flex: 1, minWidth: '200px',
-            background: 'var(--warm-white)', border: '1px solid var(--parchment)',
-            borderLeft: '3px solid var(--gold)',
-            borderRadius: '10px', padding: '1rem 1.2rem',
-            textDecoration: 'none',
-          }}>
+          </Link>
+          <Link href="/au-insights" className="career-tool-card" style={{ borderLeft: '3px solid var(--gold)' }}>
             <span style={{ fontSize: '1.6rem' }}>🗺</span>
             <div>
               <div style={{ fontWeight: 600, color: 'var(--brown-dark)', fontSize: '0.92rem' }}>AU IT Insights</div>
               <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>Salaries, visas, skill map & more</div>
             </div>
-          </a>
-          <a href="/dashboard/visa-tracker" style={{
-            display: 'flex', alignItems: 'center', gap: '0.75rem',
-            flex: 1, minWidth: '200px',
-            background: 'var(--warm-white)', border: '1px solid var(--parchment)',
-            borderLeft: '3px solid #8b5cf6',
-            borderRadius: '10px', padding: '1rem 1.2rem',
-            textDecoration: 'none',
-          }}>
+          </Link>
+          <Link href="/dashboard/visa-tracker" className="career-tool-card" style={{ borderLeft: '3px solid #8b5cf6' }}>
             <span style={{ fontSize: '1.6rem' }}>🛂</span>
             <div>
               <div style={{ fontWeight: 600, color: 'var(--brown-dark)', fontSize: '0.92rem' }}>Visa Journey Tracker</div>
               <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>Track your 482 / Skills in Demand visa</div>
             </div>
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -265,7 +239,7 @@ export default function DashboardPage() {
               {savedJobs.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
                   <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>♡</div>
-                  <p>No saved jobs yet. <a href="/jobs" style={{ color: 'var(--terracotta)' }}>Search for jobs →</a></p>
+                  <p>No saved jobs yet. <Link href="/jobs" style={{ color: 'var(--terracotta)' }}>Search for jobs →</Link></p>
                 </div>
               ) : savedJobs.map(job => (
                 <div key={job.id} style={{ background: 'var(--warm-white)', border: '1px solid var(--parchment)', borderRadius: '14px', padding: '1.2rem 1.4rem' }}>
@@ -309,7 +283,7 @@ export default function DashboardPage() {
               {alerts.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
                   <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔔</div>
-                  <p>No saved searches yet. <a href="/jobs" style={{ color: 'var(--terracotta)' }}>Search for jobs →</a> and click "Save this search".</p>
+                  <p>No saved searches yet. <Link href="/jobs" style={{ color: 'var(--terracotta)' }}>Search for jobs →</Link> and click "Save this search".</p>
                 </div>
               ) : alerts.map(alert => (
                 <div key={alert.id} style={{ background: 'var(--warm-white)', border: '1px solid var(--parchment)', borderRadius: '14px', padding: '1.2rem 1.4rem' }}>
@@ -323,10 +297,10 @@ export default function DashboardPage() {
                       </p>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <a href={`/jobs?keywords=${encodeURIComponent(alert.keywords)}&location=${encodeURIComponent(alert.location)}`}
+                      <Link href={`/jobs?keywords=${encodeURIComponent(alert.keywords)}&location=${encodeURIComponent(alert.location)}`}
                         style={{ padding: '0.35rem 0.8rem', borderRadius: '99px', background: 'var(--parchment)', color: 'var(--text-secondary)', fontSize: '0.8rem', textDecoration: 'none' }}>
                         Search
-                      </a>
+                      </Link>
                       <button
                         onClick={async () => {
                           await fetch(`/api/alerts?id=${alert.id}`, { method: 'DELETE' });
@@ -373,10 +347,10 @@ export default function DashboardPage() {
                         ))}
                       </select>
                       {app.status === 'interview' && (
-                        <a href={`/interview-prep/${inferPrepRole(app.title)}`}
+                        <Link href={`/interview-prep/${inferPrepRole(app.title)}`}
                           style={{ padding: '0.3rem 0.8rem', borderRadius: '99px', background: '#fef3c7', color: '#d97706', border: '1px solid #fde68a', fontSize: '0.8rem', fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
                           🎯 Prep for interview
-                        </a>
+                        </Link>
                       )}
                       <a href={app.url} target="_blank" rel="noopener noreferrer" style={{
                         padding: '0.3rem 0.7rem', borderRadius: '99px',

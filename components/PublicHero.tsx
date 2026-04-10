@@ -13,7 +13,7 @@ export default function PublicHero() {
   return (
     <>
       {/* ── Targeted hero ── */}
-      <section style={{ padding: '4rem 0 3rem' }}>
+      <section className="public-hero-section">
         <p style={{ fontSize: '0.85rem', color: 'var(--terracotta)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '1rem' }}>
           For international IT graduates in Australia
         </p>
@@ -34,7 +34,7 @@ export default function PublicHero() {
           interview prep, skill paths — all for international grads.
         </p>
 
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div className="hero-ctas">
           <Link href="/login" className="hero-btn-primary">Start for free →</Link>
           <a href="#tools" className="hero-btn-secondary">See how it works ↓</a>
         </div>

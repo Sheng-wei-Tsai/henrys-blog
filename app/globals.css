@@ -565,6 +565,66 @@ h3, h4 {
   .interview-sidebar  { display: none !important; }
   main                { padding-bottom: 6rem !important; }
   .tools-grid         { grid-template-columns: 1fr !important; }
+
+  /* PublicHero — tighter vertical rhythm on mobile */
+  .public-hero-section { padding: 2.5rem 0 2rem !important; }
+
+  /* Hero CTAs — stack full-width on mobile */
+  .hero-ctas {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .hero-ctas .hero-btn-primary,
+  .hero-ctas .hero-btn-secondary {
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Career tools — 1 column on mobile, full width */
+  .career-tools-grid  { grid-template-columns: 1fr !important; }
+
+  /* Footer — stack columns vertically on mobile */
+  .footer-cols        { flex-direction: column !important; gap: 1.5rem !important; }
+}
+
+/* ── Desktop default for classes defined above ── */
+.public-hero-section  { padding: 4rem 0 3rem; }
+.hero-ctas            { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.career-tools-grid    {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.8rem;
+}
+.footer-cols          { display: flex; gap: 3rem; flex-wrap: wrap; }
+
+/* ── Career tool card ── */
+.career-tool-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--warm-white);
+  border: 1px solid var(--parchment);
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+  text-decoration: none;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.career-tool-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+.career-tool-card:active {
+  transform: translateY(0);
+}
+
+/* ── Dropdown item hover (works on both mouse and touch-tap) ── */
+.drop-item { background: transparent; }
+.drop-item:hover,
+.drop-item:focus-visible {
+  background: var(--parchment) !important;
+  outline: none;
 }
 
 /* ── Brand logo — theme-aware switching ── */

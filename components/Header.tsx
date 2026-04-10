@@ -71,7 +71,7 @@ function DropPanel({ children }: { children: React.ReactNode }) {
   return (
     <div role="menu" style={{
       position: 'absolute', top: 'calc(100% + 10px)', left: '50%', transform: 'translateX(-50%)',
-      width: '240px', background: 'var(--warm-white)',
+      width: 'min(240px, 90vw)', background: 'var(--warm-white)',
       border: '2px solid var(--parchment)', borderRadius: '12px',
       boxShadow: 'var(--panel-shadow), 0 16px 40px var(--shadow-color)',
       padding: '0.5rem', zIndex: 60, overflow: 'hidden',
@@ -82,11 +82,9 @@ function DropPanel({ children }: { children: React.ReactNode }) {
   );
 }
 function DropItem({ href, emoji, label, desc, onClick }: { href: string; emoji: string; label: string; desc: string; onClick: () => void }) {
-  const [hovered, setHovered] = useState(false);
   return (
-    <Link href={href} onClick={onClick}
-      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', padding: '0.5rem 0.6rem', borderRadius: '7px', textDecoration: 'none', background: hovered ? 'var(--parchment)' : 'transparent', transition: 'background 0.12s ease' }}>
+    <Link href={href} onClick={onClick} className="drop-item"
+      style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', padding: '0.5rem 0.6rem', borderRadius: '7px', textDecoration: 'none', transition: 'background 0.12s ease' }}>
       <span style={{ fontSize: '1.05rem', flexShrink: 0, marginTop: '1px' }}>{emoji}</span>
       <div>
         <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--brown-dark)', lineHeight: 1.2 }}>{label}</div>
@@ -108,14 +106,11 @@ function GroupDivider() {
 
 /* Compact item for the AU Insights mega-menu: emoji + label + tag badge only */
 function MegaItem({ href, emoji, label, tag, onClick }: { href: string; emoji: string; label: string; tag: string; onClick: () => void }) {
-  const [hovered, setHovered] = useState(false);
   return (
-    <Link href={href} onClick={onClick}
-      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+    <Link href={href} onClick={onClick} className="drop-item"
       style={{
         display: 'flex', alignItems: 'center', gap: '0.45rem',
         padding: '0.38rem 0.55rem', borderRadius: '7px', textDecoration: 'none',
-        background: hovered ? 'var(--parchment)' : 'transparent',
         transition: 'background 0.12s ease',
       }}>
       <span style={{ fontSize: '0.95rem', flexShrink: 0 }}>{emoji}</span>
@@ -256,7 +251,7 @@ export default function Header() {
               {auInsightsOpen && (
                 <div role="menu" style={{
                   position: 'absolute', top: 'calc(100% + 10px)', right: 0,
-                  width: '270px', background: 'var(--warm-white)',
+                  width: 'min(270px, 90vw)', background: 'var(--warm-white)',
                   border: '2px solid var(--parchment)', borderRadius: '12px',
                   boxShadow: 'var(--panel-shadow), 0 16px 40px var(--shadow-color)',
                   padding: '0.5rem', zIndex: 60, overflow: 'hidden',
@@ -302,7 +297,7 @@ export default function Header() {
             {user ? (
               <ReadinessScoreMini>
                 <button onClick={() => setAvatarOpen(o => !o)} aria-label="Account menu" style={{
-                  width: '34px', height: '34px', borderRadius: '50%',
+                  width: '44px', height: '44px', borderRadius: '50%',
                   background: 'var(--terracotta)', color: 'white',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '0.8rem', fontWeight: 600,
