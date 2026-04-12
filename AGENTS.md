@@ -443,7 +443,27 @@ These are acknowledged issues being fixed incrementally. **Do not add new instan
 
 ---
 
-## 16. What Requires Human Review Before Merging
+## 16. Feature Development Workflow — MANDATORY
+
+**Before implementing ANY new feature or significant UI change, you MUST:**
+
+1. Write a feature entry in `TODO.md` under the appropriate priority section — describe what will be built, why, and list the files to be created/modified
+2. Only then begin implementation
+
+This keeps the project clean, consistent, and allows the product owner to review scope before code is written.
+
+```
+// ✅ Correct order
+1. Add feature to TODO.md with description + file list
+2. Implement the feature
+3. Mark as ✅ Done in TODO.md
+
+// ❌ Wrong — never write code without first documenting in TODO.md
+```
+
+---
+
+## 17. What Requires Human Review Before Merging
 
 Flag these changes for review — do not push autonomously:
 

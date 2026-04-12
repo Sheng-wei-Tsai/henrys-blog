@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
 interface ScoreComponent {
@@ -124,13 +125,13 @@ export default function ReadinessScore() {
         <span style={{ fontSize: '0.83rem', color: 'var(--text-muted)' }}>
           💡 Boost your score:
         </span>
-        <a href={boostAction.href} style={{
+        <Link href={boostAction.href} style={{
           padding: '0.35rem 0.9rem', borderRadius: '99px',
           background: 'var(--terracotta)', color: 'white',
           fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none',
         }}>
           {boostAction.label} <span style={{ opacity: 0.8 }}>{boostAction.gain}</span>
-        </a>
+        </Link>
       </div>
     </div>
   );

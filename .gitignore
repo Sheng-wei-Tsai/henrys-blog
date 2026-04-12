@@ -18,3 +18,4 @@ context/.DS_Store
 *.pyo
 .claude/settings.local.json
 tsconfig.tsbuildinfo
+.vercel

@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'avatars.githubusercontent.com' },
       { protocol: 'https', hostname: '*.githubusercontent.com' },
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
+      // YouTube thumbnails (channel video grid + video pages)
+      { protocol: 'https', hostname: 'i.ytimg.com' },
+      { protocol: 'https', hostname: '*.ytimg.com' },
+      { protocol: 'https', hostname: 'img.youtube.com' },
     ],
   },
 

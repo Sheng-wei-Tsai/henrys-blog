@@ -83,7 +83,7 @@ export const LEARN_CHANNELS: LearnChannel[] = [
   },
   {
     id:          'traversy',
-    channelId:   'UCuP2vJ6kRutQBfRmdcI92mA',
+    channelId:   'UC29ju8bIPH5as8OGnQzwJyA',
     name:        'Traversy Media',
     handle:      '@TraversyMedia',
     description: 'Full-stack web development crash courses and project builds.',
@@ -170,5 +170,23 @@ export const LEARN_CHANNELS: LearnChannel[] = [
     description: 'Official Anthropic channel — Claude, AI safety, and research.',
     focus:       ['Claude', 'AI Safety', 'LLMs'],
     emoji:       '🧠',
+  },
+  {
+    id:          'webdevsimplified',
+    channelId:   'UCFbNIlppjAuEX4znoulh0Cw',
+    name:        'Web Dev Simplified',
+    handle:      '@WebDevSimplified',
+    description: 'Modern web development explained simply — React, JS, CSS, full-stack.',
+    focus:       ['React', 'JavaScript', 'CSS', 'Full Stack'],
+    emoji:       '🎓',
+  },
+  {
+    id:          'bootdotdev',
+    channelId:   'UC9HOZ53gnHP3f_b-wixS74g',
+    name:        'Boot.dev',
+    handle:      '@bootdotdev',
+    description: 'Backend development fundamentals — Python, Go, algorithms, and CS concepts.',
+    focus:       ['Backend', 'Python', 'Go', 'Algorithms'],
+    emoji:       '🚀',
   },
 ];

@@ -1,6 +1,6 @@
 # TODO — Henry Blog Feature Backlog
 
-Last updated: 2026-04-08
+Last updated: 2026-04-12
 Product vision: The definitive career platform for international IT graduates entering the Australian job market.
 
 ---
@@ -31,6 +31,10 @@ Product vision: The definitive career platform for international IT graduates en
 - **Interview questions cache** — 24h localStorage cache, "New Questions" clears cache
 - **Interview company pages** — AU careers URLs for 25 companies
 - **Page state persistence** — jobs results 10min cache, interview questions 24h cache
+- **Interview Prep v2** — Universal Questions (8 AU-specific hardcoded Qs), Reality Check stage (6-stage flow: scene→why→guide→reality→practice→debrief), follow-up question streamed in debrief, Company Intel for 10 companies (expandable on role cards + injected into mentor prompts), Post-Interview Toolkit (Summary/Email/Rejection/Negotiation tabs), Networking Hub at `/interview-prep/networking`
+- **YouTube learn** — 20 channels (added WebDevSimplified, Boot.dev), pagination fix (POST body cache bug), transcript smart sampling (6-language fallback, 30/50/20% windowed sampling)
+- **Jobs page** — stale closure fix, category filter in useCallback deps, `<Link>` for internal nav, quick-start pill fix
+- **Performance & quality** — dark mode contrast fixed (#a09080 both blocks), YouTube thumbnails via `next/image`, video study page SSR split (instant load for cached guides)
 
 ### AU Insights (10 tabs)
 - **Company Tiers** — 8 tiers, Framer scroll entrance, hover lift, favicon chips, ghost logo
@@ -63,23 +67,61 @@ Product vision: The definitive career platform for international IT graduates en
 
 ---
 
+## 🔴 Priority 0 — In Progress
+
+### ✅ 0.2 Yin-Yang Dark Mode Toggle
+**What:** Circular yin-yang SVG toggle button. CSS `transition: transform` on accumulated rotation state — smooth 180° spin on click, no snap-back. Fill colours cross-fade at spin midpoint. Comic panel shadow adapts to theme.
+**Files:** `components/ThemeToggle.tsx`, `app/globals.css`
+
+---
+
+### ✅ 0.1 Comic Book Card Animation — Interview Prep Tool Cards
+**What:** 4 full-width stacked comic cards (Resume Analyser, Cover Letter, Interview Prep, Networking Hub). Hard ink border, offset box-shadow, hover tilt `rotate(-1.5deg) translateY(-9px)` + vermilion shadow. Dot halftone panel. Framer `whileTap` for mobile.
+**Files:** `app/interview-prep/InterviewPrepClient.tsx`, `app/globals.css`
+
+---
+
+### ✅ 0. Interview Prep Landing Page Redesign + Progress Tracking
+**Why now:** The `/interview-prep` page is static cards with no user context. Users have no idea how far they've come. Layout should match the polished `/learn` page pattern with Framer Motion animations.
+
+**What gets built:**
+- Split `app/interview-prep/page.tsx` into server component (metadata) + `app/interview-prep/InterviewPrepClient.tsx` (interactive)
+- **Tool cards** — same dark-gradient style as `/learn` (YouTube/GitHub/Claude Code cards): Resume Analyser, Cover Letter, Interview Prep, Networking Hub. Each card shows live progress (resume count, cover letter count, XP/level, networking %).
+- **Hover + touch animations** — Framer Motion `whileHover` + `whileTap` + `whileFocus` on every card. Works on mobile (touch = same animation as hover).
+- **"How it works" accordion** — Framer `AnimatePresence` expand/collapse. Each step has a `CartoonArrow` component: animated dashed SVG line + bouncing arrowhead in the Eastern Ink comic style.
+- **"Practice by Role" section** — Collapsed by default (compact pill list). Click/tap to reveal full role cards with stagger entrance animation. `AnimatePresence` for smooth expand. Feels like an interactive game level-select.
+- **Progress data sources:** `profiles.interview_xp` + `profiles.interview_level` (Supabase), `resume_analyses` count (Supabase), `usage_records` for cover-letter (Supabase), networking % from `localStorage` key `networking-30day-checklist`.
+
+**Files:**
+- `app/interview-prep/page.tsx` — slim down to server metadata wrapper
+- `app/interview-prep/InterviewPrepClient.tsx` — NEW client component (main UI)
+- `app/api/dashboard/summary/route.ts` — may need new fields for interview/resume counts
+
+**Acceptance criteria:**
+- [x] Tool cards match `/learn` visual style (dark gradient, glow, progress pill)
+- [x] `whileHover` scale + glow runs on desktop; same scale on mobile tap (`whileTap`)
+- [x] `CartoonArrow` animates on mount: dashed line draws in, arrowhead bounces
+- [x] "Practice by Role" expands/collapses with stagger animation
+- [x] Progress numbers load from Supabase (skeleton while loading, graceful if unauthenticated)
+- [x] `npm run check` passes clean
+
+---
+
 ## 🔴 Priority 1 — The Connective Tissue (Retention Engine)
 
 These features tie everything together into a coherent product. Without them, every tool is an island.
 
-### 1. Smart Onboarding Flow — `features/onboarding-flow.md`
-**Why now:** Zero retention without it. Users arrive and don't know what to do. 3 questions → personalised experience.
-- [ ] Onboarding modal on first login (target role, visa status, job search stage)
-- [ ] Persist `onboarding_profile` to `profiles` table
-- [ ] Skip / edit later from dashboard
-- [ ] Used by Gap Engine, personalised dashboard, learning path pre-selection
+### ✅ 1. Smart Onboarding Flow — `features/onboarding-flow.md`
+- [x] Onboarding modal on first login (target role, visa status, job search stage) — `components/OnboardingModal.tsx`
+- [x] Persist `onboarding_profile` to `profiles` table — `app/api/onboarding/route.ts`
+- [x] Triggered from `AuthProvider` on first login; never shown again after completion
+- [x] `supabase/012_onboarding.sql` migration
 
-### 2. Personalised Dashboard Homepage — `features/personalised-dashboard.md`
-**Why now:** The homepage shows a blog to logged-in users. It should show their career status.
-- [ ] Logged-in `/` route: personalised greeting, resume staleness, visa step, review due, matched jobs
-- [ ] Logged-out `/`: targeted hero — "Get hired in AU IT" with specific CTA for international grads
-- [ ] Readiness Score widget (0–100) visible above the fold
-- [ ] "Your next action" card — one prioritised suggestion per day
+### ✅ 2. Personalised Dashboard Homepage — `features/personalised-dashboard.md`
+- [x] Logged-in `/`: `HomepageHero` → `PersonalisedHero` — greeting, next action card, today strip
+- [x] Logged-out `/`: `PublicHero` — targeted hero with emotional copy + CTAs
+- [x] Readiness Score widget in dashboard page + `ReadinessScoreMini` in Header
+- [x] "Your next action" priority logic (visa step → review due → stale resume → jobs)
 
 ### 3. Job-to-Gap Engine — `features/gap-engine.md`
 **Why now:** The single feature that makes every other feature more valuable.

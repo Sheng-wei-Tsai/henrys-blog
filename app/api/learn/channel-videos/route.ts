@@ -29,7 +29,10 @@ export async function GET(req: NextRequest) {
       hl:     'en',
       gl:     'AU',
     }),
-    next: { revalidate: 3600 },
+    // Only cache the first page — cursor pages must never be cached (POST body
+    // is not part of the Next.js fetch cache key, so all pages would return
+    // the same first-page response from cache).
+    ...(cursor ? { cache: 'no-store' } : { next: { revalidate: 3600 } }),
   });
 
   if (!res.ok) return NextResponse.json({ error: 'Channel not found' }, { status: 404 });

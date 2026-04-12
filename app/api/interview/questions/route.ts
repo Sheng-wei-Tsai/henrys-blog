@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { getRoleById } from '@/lib/interview-roles';
+import { UNIVERSAL_QUESTIONS } from '@/lib/universal-questions';
 import { requireSubscription, recordUsage, checkEndpointRateLimit, rateLimitResponse } from '@/lib/subscription';
 
 export async function POST(req: NextRequest) {
@@ -25,6 +26,14 @@ export async function POST(req: NextRequest) {
   const role = getRoleById(roleId);
   if (!role) {
     return new Response(JSON.stringify({ error: 'Unknown role' }), { status: 400 });
+  }
+
+  // Universal questions are hardcoded — no OpenAI call, no rate limit cost
+  if (roleId === 'universal') {
+    void recordUsage(auth.user.id, 'interview/questions');
+    return new Response(JSON.stringify({ questions: UNIVERSAL_QUESTIONS }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   const prompt = `Generate the 10 most commonly asked interview questions for a ${role.title} role in Australia at companies like ${role.companies.slice(0, 3).join(', ')}.

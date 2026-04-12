@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { COMPANY_INTEL } from '@/lib/interview-roles';
 import { requireSubscription, recordUsage, checkEndpointRateLimit, rateLimitResponse } from '@/lib/subscription';
 
-type MentorStage = 'scene' | 'why' | 'guide';
+type MentorStage = 'scene' | 'why' | 'guide' | 'reality' | 'followup';
 
 const ALEX_SYSTEM = `You are Alex Chen, a senior software developer with 8 years of experience at Australian tech companies including Atlassian. You're helping someone prepare for Australian IT job interviews.
 
@@ -22,14 +23,21 @@ interface MentorData {
   framework?: string;
   roleTitle: string;
   companyExample?: string;
+  userAnswer?: string;  // used for followup stage
 }
 
 function buildPrompt(d: MentorData): string {
+  const companyIntel = d.companyExample ? COMPANY_INTEL[d.companyExample] : undefined;
+  const companyContext = companyIntel
+    ? `At ${d.companyExample}, interviews follow this process: ${companyIntel.process}. Their style: ${companyIntel.style}.`
+    : '';
+
   switch (d.stage) {
     case 'scene':
       return `You are coaching someone preparing for a ${d.roleTitle} interview. The question is: "${d.question}"
 
 Context: ${d.scenario ?? 'a real-world team at an Australian tech company'}
+${companyContext}
 
 In 2-3 short sentences, paint a vivid picture of when this situation actually comes up in Australian tech teams. Be concrete and specific — not generic advice. End with why nailing this answer matters for getting the job.`;
 
@@ -37,14 +45,28 @@ In 2-3 short sentences, paint a vivid picture of when this situation actually co
       return `Interview question: "${d.question}"
 What it tests: ${d.focus ?? '(see question)'}
 Key concepts: ${d.concepts?.join(', ') ?? '(see question)'}
+${companyContext}
 
 In 2-3 sentences, tell the candidate exactly what the interviewer at a company like ${d.companyExample ?? 'Atlassian'} is looking for. Be direct about what separates a good answer from a great one.`;
 
     case 'guide':
       return `Interview question: "${d.question}"
 Answer framework: ${d.framework ?? '(structure a clear, relevant response)'}
+${companyIntel ? `Insider tip for ${d.companyExample}: ${companyIntel.tip}` : ''}
 
 In 3-4 sentences, give your personal take on structuring the perfect answer. Share one specific tip you'd whisper to a junior dev right before they walked in. Make it actionable.`;
+
+    case 'reality':
+      return `Interview question: "${d.question}"
+Role: ${d.roleTitle}
+
+You've seen hundreds of candidates answer this question. In 3-4 sentences, share the 2-3 most common mistakes candidates make — especially international candidates. Be specific about cultural assumptions, over-qualification anxiety, or underselling patterns you've seen. End with ONE short recovery phrase they can memorise for when they feel they've gone off track.`;
+
+    case 'followup':
+      return `Original interview question: "${d.question}"
+Candidate's answer: "${(d.userAnswer ?? '').slice(0, 800)}"
+
+As an interviewer, generate ONE specific follow-up question you'd ask next. Make it probing and specific to what the candidate actually said — not a generic follow-up. Keep it to one sentence. Don't explain it, just ask the question.`;
   }
 }
 
@@ -67,7 +89,7 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400 });
   }
 
-  if (!['scene', 'why', 'guide'].includes(stage)) {
+  if (!['scene', 'why', 'guide', 'reality', 'followup'].includes(stage)) {
     return new Response(JSON.stringify({ error: 'Invalid stage' }), { status: 400 });
   }
 

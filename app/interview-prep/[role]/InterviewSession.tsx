@@ -25,20 +25,21 @@ type Question = {
   starterCode?: string;
 };
 
-type Stage = 'scene' | 'why' | 'guide' | 'practice' | 'debrief';
+type Stage = 'scene' | 'why' | 'guide' | 'reality' | 'practice' | 'debrief';
 
 type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
 };
 
-const STAGES: Stage[] = ['scene', 'why', 'guide', 'practice', 'debrief'];
-const MENTOR_STAGES = new Set<Stage>(['scene', 'why', 'guide']);
+const STAGES: Stage[] = ['scene', 'why', 'guide', 'reality', 'practice', 'debrief'];
+const MENTOR_STAGES = new Set<Stage>(['scene', 'why', 'guide', 'reality']);
 
 const STAGE_LABELS: Record<Stage, string> = {
   scene:    'Scene',
   why:      'Why',
   guide:    'Guide',
+  reality:  'Reality',
   practice: 'Practice',
   debrief:  'Debrief',
 };
@@ -123,6 +124,13 @@ export default function InterviewSession({ role }: { role: InterviewRole }) {
   const [score, setScore]           = useState<number | null>(null);
   const [evaluating, setEvaluating] = useState(false);
   const [evalError, setEvalError]   = useState<string | null>(null);
+
+  // Debrief — follow-up question from Alex
+  const [followUpText, setFollowUpText]         = useState('');
+  const [followUpStreaming, setFollowUpStreaming] = useState(false);
+
+  // Per-question score tracking for session summary
+  const [questionScores, setQuestionScores] = useState<Array<{ text: string; score: number | null }>>([]);
 
   // XP
   const [sessionXp, setSessionXp] = useState(0);
@@ -357,10 +365,12 @@ export default function InterviewSession({ role }: { role: InterviewRole }) {
     const isCorrect = mcqSelected === currentQ.correctIndex;
     const xp = isCorrect ? MCQ_XP_CORRECT : MCQ_XP_WRONG;
     awardXp(xp);
-    setScore(isCorrect ? 100 : 40);
+    const mcqScore = isCorrect ? 100 : 40;
+    setScore(mcqScore);
+    setQuestionScores(prev => [...prev, { text: currentQ.text, score: mcqScore }]);
 
     const newTotalXp = totalXp + xp;
-    saveProgressToDb(currentQ, isCorrect ? 100 : 40, newTotalXp);
+    saveProgressToDb(currentQ, mcqScore, newTotalXp);
   }
 
   function advanceFromMCQ() {
@@ -422,7 +432,38 @@ export default function InterviewSession({ role }: { role: InterviewRole }) {
       const bonusXp = extracted !== null && extracted >= 90 ? bonusXpIfPerfect : 0;
       if (bonusXp > 0) awardXp(bonusXp);
 
+      // Record score for session summary
+      setQuestionScores(prev => [...prev, { text: currentQ.text, score: extracted }]);
+
       await saveProgressToDb(currentQ, extracted, totalXp + practiceXp + bonusXp);
+
+      // Stream follow-up question from Alex after feedback is complete
+      if (currentQ.questionType !== 'mcq') {
+        setFollowUpStreaming(true);
+        setFollowUpText('');
+        fetch('/api/interview/mentor', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            stage:       'followup',
+            question:    currentQ.text,
+            userAnswer:  userAnswer.slice(0, 800),
+            roleTitle:   role.title,
+          }),
+        }).then(async res => {
+          if (!res.ok || !res.body) { setFollowUpStreaming(false); return; }
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let text = '';
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            text += decoder.decode(value, { stream: true });
+            setFollowUpText(text);
+          }
+          setFollowUpStreaming(false);
+        }).catch(() => setFollowUpStreaming(false));
+      }
     } catch (err) {
       setEvalError(err instanceof Error ? err.message : 'Evaluation failed');
     } finally {
@@ -446,6 +487,8 @@ export default function InterviewSession({ role }: { role: InterviewRole }) {
     setMentorText('');
     setMcqSelected(null);
     setMcqSubmitted(false);
+    setFollowUpText('');
+    setFollowUpStreaming(false);
   }
 
   // ── Mentor chat ─────────────────────────────────────────────────────────
@@ -514,66 +557,16 @@ export default function InterviewSession({ role }: { role: InterviewRole }) {
   // ── Session complete ────────────────────────────────────────────────────
 
   if (sessionDone) {
-    return (
-      <div style={{ maxWidth: '600px', margin: '0 auto', padding: '4.5rem 1.5rem', textAlign: 'center' }}>
-        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎉</div>
-        <h1 style={{ fontFamily: "'Lora', serif", fontSize: '1.8rem', fontWeight: 700, color: 'var(--brown-dark)', marginBottom: '0.5rem' }}>
-          Session Complete!
-        </h1>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-          You earned <strong style={{ color: 'var(--terracotta)' }}>+{sessionXp} XP</strong> this session.
-        </p>
-        <div style={{ background: 'var(--warm-white)', border: '1px solid var(--parchment)', borderRadius: '14px', padding: '1.5rem', marginBottom: '2rem' }}>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.8rem' }}>Your Level</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', justifyContent: 'center', marginBottom: '0.8rem' }}>
-            <span style={{ fontSize: '1.5rem' }}>{levelInfo.current.emoji}</span>
-            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--brown-dark)' }}>{levelInfo.current.title}</span>
-          </div>
-          <div style={{ background: 'var(--parchment)', borderRadius: '99px', height: '8px', overflow: 'hidden' }}>
-            <div style={{ height: '100%', borderRadius: '99px', background: 'var(--terracotta)', width: `${levelInfo.progress}%`, transition: 'width 0.8s ease' }} />
-          </div>
-          {levelInfo.next && (
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-              {totalXp} / {nextLevel.xpRequired} XP to {levelInfo.next.title}
-            </p>
-          )}
-        </div>
-        {/* What now? */}
-        <div style={{ background: 'var(--warm-white)', border: '1px solid var(--parchment)', borderRadius: '14px', padding: '1.2rem 1.4rem', marginBottom: '1.5rem', textAlign: 'left' }}>
-          <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--terracotta)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 0.75rem' }}>
-            ⚡ What to do next
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-            <a href="/dashboard/resume-analyser" style={whatNowLinkStyle}>
-              <span style={{ fontSize: '1.1rem' }}>📄</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--brown-dark)' }}>Analyse your resume</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Make sure your resume matches what you just practised</div>
-              </div>
-              <span style={{ color: 'var(--text-muted)' }}>→</span>
-            </a>
-            <a href={`/jobs?keywords=${encodeURIComponent(role.title)}`} style={whatNowLinkStyle}>
-              <span style={{ fontSize: '1.1rem' }}>💼</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--brown-dark)' }}>Search {role.title} jobs</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Browse AU openings now that you're prepared</div>
-              </div>
-              <span style={{ color: 'var(--text-muted)' }}>→</span>
-            </a>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button onClick={() => { clearCachedQuestions(role.id); localStorage.removeItem(sessionKey); window.location.href = `/interview-prep/${role.id}`; }}
-            style={{ background: 'var(--terracotta)', color: 'white', padding: '0.6rem 1.4rem', borderRadius: '99px', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, fontFamily: 'inherit' }}>
-            Practice again
-          </button>
-          <Link href="/interview-prep" style={{ background: 'var(--parchment)', color: 'var(--brown-dark)', padding: '0.6rem 1.4rem', borderRadius: '99px', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 600 }}>
-            Try another role
-          </Link>
-        </div>
-      </div>
-    );
+    return <PostInterviewToolkit
+      role={role}
+      sessionXp={sessionXp}
+      totalXp={totalXp}
+      levelInfo={levelInfo}
+      nextLevel={nextLevel}
+      questionScores={questionScores}
+      onPracticeAgain={() => { clearCachedQuestions(role.id); localStorage.removeItem(sessionKey); window.location.href = `/interview-prep/${role.id}`; }}
+      sessionKey={sessionKey}
+    />;
   }
 
   // ── Main session UI ─────────────────────────────────────────────────────
@@ -933,6 +926,25 @@ export default function InterviewSession({ role }: { role: InterviewRole }) {
                 {user && evalError && !feedback && (
                   <p style={{ color: 'var(--terracotta)', fontSize: '0.85rem' }}>{evalError}</p>
                 )}
+
+                {/* Follow-up question from Alex */}
+                {user && (followUpText || followUpStreaming) && (
+                  <div style={{ marginTop: '1.25rem', background: 'rgba(20,184,166,0.06)', border: '1px solid rgba(20,184,166,0.3)', borderRadius: '10px', padding: '1rem 1.1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#14b8a6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '0.65rem', flexShrink: 0 }}>A</div>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#14b8a6', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Alex would follow up</span>
+                    </div>
+                    {followUpStreaming && !followUpText ? (
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Alex is thinking…</p>
+                    ) : (
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: 1.7, fontStyle: 'italic' }}>
+                        "{followUpText}"
+                        {followUpStreaming && <span className="stream-cursor" />}
+                      </p>
+                    )}
+                    <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>Think about how you'd answer this before moving on.</p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1036,3 +1048,295 @@ const whatNowLinkStyle: React.CSSProperties = {
   background: 'white', border: '1px solid var(--parchment)',
   textDecoration: 'none', color: 'inherit',
 };
+
+// ── Post-Interview Toolkit ─────────────────────────────────────────────────
+
+type ToolkitTab = 'summary' | 'email' | 'rejection' | 'negotiation';
+
+function PostInterviewToolkit({
+  role, sessionXp, totalXp, levelInfo, nextLevel, questionScores, onPracticeAgain, sessionKey,
+}: {
+  role: InterviewRole;
+  sessionXp: number;
+  totalXp: number;
+  levelInfo: ReturnType<typeof getLevelFromXp>;
+  nextLevel: { title: string; xpRequired: number; emoji: string; level: number };
+  questionScores: Array<{ text: string; score: number | null }>;
+  onPracticeAgain: () => void;
+  sessionKey: string;
+}) {
+  const [tab, setTab] = React.useState<ToolkitTab>('summary');
+  const [copied, setCopied] = React.useState<string | null>(null);
+
+  function copyToClipboard(text: string, key: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(key);
+      setTimeout(() => setCopied(null), 2000);
+    });
+  }
+
+  const avgScore = questionScores.length
+    ? Math.round(questionScores.reduce((s, q) => s + (q.score ?? 0), 0) / questionScores.length)
+    : null;
+
+  const weakQuestions = questionScores.filter(q => q.score !== null && q.score < 70);
+
+  const TABS: { id: ToolkitTab; label: string; emoji: string }[] = [
+    { id: 'summary',     label: 'Summary',     emoji: '📊' },
+    { id: 'email',       label: 'Follow-up',   emoji: '✉️' },
+    { id: 'rejection',   label: 'Rejection',   emoji: '💪' },
+    { id: 'negotiation', label: 'Negotiation', emoji: '💰' },
+  ];
+
+  const followUpEmailTemplate = `Subject: Thank you — ${role.title} interview
+
+Hi [Interviewer name],
+
+Thank you for taking the time to speak with me today about the ${role.title} position at [Company name].
+
+I really enjoyed learning about [specific thing discussed — team structure / project / challenge], and I'm excited about the opportunity to contribute to [something specific you heard about their work].
+
+I'm very interested in moving forward with the process. Please don't hesitate to reach out if you need any additional information from me.
+
+Looking forward to hearing from you.
+
+Best regards,
+[Your name]
+[LinkedIn URL]`;
+
+  const feedbackRequestTemplate = `Subject: Feedback request — ${role.title} application
+
+Hi [Recruiter/Hiring Manager name],
+
+Thank you for letting me know about the outcome of my application for the ${role.title} role.
+
+While I'm disappointed to not be moving forward this time, I'm committed to improving. I'd be very grateful if you could share any brief feedback on where my application or interview fell short — even a sentence or two would be incredibly helpful.
+
+I genuinely respect [Company name] and would love to be considered for future opportunities once I've strengthened the areas you identify.
+
+Thank you for your time throughout the process.
+
+Best regards,
+[Your name]`;
+
+  const negotiationScript = `"Thank you so much for the offer — I'm genuinely excited about this opportunity and the team.
+
+I was hoping we could discuss the base salary. Based on my research into the ${role.title} market in Australia and the scope of the role, I was targeting something closer to [your number]. Is there flexibility to move in that direction?
+
+I'm very open to discussing the full package — I want to find something that works well for both of us."`;
+
+  return (
+    <div style={{ maxWidth: '680px', margin: '0 auto', padding: '3rem 1.5rem 6rem' }}>
+      {/* Header */}
+      <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🎉</div>
+        <h1 style={{ fontFamily: "'Lora', serif", fontSize: '1.7rem', fontWeight: 700, color: 'var(--brown-dark)', marginBottom: '0.4rem' }}>
+          Session Complete
+        </h1>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+          +<strong style={{ color: 'var(--terracotta)' }}>{sessionXp} XP</strong> earned · {levelInfo.current.emoji} {levelInfo.current.title}
+        </p>
+        {levelInfo.next && (
+          <div style={{ maxWidth: '300px', margin: '0.75rem auto 0' }}>
+            <div style={{ background: 'var(--parchment)', borderRadius: '99px', height: '6px', overflow: 'hidden' }}>
+              <div style={{ height: '100%', borderRadius: '99px', background: 'var(--terracotta)', width: `${levelInfo.progress}%`, transition: 'width 0.8s ease' }} />
+            </div>
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+              {totalXp} / {nextLevel.xpRequired} XP to {levelInfo.next.title}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Toolkit tabs */}
+      <div style={{ background: 'var(--warm-white)', border: '1px solid var(--parchment)', borderRadius: '16px', overflow: 'hidden', marginBottom: '1.5rem' }}>
+        {/* Tab bar */}
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--parchment)', overflowX: 'auto' }}>
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              style={{ flex: 1, minWidth: '80px', padding: '0.75rem 0.5rem', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 600, whiteSpace: 'nowrap', background: tab === t.id ? 'var(--warm-white)' : 'var(--cream)', color: tab === t.id ? 'var(--terracotta)' : 'var(--text-muted)', borderBottom: tab === t.id ? '2px solid var(--terracotta)' : '2px solid transparent', transition: 'all 0.15s' }}>
+              {t.emoji} {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab content */}
+        <div style={{ padding: '1.5rem' }}>
+
+          {/* ── Summary tab ── */}
+          {tab === 'summary' && (
+            <div>
+              <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '1rem' }}>Session breakdown</p>
+
+              {avgScore !== null && (
+                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: '120px', background: 'var(--cream)', borderRadius: '10px', padding: '0.9rem', textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 700, color: avgScore >= 75 ? '#2D6A4F' : avgScore >= 60 ? '#C8922A' : 'var(--terracotta)' }}>{avgScore}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Avg score /100</div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: '120px', background: 'var(--cream)', borderRadius: '10px', padding: '0.9rem', textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--terracotta)' }}>+{sessionXp}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>XP earned</div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: '120px', background: 'var(--cream)', borderRadius: '10px', padding: '0.9rem', textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--brown-dark)' }}>{questionScores.filter(q => (q.score ?? 0) >= 75).length}/{questionScores.length}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Strong answers</div>
+                  </div>
+                </div>
+              )}
+
+              {questionScores.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.25rem' }}>
+                  {questionScores.map((q, i) => {
+                    const s = q.score;
+                    const color = s === null ? 'var(--text-muted)' : s >= 75 ? '#2D6A4F' : s >= 60 ? '#C8922A' : 'var(--terracotta)';
+                    return (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.55rem 0.75rem', background: 'var(--cream)', borderRadius: '8px' }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0, width: '20px' }}>Q{i + 1}</span>
+                        <span style={{ flex: 1, fontSize: '0.82rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.text}</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color, flexShrink: 0 }}>{s !== null ? `${s}/100` : 'MCQ'}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {weakQuestions.length > 0 && (
+                <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '0.9rem 1rem' }}>
+                  <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#c2410c', marginBottom: '0.5rem' }}>Revisit these questions</p>
+                  {weakQuestions.map((q, i) => (
+                    <p key={i} style={{ fontSize: '0.82rem', color: '#9a3412', lineHeight: 1.5 }}>• {q.text}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Follow-up email tab ── */}
+          {tab === 'email' && (
+            <div>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1rem' }}>
+                Send this within <strong>24 hours</strong> of your interview. Keep it short — AU interviewers appreciate brevity. Always personalise the bracketed sections.
+              </p>
+              <div style={{ position: 'relative', marginBottom: '1rem' }}>
+                <pre style={{ background: 'var(--cream)', border: '1px solid var(--parchment)', borderRadius: '10px', padding: '1rem', fontSize: '0.82rem', lineHeight: 1.7, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'inherit' }}>
+                  {followUpEmailTemplate}
+                </pre>
+                <button onClick={() => copyToClipboard(followUpEmailTemplate, 'email')}
+                  style={{ position: 'absolute', top: '0.6rem', right: '0.6rem', background: copied === 'email' ? '#2D6A4F' : 'var(--warm-white)', color: copied === 'email' ? 'white' : 'var(--text-muted)', border: '1px solid var(--parchment)', borderRadius: '6px', padding: '0.3rem 0.7rem', fontSize: '0.72rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  {copied === 'email' ? '✓ Copied' : 'Copy'}
+                </button>
+              </div>
+              <div style={{ background: 'rgba(20,184,166,0.07)', border: '1px solid rgba(20,184,166,0.25)', borderRadius: '8px', padding: '0.75rem 1rem' }}>
+                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f766e', marginBottom: '0.4rem' }}>AU etiquette tips</p>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                  • Send within 24h — next day is fine, same evening is eager but acceptable<br/>
+                  • Connect on LinkedIn with a personalised note referencing the interview<br/>
+                  • If you don't hear back within their stated timeline, one polite follow-up is fine<br/>
+                  • Avoid being overly formal — Australian workplaces are relatively casual
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ── Rejection handling tab ── */}
+          {tab === 'rejection' && (
+            <div>
+              <div style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '10px', padding: '0.9rem 1rem', marginBottom: '1.25rem' }}>
+                <p style={{ fontSize: '0.85rem', fontWeight: 600, color: '#4338ca', marginBottom: '0.3rem' }}>The numbers are normal</p>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                  Australian IT grads typically apply to <strong>40–60 roles</strong> before landing their first offer. International graduates often need <strong>20–30% more applications</strong> due to visa considerations. Every rejection is data, not a verdict.
+                </p>
+              </div>
+
+              <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.75rem' }}>Feedback request template</p>
+              <div style={{ position: 'relative', marginBottom: '1.25rem' }}>
+                <pre style={{ background: 'var(--cream)', border: '1px solid var(--parchment)', borderRadius: '10px', padding: '1rem', fontSize: '0.82rem', lineHeight: 1.7, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'inherit' }}>
+                  {feedbackRequestTemplate}
+                </pre>
+                <button onClick={() => copyToClipboard(feedbackRequestTemplate, 'rejection')}
+                  style={{ position: 'absolute', top: '0.6rem', right: '0.6rem', background: copied === 'rejection' ? '#2D6A4F' : 'var(--warm-white)', color: copied === 'rejection' ? 'white' : 'var(--text-muted)', border: '1px solid var(--parchment)', borderRadius: '6px', padding: '0.3rem 0.7rem', fontSize: '0.72rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  {copied === 'rejection' ? '✓ Copied' : 'Copy'}
+                </button>
+              </div>
+
+              <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.6rem' }}>After rejection: what to do</p>
+              {[
+                { step: '1', text: 'Wait 24h before responding to a rejection — reply too fast and it reads as desperation' },
+                { step: '2', text: 'Send the feedback request email — about 30% of AU companies will respond with useful detail' },
+                { step: '3', text: 'Note which questions you struggled with and add them to your practice list' },
+                { step: '4', text: 'You can reapply to most AU companies after 6–12 months — not all close the door permanently' },
+                { step: '5', text: 'Keep the hiring manager on LinkedIn — future roles at the same company are common' },
+              ].map(item => (
+                <div key={item.step} style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.55rem', alignItems: 'flex-start' }}>
+                  <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'var(--parchment)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', flexShrink: 0 }}>{item.step}</span>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>{item.text}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Negotiation tab ── */}
+          {tab === 'negotiation' && (
+            <div>
+              <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', padding: '0.9rem 1rem', background: 'rgba(200,138,20,0.07)', border: '1px solid rgba(200,138,20,0.25)', borderRadius: '10px' }}>
+                <div>
+                  <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#b45309', marginBottom: '0.3rem' }}>AU salary benchmark for {role.title}</p>
+                  <p style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--brown-dark)', marginBottom: '0.2rem' }}>{role.salaryRange} base</p>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>+ 11.5% superannuation on top · quoted exclusive of super</p>
+                </div>
+              </div>
+
+              <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.75rem' }}>What's negotiable in Australia</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1.25rem' }}>
+                {[
+                  { item: 'Base salary', yes: true },
+                  { item: 'Superannuation (11.5%)', yes: false },
+                  { item: 'WFH / flexible hours', yes: true },
+                  { item: 'Learning & conf budget', yes: true },
+                  { item: 'Extra annual leave', yes: true },
+                  { item: 'Visa sponsorship', yes: true },
+                  { item: 'Start date', yes: true },
+                  { item: 'Title / seniority', yes: true },
+                ].map(n => (
+                  <div key={n.item} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.45rem 0.65rem', background: 'var(--cream)', borderRadius: '7px' }}>
+                    <span style={{ fontSize: '0.8rem', color: n.yes ? '#2D6A4F' : 'var(--terracotta)' }}>{n.yes ? '✓' : '✗'}</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{n.item}</span>
+                  </div>
+                ))}
+              </div>
+
+              <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.6rem' }}>Negotiation script</p>
+              <div style={{ position: 'relative', marginBottom: '1rem' }}>
+                <pre style={{ background: 'var(--cream)', border: '1px solid var(--parchment)', borderRadius: '10px', padding: '1rem', fontSize: '0.82rem', lineHeight: 1.7, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'inherit' }}>
+                  {negotiationScript}
+                </pre>
+                <button onClick={() => copyToClipboard(negotiationScript, 'negotiation')}
+                  style={{ position: 'absolute', top: '0.6rem', right: '0.6rem', background: copied === 'negotiation' ? '#2D6A4F' : 'var(--warm-white)', color: copied === 'negotiation' ? 'white' : 'var(--text-muted)', border: '1px solid var(--parchment)', borderRadius: '6px', padding: '0.3rem 0.7rem', fontSize: '0.72rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  {copied === 'negotiation' ? '✓ Copied' : 'Copy'}
+                </button>
+              </div>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                Tip: Always have a specific number ready. "The range suits me" leaves money on the table — come in at the top of what you'd accept and leave room to land in the middle.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <button onClick={onPracticeAgain}
+          style={{ background: 'var(--terracotta)', color: 'white', padding: '0.6rem 1.4rem', borderRadius: '99px', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, fontFamily: 'inherit' }}>
+          Practice again
+        </button>
+        <Link href="/interview-prep" style={{ background: 'var(--parchment)', color: 'var(--brown-dark)', padding: '0.6rem 1.4rem', borderRadius: '99px', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 600 }}>
+          Try another role
+        </Link>
+        <Link href="/dashboard/resume-analyser" style={{ background: 'var(--parchment)', color: 'var(--brown-dark)', padding: '0.6rem 1.4rem', borderRadius: '99px', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 600 }}>
+          Analyse resume →
+        </Link>
+      </div>
+    </div>
+  );
+}

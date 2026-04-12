@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { LEARN_CHANNELS } from '@/lib/learn-channels';
 
 interface Video {
@@ -221,9 +222,14 @@ export default function LearnYoutubePage() {
                       background: 'var(--warm-white)', border: '1px solid var(--parchment)',
                       borderRadius: '12px', overflow: 'hidden', cursor: 'pointer',
                     }}>
-                      <div style={{ position: 'relative' }}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={v.thumbnail} alt={v.title} style={{ width: '100%', display: 'block', aspectRatio: '16/9', objectFit: 'cover' }} />
+                      <div style={{ position: 'relative', paddingBottom: '56.25%', overflow: 'hidden' }}>
+                        <Image
+                          src={v.thumbnail}
+                          alt={v.title}
+                          fill
+                          sizes="(max-width: 640px) 100vw, 260px"
+                          style={{ objectFit: 'cover' }}
+                        />
                         {p?.completed && (
                           <span style={{ position: 'absolute', top: '0.5rem', right: '0.5rem',
                             background: '#10b981', color: 'white', fontSize: '0.68rem',

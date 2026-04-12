@@ -1,3 +1,22 @@
+// Company interview intel — curated process/style data for top AU tech companies
+export const COMPANY_INTEL: Record<string, {
+  process:         string;
+  style:           string;
+  tip:             string;
+  interviewLength: string;
+}> = {
+  'Atlassian':         { process: '4 rounds: recruiter screen → technical (take-home or live coding) → system design → values/culture', style: 'Collaborative — they encourage thinking aloud; no trick questions; strong focus on STAR behavioural answers', tip: 'Reference their products (Jira, Confluence, Bitbucket) with genuine detail; they love hearing how you\'ve actually used them', interviewLength: '3–5 weeks' },
+  'Canva':             { process: '3–4 rounds: recruiter call → technical challenge (48h take-home) → tech interview → culture fit', style: 'Fast-paced, design-aware; expect questions about scale and user impact', tip: 'Show you care about the end user experience, not just the code; mention Canva features you\'ve used personally', interviewLength: '2–3 weeks' },
+  'REA Group':         { process: '3 rounds: phone screen → technical pair programming → team interview', style: 'Pair programming is real and collaborative — they want to see how you communicate while coding, not just solve it solo', tip: 'Talk through your thinking constantly during the pair exercise; silence is your biggest risk', interviewLength: '2–3 weeks' },
+  'Commonwealth Bank': { process: '4 rounds: HR screen → technical assessment → panel interview → senior stakeholder', style: 'More formal than pure-tech startups; expect competency-based questions and structured STAR answers', tip: 'Research CBA\'s tech transformation narrative — they invest heavily in cloud and data; reference their digital banking initiatives', interviewLength: '4–6 weeks' },
+  'ANZ':               { process: '3–4 rounds: recruiter → technical → panel → sometimes a final with a senior leader', style: 'Structured and process-driven; values alignment is weighted as heavily as technical ability', tip: 'Emphasise security awareness and risk thinking — financial services care deeply about data handling practices', interviewLength: '4–6 weeks' },
+  'Telstra':           { process: '3 rounds: recruiter screen → technical assessment → hiring manager panel', style: 'Mix of technical and behavioural; expect questions about working at scale and enterprise systems', tip: 'Frame your experience around reliability and scale — Telstra deals with millions of customers; show you understand production consequences', interviewLength: '3–5 weeks' },
+  'Xero':              { process: '3 rounds: recruiter call → technical interview (live coding) → values interview', style: 'Relaxed and conversational; strong emphasis on Xero\'s values (human, team, beautiful, ownership)', tip: 'Read their engineering blog before the interview; they respect candidates who know what their teams are building', interviewLength: '2–3 weeks' },
+  'Seek':              { process: '3 rounds: recruiter → technical (take-home + review) → team culture', style: 'Data-informed culture; expect questions about metrics, A/B testing, and decisions backed by evidence', tip: 'Mention how you\'d measure the success of features you\'ve built — Seek values outcome thinking over output thinking', interviewLength: '2–4 weeks' },
+  'Afterpay':          { process: '3 rounds: recruiter screen → technical challenge → team + leadership panel', style: 'Fast-moving; they value speed of delivery and pragmatism alongside quality', tip: 'Show experience with high-traffic systems or financial data; fraud and payment reliability come up frequently', interviewLength: '2–3 weeks' },
+  'NAB':               { process: '3–4 rounds: HR → technical assessment → behavioural panel → final leader interview', style: 'Structured; risk and compliance awareness is weighted highly alongside technical skills', tip: 'Demonstrate understanding of agile delivery within enterprise constraints — they\'re mid-transformation and want people comfortable with both worlds', interviewLength: '4–6 weeks' },
+};
+
 // AU careers page URLs for companies shown on interview prep cards
 export const COMPANY_CAREERS_URLS: Record<string, string> = {
   'Atlassian':          'https://www.atlassian.com/company/careers',
@@ -37,11 +56,26 @@ export type InterviewRole = {
   readonly topics:        readonly string[];
   readonly difficulty:    'Entry' | 'Mid' | 'Senior';
   readonly demand:        'Medium' | 'High' | 'Very High';
-  readonly questionCount: 10;
+  readonly questionCount: 8 | 10;
   readonly color:         string;
+  readonly badge?:        string;  // optional callout badge, e.g. "Recommended for international grads"
 };
 
 export const INTERVIEW_ROLES: readonly InterviewRole[] = [
+  {
+    id:            'universal',
+    title:         'Australian Universal Questions',
+    emoji:         '🌏',
+    description:   '8 questions every international IT graduate faces in Australia — visa, salary, culture fit, and the questions that actually decide if you get the offer.',
+    companies:     ['Atlassian', 'Canva', 'REA Group', 'Commonwealth Bank', 'Xero'],
+    salaryRange:   'All levels',
+    topics:        ['Self-introduction pitch', 'Visa & work rights', 'Salary expectations (AU)', 'Cross-cultural teamwork', 'AU workplace culture', 'Career goals in Australia', 'Handling feedback', 'Questions to ask interviewers'],
+    difficulty:    'Entry',
+    demand:        'Very High',
+    questionCount: 8,
+    color:         '#14b8a6',
+    badge:         'Start here — international grads',
+  },
   {
     id:            'junior-frontend',
     title:         'Junior Frontend Developer',
@@ -148,11 +182,12 @@ export const INTERVIEW_ROLES: readonly InterviewRole[] = [
   },
 ];
 
-// XP awarded when the user completes each stage (stages: scene → why → guide → practice → debrief)
+// XP awarded when the user completes each stage (stages: scene → why → guide → reality → practice → debrief)
 export const STAGE_XP_VALUES: Record<string, number> = {
   scene:    5,
   why:      10,
   guide:    10,
+  reality:  10,
   practice: 50,
   debrief:  0,
 } as const;

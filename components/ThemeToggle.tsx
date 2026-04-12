@@ -1,35 +1,33 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const [theme,    setTheme]    = useState<'light' | 'dark'>('light');
+  const [rotation, setRotation] = useState(0);
 
   useEffect(() => {
     const saved = localStorage.getItem('theme') as 'light' | 'dark' | null;
     const initial = saved ?? 'light';
     setTheme(initial);
+    // Restore persisted rotation parity so first click continues from correct angle
+    if (initial === 'dark') setRotation(180);
     document.documentElement.setAttribute('data-theme', initial);
   }, []);
 
   const toggle = () => {
     const next = theme === 'light' ? 'dark' : 'light';
 
-    if (wrapRef.current) {
-      const degrees = next === 'dark' ? 180 : -180;
-      wrapRef.current.animate(
-        [
-          { transform: 'rotate(0deg) scale(1)' },
-          { transform: `rotate(${degrees * 0.5}deg) scale(0.8)` },
-          { transform: `rotate(${degrees}deg) scale(1)` },
-        ],
-        { duration: 500, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'none' }
-      );
-    }
+    // Accumulate rotation — CSS transition carries it smoothly, no snap-back
+    setRotation(prev => prev + 180);
 
-    setTheme(next);
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('theme', next);
+    // Swap colours at the midpoint (halfway through the spin) so the fill
+    // change is hidden while the icon is nearly edge-on
+    const half = 280; // ms — half of the 560ms transition below
+    setTimeout(() => {
+      setTheme(next);
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    }, half);
   };
 
   const isDark = theme === 'dark';
@@ -59,13 +57,20 @@ export default function ThemeToggle() {
           : '2px 2px 0 rgba(20,10,5,0.2)',
       }}
     >
-      <div ref={wrapRef} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {/* CSS transition on transform — accumulating degrees, never resets */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transform: `rotate(${rotation}deg)`,
+        transition: 'transform 0.56s cubic-bezier(0.4, 0, 0.2, 1)',
+      }}>
         <svg viewBox="0 0 40 40" width="28" height="28" style={{ display: 'block' }}>
-          <circle cx="20" cy="20" r="18" fill={yinColor} />
-          <path d="M20,2 A18,18 0 0,1 20,38 A9,9 0 0,1 20,20 A9,9 0 0,0 20,2 Z" fill={yangColor} />
-          <circle cx="20" cy="11" r="4.5" fill={yinColor} />
-          <circle cx="20" cy="29" r="4.5" fill={yangColor} />
-          <circle cx="20" cy="20" r="18" fill="none" stroke={ringColor} strokeWidth="1.5" />
+          <circle cx="20" cy="20" r="18" fill={yinColor} style={{ transition: 'fill 0.25s ease' }} />
+          <path d="M20,2 A18,18 0 0,1 20,38 A9,9 0 0,1 20,20 A9,9 0 0,0 20,2 Z"
+                fill={yangColor} style={{ transition: 'fill 0.25s ease' }} />
+          <circle cx="20" cy="11" r="4.5" fill={yinColor}  style={{ transition: 'fill 0.25s ease' }} />
+          <circle cx="20" cy="29" r="4.5" fill={yangColor} style={{ transition: 'fill 0.25s ease' }} />
+          <circle cx="20" cy="20" r="18" fill="none" stroke={ringColor} strokeWidth="1.5"
+                  style={{ transition: 'stroke 0.25s ease' }} />
         </svg>
       </div>
     </button>

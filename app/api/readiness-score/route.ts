@@ -69,9 +69,15 @@ async function skillsScore(userId: string, role: string | null): Promise<{ score
 }
 
 // ── Component: Interview (0–100) ──────────────────────────────
-// No interview_sessions table yet — returns 0 with a prompt
-function interviewScore(): { score: number; detail: string } {
-  return { score: 0, detail: 'No sessions yet' };
+// Derived from profiles.interview_xp + interview_level (set by InterviewSession.tsx)
+function interviewScore(xp: number, level: number): { score: number; detail: string } {
+  if (xp === 0) return { score: 0, detail: 'No sessions yet' };
+
+  // XP thresholds: level 1 starts at 0, each ~150 XP = +1 level (rough)
+  // Map to 0–100: 500 XP ≈ solid practitioner
+  const score = Math.min(100, Math.round((xp / 500) * 100));
+  const detail = level > 1 ? `Level ${level} · ${xp} XP` : `${xp} XP earned`;
+  return { score, detail };
 }
 
 // ── Component: Quizzes (0–100) ────────────────────────────────
@@ -120,17 +126,23 @@ export async function GET(req: NextRequest) {
   const { data: { user }, error: authErr } = await sb.auth.getUser(token);
   if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // Fetch onboarding role alongside scores
-  const [{ data: profile }, resume, skills, quiz] = await Promise.all([
-    sb.from('profiles').select('onboarding_role').eq('id', user.id).maybeSingle(),
+  // Fetch profile + all independent scores in one parallel round-trip
+  const [{ data: profile }, resume, quiz] = await Promise.all([
+    sb.from('profiles')
+      .select('onboarding_role, interview_xp, interview_level')
+      .eq('id', user.id)
+      .maybeSingle(),
     resumeScore(user.id),
-    skillsScore(user.id, null), // role filled after profile
     quizScore(user.id),
   ]);
 
-  const role = profile?.onboarding_role ?? null;
+  const role      = profile?.onboarding_role ?? null;
+  const xp        = profile?.interview_xp    ?? 0;
+  const lvl       = profile?.interview_level ?? 1;
+
+  // Skills needs the role — fetch after profile; interview is computed locally
   const skillsFinal = await skillsScore(user.id, role);
-  const interview = interviewScore();
+  const interview   = interviewScore(xp, lvl);
 
   const components = { resume, skills: skillsFinal, interview, quiz };
   const score = Math.round(

@@ -110,7 +110,7 @@
   --brown-light:       #887060;
   --text-primary:      #f0e6d0;
   --text-secondary:    #c8b090;
-  --text-muted:        #786858;
+  --text-muted:        #a09080;  /* was #786858 — 3.5:1 fail → #a09080 passes WCAG AA */
 
   /* Comic panel shadow — glowing vermilion offset */
   --panel-shadow:      4px 4px 0 rgba(232, 64, 64, 0.6);
@@ -886,3 +886,56 @@ h3, h4 {
 }
 
 .visa-source-cta:hover { opacity: 0.8; }
+
+/* ── Interview Prep tool cards — mobile: 2-col grid ── */
+@media (max-width: 640px) {
+  .tool-cards-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ── Comic book tool cards ───────────────────────────────────────────── */
+.comic-tool-card {
+  position: relative;
+  display: block;
+  text-decoration: none;
+  border-radius: 14px;
+  border: 3px solid #140a05;
+  box-shadow: 7px 7px 0 #140a05;
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.22s ease;
+  transform-origin: center bottom;
+}
+
+.comic-tool-card:hover {
+  transform: translateY(-9px) rotate(-1.5deg);
+  box-shadow: 11px 11px 0 2px #c0281c;
+}
+
+.comic-tool-card:focus-visible {
+  transform: translateY(-6px) rotate(-1deg);
+  box-shadow: 9px 9px 0 1px #c0281c;
+  outline: none;
+}
+
+[data-theme="dark"] .comic-tool-card {
+  border-color: rgba(240,230,208,0.6);
+  box-shadow: 7px 7px 0 rgba(240,230,208,0.35);
+}
+
+[data-theme="dark"] .comic-tool-card:hover {
+  box-shadow: 11px 11px 0 2px #e84040;
+}
+
+[data-theme="dark"] .comic-tool-card:focus-visible {
+  box-shadow: 9px 9px 0 1px #e84040;
+}
+
+/* Dot halftone overlay — decorative right panel */
+.comic-card-dots {
+  background-image: radial-gradient(circle, rgba(0,0,0,0.18) 0.06em, transparent 0.06em);
+  background-size: 0.55em 0.55em;
+}

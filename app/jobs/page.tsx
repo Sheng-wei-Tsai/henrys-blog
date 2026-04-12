@@ -1,6 +1,7 @@
 'use client';
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import type { AdzunaJob } from '../api/jobs/route';
@@ -140,7 +141,7 @@ function JobCard({ job, savedIds, onSaveToggle, onApply }: {
         >
           {isSaved ? '♥ Saved' : '♡ Save'}
         </button>
-        <a
+        <Link
           href={`/cover-letter?title=${encodeURIComponent(job.title)}&company=${encodeURIComponent(job.company)}&desc=${encodeURIComponent(job.description)}`}
           style={{
             background: 'white', color: 'var(--terracotta)',
@@ -149,7 +150,7 @@ function JobCard({ job, savedIds, onSaveToggle, onApply }: {
             fontSize: '0.85rem', fontWeight: 500, textDecoration: 'none',
           }}>
           ✍️ Cover Letter
-        </a>
+        </Link>
         <a href={job.url} target="_blank" rel="noopener noreferrer"
           onClick={() => onApply(job)}
           style={{
@@ -224,14 +225,16 @@ export default function JobsPage() {
     savePrefs({ keywords, location, sortBy, fullTime, workingRights, category, salaryMin, salaryMax });
   }, [keywords, location, sortBy, fullTime, workingRights, category, salaryMin, salaryMax]);
 
-  const search = useCallback(async (p = 1, forceRefresh = false) => {
+  // overrideKeywords: used by quick-start pills to pass the new value before state updates
+  const search = useCallback(async (p = 1, forceRefresh = false, overrideKeywords?: string) => {
     setLoading(true);
     setError('');
     setAlertSaved(false);
 
-    const catKeyword    = CATEGORIES.find(c => c.label === category)?.keyword ?? '';
-    const rightsKeyword = workingRights ? 'full working rights' : '';
-    const fullQuery     = [keywords, catKeyword, rightsKeyword].filter(Boolean).join(' ');
+    const effectiveKeywords = overrideKeywords ?? keywords;
+    const catKeyword        = CATEGORIES.find(c => c.label === category)?.keyword ?? '';
+    const rightsKeyword     = workingRights ? 'full working rights' : '';
+    const fullQuery         = [effectiveKeywords, catKeyword, rightsKeyword].filter(Boolean).join(' ');
     const params = new URLSearchParams({
       keywords: fullQuery, location, sort_by: sortBy, page: String(p),
       ...(fullTime  ? { full_time: '1' }      : {}),
@@ -272,7 +275,7 @@ export default function JobsPage() {
     } finally {
       setLoading(false);
     }
-  }, [keywords, location, sortBy, fullTime, workingRights, salaryMin, salaryMax]);
+  }, [keywords, location, sortBy, fullTime, workingRights, salaryMin, salaryMax, category]);
 
   const handleSaveToggle = async (job: AdzunaJob) => {
     if (!user) { router.push('/login'); return; }
@@ -329,7 +332,7 @@ export default function JobsPage() {
         <p className="animate-fade-up delay-1" style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
           Aggregated from Adzuna + Google for Jobs — same-day listings.
           {user
-            ? <span> <a href="/dashboard" style={{ color: 'var(--terracotta)' }}>View saved jobs →</a></span>
+            ? <span> <Link href="/dashboard" style={{ color: 'var(--terracotta)' }}>View saved jobs →</Link></span>
             : ' Sign in to save jobs.'}
         </p>
       </div>
@@ -337,7 +340,7 @@ export default function JobsPage() {
       {/* Quick-start pills */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', marginBottom: '1rem' }}>
         {QUICK_STARTS.map(q => (
-          <button key={q} onClick={() => { setKeywords(q); setTimeout(() => search(1), 0); }}
+          <button key={q} onClick={() => { setKeywords(q); search(1, false, q); }}
             style={{
               padding: '0.35rem 0.9rem', borderRadius: '99px', fontSize: '0.82rem',
               border: '1px solid var(--parchment)', background: 'var(--warm-white)',
@@ -485,9 +488,9 @@ export default function JobsPage() {
           whiteSpace: 'nowrap',
         }}>
           Applied to {applyToast.company}?
-          <a href="/dashboard" style={{ color: '#fbbf24', fontWeight: 600, textDecoration: 'none' }}>
+          <Link href="/dashboard" style={{ color: '#fbbf24', fontWeight: 600, textDecoration: 'none' }}>
             Track it →
-          </a>
+          </Link>
           <button onClick={() => setApplyToast(null)}
             style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '1rem', padding: 0 }}>
             ✕
