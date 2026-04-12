@@ -32,9 +32,18 @@ function extractVideoId(input: string): string | null {
   return null;
 }
 
-// RapidAPI returns relative text like "3 days ago" — use directly
-function timeAgo(publishedAt: string) {
-  return publishedAt || '';
+// YouTube Data API v3 returns ISO 8601 dates — convert to relative text
+function timeAgo(publishedAt: string): string {
+  if (!publishedAt) return '';
+  const ms   = Date.now() - new Date(publishedAt).getTime();
+  const secs = ms / 1000;
+  if (secs < 3600)  return `${Math.floor(secs / 60)}m ago`;
+  if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
+  const days = Math.floor(secs / 86400);
+  if (days < 7)   return `${days}d ago`;
+  if (days < 30)  return `${Math.floor(days / 7)}w ago`;
+  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
+  return `${Math.floor(days / 365)}y ago`;
 }
 
 function ScoreBadge({ score }: { score: number }) {
@@ -55,24 +64,30 @@ export default function LearnYoutubePage() {
   const [videos,        setVideos]        = useState<Video[]>([]);
   const [nextToken,     setNextToken]     = useState<string | null>(null);
   const [loading,       setLoading]       = useState(false);
+  const [loadError,     setLoadError]     = useState(false);
   const [progress,      setProgress]      = useState<Record<string, Progress>>({});
   const sentinelRef = useRef<HTMLDivElement>(null);
   const loadingRef  = useRef(false); // prevent double-fire from IntersectionObserver
 
   const channel = LEARN_CHANNELS.find(c => c.id === activeChannel)!;
 
-  const loadChannel = useCallback(async (channelId: string, cursor?: string) => {
+  const loadChannel = useCallback(async (channelId: string, pageToken?: string) => {
     if (loadingRef.current) return;
     loadingRef.current = true;
     setLoading(true);
-    if (!cursor) setVideos([]);
-    const apiUrl = `/api/learn/channel-videos?channelId=${channelId}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+    setLoadError(false);
+    if (!pageToken) setVideos([]);
+    const apiUrl = `/api/learn/channel-videos?channelId=${channelId}${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`;
     try {
       const res  = await fetch(apiUrl);
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
       const data = await res.json();
-      setVideos(prev => cursor ? [...prev, ...(data.videos ?? [])] : (data.videos ?? []));
-      setNextToken(data.nextPageToken || null); // '' → null (no more pages)
-    } catch { /* ignore fetch errors */ }
+      setVideos(prev => pageToken ? [...prev, ...(data.videos ?? [])] : (data.videos ?? []));
+      setNextToken(data.nextPageToken ?? null);
+    } catch {
+      // Preserve nextToken so user can retry — do NOT set to null on error
+      setLoadError(true);
+    }
     setLoading(false);
     loadingRef.current = false;
   }, []);
@@ -99,7 +114,7 @@ export default function LearnYoutubePage() {
     const observer = new IntersectionObserver(
       entries => {
         if (entries[0].isIntersecting && nextToken && !loadingRef.current) {
-          loadChannel(channel.channelId, nextToken);
+          loadChannel(channel.channelId, nextToken);   // nextToken = YouTube pageToken
         }
       },
       { rootMargin: '200px' }, // start loading 200px before visible
@@ -270,6 +285,29 @@ export default function LearnYoutubePage() {
                   }} />
                 ))}
                 <style>{`@keyframes dotPulse{0%,80%,100%{transform:scale(0.7);opacity:0.4}40%{transform:scale(1);opacity:1}}`}</style>
+              </div>
+            )}
+
+            {/* Load more button — visible fallback when there are more pages */}
+            {nextToken && !loading && (
+              <div style={{ textAlign: 'center', padding: '1.5rem 0 3rem' }}>
+                {loadError && (
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                    Failed to load more — tap to retry
+                  </p>
+                )}
+                <button
+                  onClick={() => loadChannel(channel.channelId, nextToken)}
+                  className="channel-btn"
+                  style={{
+                    padding: '0.55rem 1.5rem', borderRadius: '99px',
+                    border: '1px solid var(--parchment)',
+                    background: 'var(--warm-white)', color: 'var(--brown-dark)',
+                    fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer',
+                  }}
+                >
+                  Load more videos ↓
+                </button>
               </div>
             )}
 
