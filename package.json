@@ -11,6 +11,7 @@
     "githot": "npx tsx --env-file=.env.local scripts/run-githot.ts",
     "post": "npx tsx --env-file=.env.local scripts/run-post.ts",
     "refresh:jsa": "npx tsx scripts/fetch-jsa.ts",
+    "scrape:jobs": "npx tsx --env-file=.env.local scripts/scrape-au-jobs.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

@@ -92,6 +92,9 @@ function JobCard({ job, savedIds, onSaveToggle, onApply }: {
   const { label: ageLabel, color: ageColor } = freshness(job.created);
   const sourceBadge = job.source === 'jsearch'
     ? (job.publisher ?? 'Google Jobs')
+    : job.source === 'jora'   ? 'Jora'
+    : job.source === 'indeed' ? 'Indeed'
+    : job.source === 'acs'    ? 'ACS'
     : null;
 
   return (
@@ -330,7 +333,7 @@ export default function JobsPage() {
           IT Jobs in Australia
         </h1>
         <p className="animate-fade-up delay-1" style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
-          Aggregated from Adzuna + Google for Jobs — same-day listings.
+          Aggregated from Jora, ACS TechCareers, Adzuna + Google for Jobs — same-day listings.
           {user
             ? <span> <Link href="/dashboard" style={{ color: 'var(--terracotta)' }}>View saved jobs →</Link></span>
             : ' Sign in to save jobs.'}

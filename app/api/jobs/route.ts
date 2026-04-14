@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
 const APP_ID       = process.env.ADZUNA_APP_ID;
 const APP_KEY      = process.env.ADZUNA_APP_KEY;
@@ -17,7 +18,7 @@ export interface AdzunaJob {
   created: string;
   category: string;
   contract_type: string | null;
-  source: 'adzuna' | 'jsearch';
+  source: 'adzuna' | 'jsearch' | 'jora' | 'indeed' | 'acs';
   publisher?: string;   // e.g. "LinkedIn", "Glassdoor" — from JSearch
   salary_min?: number;
   salary_max?: number;
@@ -86,6 +87,49 @@ async function fetchJSearch(keywords: string, location: string): Promise<AdzunaJ
   }
 }
 
+// ─── Scraped Jobs (Seek / Indeed / ACS cached in Supabase) ────────────────────
+
+async function fetchScrapedJobs(keywords: string, location: string): Promise<AdzunaJob[]> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !anonKey) return [];
+
+  try {
+    const sb = createClient(supabaseUrl, anonKey);
+    const kw = keywords.slice(0, 60);
+    const loc = location.slice(0, 40);
+
+    const { data, error } = await sb
+      .from('scraped_jobs')
+      .select('id, source, title, company, location, description, salary, salary_min, salary_max, url, category, contract_type, created')
+      .or(`title.ilike.%${kw}%,description.ilike.%${kw}%`)
+      .ilike('location', `%${loc}%`)
+      .gt('expires_at', new Date().toISOString())
+      .order('created', { ascending: false })
+      .limit(50);
+
+    if (error || !data) return [];
+
+    return data.map(r => ({
+      id:            r.id,
+      title:         r.title,
+      company:       r.company,
+      location:      r.location,
+      description:   r.description ?? '',
+      salary:        r.salary ?? null,
+      salary_min:    r.salary_min ?? undefined,
+      salary_max:    r.salary_max ?? undefined,
+      url:           r.url,
+      created:       r.created,
+      category:      r.category ?? '',
+      contract_type: r.contract_type ?? null,
+      source:        r.source as AdzunaJob['source'],
+    }));
+  } catch {
+    return [];
+  }
+}
+
 // ─── Deduplication ────────────────────────────────────────────────────────────
 
 function dedupKey(title: string, company: string): string {
@@ -128,9 +172,10 @@ export async function GET(req: NextRequest) {
   const adzunaUrl = `https://api.adzuna.com/v1/api/jobs/au/search/${page}?${adzunaParams}`;
 
   try {
-    const [adzunaRes, jsearchJobs] = await Promise.all([
+    const [adzunaRes, jsearchJobs, scrapedJobs] = await Promise.all([
       fetch(adzunaUrl, { next: { revalidate: 300 } }),
       fetchJSearch(keywords, location),
+      fetchScrapedJobs(keywords, location),
     ]);
 
     if (!adzunaRes.ok) {
@@ -158,10 +203,19 @@ export async function GET(req: NextRequest) {
       source:        'adzuna' as const,
     }));
 
-    // JSearch jobs go first (fresher), Adzuna fills unique listings after
-    const seen   = new Set(jsearchJobs.map(j => dedupKey(j.title, j.company)));
+    // Priority: JSearch (freshest, includes LinkedIn) → scraped (Seek/Indeed/ACS) → Adzuna
+    const seen = new Set(jsearchJobs.map(j => dedupKey(j.title, j.company)));
+
+    const uniqueScraped = scrapedJobs.filter(j => {
+      const key = dedupKey(j.title, j.company);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
     const merged = [
       ...jsearchJobs,
+      ...uniqueScraped,
       ...adzunaJobs.filter(j => !seen.has(dedupKey(j.title, j.company))),
     ];
 
