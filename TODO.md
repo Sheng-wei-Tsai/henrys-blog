@@ -1,6 +1,6 @@
 # TODO — Henry Blog Feature Backlog
 
-Last updated: 2026-04-12
+Last updated: 2026-04-14
 Product vision: The definitive career platform for international IT graduates entering the Australian job market.
 
 ---
@@ -217,18 +217,38 @@ These features tie everything together into a coherent product. Without them, ev
 
 ## 🟢 Priority 5 — Polish & Completeness
 
-### 13. Framer Motion — remaining AU Insights tabs
-- [ ] Skill Map — animate match bars with `whileInView`
-- [ ] Company Compare — SVG radar `pathLength` draw-in on load
-- [ ] Grad Programs — card entrance stagger on tab reveal
+### ✅ 13. Framer Motion — remaining AU Insights tabs
+- [x] Skill Map — animate match bars with `whileInView`
+- [x] Company Compare — SVG radar `motion.polygon` scale-in on load
+- [x] Grad Programs — card entrance stagger on tab reveal
 
-### 14. Interview Session Share Card — `features/interview-share-card.md`
-- [ ] PNG share card on session complete (role, score, date, "Alex certified")
-- [ ] One-click LinkedIn share with pre-filled text
+### ✅ 14. Interview Session Share Card
+- [x] PNG share card at `GET /api/interview/share-card` (ImageResponse, 1200×630)
+- [x] Download button + LinkedIn share in summary tab
 
-### 15. Reading Progress Bar
-- [ ] Thin scroll-progress bar at top of all blog post pages
-- [ ] Pure CSS `animation-timeline: scroll()` — no JS needed
+### ✅ 15. Reading Progress Bar
+- [x] Thin scroll-progress bar at top of all blog post pages
+- [x] Pure CSS `animation-timeline: scroll()` — no JS needed
+
+### ✅ Visual Intelligence — AI Diagram Features
+- [x] E — Resume Radar Chart (5-axis SVG, Framer Motion scale-in) in resume analyser
+- [x] B — Concept Diagram Generator (GPT-4o-mini → Mermaid.js SVG, localStorage cache) in skill cards
+- [x] D — Personalised Roadmap Diagram (GPT-4o-mini → Mermaid.js SVG, localStorage cache) in dashboard hero
+- [x] C — Interview Score Card PNG (Next.js ImageResponse / Satori)
+
+### ✅ Job Scraper — Expanded AU IT Job Coverage
+- [x] `scraped_jobs` Supabase table — `supabase/017_scraped_jobs.sql`, 30-day TTL
+- [x] `scripts/scrape-au-jobs.ts` — Jora (au.jora.com) HTML scraping, ACS RSS, Indeed best-effort
+- [x] 9 IT keywords × 5 AU cities = up to 675 Jora results per run, deduplicated
+- [x] Integrated into `/api/jobs` — merge priority: JSearch → scraped → Adzuna
+- [x] Source badges in `/jobs` page: Jora, ACS, Indeed
+- [x] Daily cron via `.github/workflows/scrape-jobs.yml` (6am AEST)
+- [x] `npm run scrape:jobs` script
+
+### ✅ Database Migrations — All Schemas Applied
+- [x] `018_fix_missing_schema.sql` — applied `skill_progress` (blocked by invalid SQL in 003), `page_views` (blocked by non-IMMUTABLE index in 010)
+- [x] All 18 tables verified present via Supabase CLI (`supabase db query --linked`)
+- [x] Supabase CLI workflow established: `supabase db query --linked -f supabase/XXX.sql`
 
 ### 16. Traditional Chinese (zh-TW) — `features/i18n-zh-tw.md`
 - [ ] `next-intl` installed

@@ -456,7 +456,9 @@ This keeps the project clean, consistent, and allows the product owner to review
 // ✅ Correct order
 1. Add feature to TODO.md with description + file list
 2. Implement the feature
-3. Mark as ✅ Done in TODO.md
+3. Run npm run check (audit + build) — must pass clean
+4. Mark as ✅ Done in TODO.md
+5. Follow §18 Commit & Push Protocol
 
 // ❌ Wrong — never write code without first documenting in TODO.md
 ```
@@ -472,3 +474,141 @@ Flag these changes for review — do not push autonomously:
 - Any change to `lib/auth-server.ts` or `lib/subscription.ts`
 - Adding a new `NEXT_PUBLIC_` environment variable
 - Any change to `.github/workflows/deploy.yml`
+
+---
+
+## 18. Commit & Push Protocol — MANDATORY
+
+### 18.1 When to ask
+
+After **every completed feature, bug fix, or meaningful change**, once:
+- `npm run check` passes (audit + build clean)
+- The feature works as intended
+
+The agent **MUST** ask the user:
+
+```
+✅ Feature complete and build passing.
+
+Ready to commit and push to GitHub?
+
+Proposed commit:
+  feat(scope): summary of what was built
+
+Files staged:
+  - path/to/changed/file.ts
+  - path/to/new/file.tsx
+  ...
+
+Reply:
+  y  → commit + push now
+  n  → skip (you can push later manually)
+  e  → edit the commit message first
+```
+
+**Never commit or push without explicit user confirmation.** Even if the user said "keep going" — always pause at natural feature boundaries to ask.
+
+### 18.2 Commit message format
+
+Every commit must follow this structure so the git log is a readable product changelog:
+
+```
+type(scope): short summary under 72 chars
+
+- What was added / changed (file path for non-obvious changes)
+- Why it was needed (user value or bug fixed)
+- Any notable tradeoffs or follow-up items
+```
+
+**Types:**
+
+| Type | When to use |
+|------|------------|
+| `feat` | New feature or capability visible to users |
+| `fix` | Bug fix — something was broken, now it works |
+| `perf` | Performance improvement — no behaviour change |
+| `security` | Security fix or hardening |
+| `refactor` | Code restructure — no behaviour change |
+| `docs` | README, DESIGN.md, AGENTS.md, TODO.md only |
+| `chore` | Dependencies, config, CI, migrations with no user-facing change |
+| `style` | CSS / design token changes only |
+
+**Scope** is the product area: `jobs`, `learn`, `resume`, `interview`, `dashboard`, `auth`, `db`, `api`, `ci`, `design`.
+
+**Good examples:**
+```
+feat(jobs): AU job scraper — Jora + ACS + daily GitHub Actions cron
+
+- scripts/scrape-au-jobs.ts: scrapes Jora (675 raw/run), ACS RSS
+- supabase/017_scraped_jobs.sql: cache table with 30-day TTL
+- app/api/jobs/route.ts: merged scraped results with JSearch + Adzuna
+- .github/workflows/scrape-jobs.yml: daily cron 6am AEST
+- Increases job coverage from ~20 to ~50+ unique AU IT listings per search
+```
+
+```
+fix(learn): replace broken Gemini image gen with OpenAI → Mermaid diagrams
+
+- app/api/learn/diagram/route.ts: GPT-4o-mini generates Mermaid code
+- app/api/learn/roadmap-image/route.ts: same pattern for career roadmaps
+- PathTracker.tsx + PersonalisedHero.tsx: render via MermaidDiagram component
+- Gemini responseModalities API was unreliable; Mermaid SVG is crisp + scalable
+```
+
+```
+docs: add DESIGN.md design system + update TODO.md and AGENTS.md
+
+- DESIGN.md: 17-section design system (colour, type, spacing, components,
+  motion, a11y, dark mode, anti-patterns)
+- TODO.md: mark job scraper, diagram fix, DB migrations as done
+- AGENTS.md: §18 commit/push protocol
+```
+
+### 18.3 Atomic commits — one logical change per commit
+
+Do **not** bundle unrelated changes into one commit. Each commit should be independently revertable:
+
+```
+✅ Three atomic commits:
+  feat(jobs): AU job scraper + Supabase cache table
+  fix(learn): replace Gemini image gen with OpenAI → Mermaid
+  docs: DESIGN.md design system
+
+❌ One mega-commit:
+  feat: lots of stuff
+```
+
+If you have built multiple features in one session, stage them in separate logical groups and commit each separately before pushing.
+
+### 18.4 Rollback safety
+
+Every commit on `main` must be independently revertable via `git revert <hash>`. This means:
+- Database migrations that add tables/columns are safe to push (additive)
+- Database migrations that **drop** tables or columns require human review before push (see §17)
+- Never squash commits that contain separate logical changes
+- Tag significant releases: `git tag v1.x.x -m "description"` before pushing breaking changes
+
+### 18.5 The push checklist
+
+Before the agent runs `git push`:
+
+```
+[ ] npm run check passes (audit + build)
+[ ] No .env secrets accidentally staged (git diff --cached shows no keys)
+[ ] No debug console.log statements left in production code
+[ ] Commit message follows §18.2 format
+[ ] Not pushing a migration that drops tables/columns without user explicitly confirming
+[ ] Not pushing to main during a declared merge freeze (check TODO.md for freeze notices)
+```
+
+### 18.6 How to read the git log
+
+The log should read as a product changelog, not a code diary. If someone unfamiliar with the codebase reads `git log --oneline`, they should understand what changed and why — without reading a single line of code.
+
+```bash
+# Quick log — readable summary
+git log --oneline -20
+
+# Full log with body — for understanding decisions
+git log --format="%h %s%n%b" -10
+```
