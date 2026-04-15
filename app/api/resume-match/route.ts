@@ -70,7 +70,7 @@ Rules:
 - Return valid JSON only — no markdown, no prose outside the JSON`;
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4.1',
+    model: 'gpt-4o',
     messages: [{ role: 'user', content: prompt }],
     response_format: { type: 'json_object' },
     max_tokens: 1000,

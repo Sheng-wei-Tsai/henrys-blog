@@ -60,7 +60,7 @@ Each object: title (5-8 words), insight (one sentence of data-backed reasoning),
 Return ONLY the JSON array, no markdown fences.`;
 
   const completion = await openai.chat.completions.create({
-    model: 'gpt-4.1',
+    model: 'gpt-4o',
     messages: [{ role: 'user', content: prompt }],
     max_tokens: 1200,
     temperature: 0.7,

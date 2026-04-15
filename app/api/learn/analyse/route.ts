@@ -248,7 +248,7 @@ Rules:
     async start(controller) {
       try {
         const stream = await openai.chat.completions.create({
-          model: 'o4-mini',
+          model: 'gpt-4o-mini',
           max_completion_tokens: 4096,
           stream: true,
           messages: [{ role: 'user', content: prompt }],

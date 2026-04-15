@@ -56,7 +56,7 @@ ${background.slice(0, 1500)}
 Write the cover letter now. 3-4 paragraphs, plain text only, no headers or bullet points.`;
 
   const stream = await client.chat.completions.create({
-    model: 'gpt-4.1',
+    model: 'gpt-4o',
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user',   content: userPrompt },
