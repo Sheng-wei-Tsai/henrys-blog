@@ -1,10 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const sb = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+import { NextResponse } from 'next/server';
+import { createSupabaseServer, createSupabaseService } from '@/lib/auth-server';
 
 export interface DashboardSummary {
   onboardingCompleted:  boolean;
@@ -18,14 +13,15 @@ export interface DashboardSummary {
   interviewCount:       number;
 }
 
-export async function GET(req: NextRequest) {
-  const token = req.headers.get('authorization')?.replace('Bearer ', '');
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { data: { user }, error: authErr } = await sb.auth.getUser(token);
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export async function GET() {
+  // Auth via SSR cookie session (not Bearer token — tokens can leak in logs/referrers)
+  const authSb = await createSupabaseServer();
+  const { data: { user } } = await authSb.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const uid = user.id;
+  // Service role for cross-table reads — all queries scoped to uid
+  const sb = createSupabaseService();
 
   const [profile, visaRow, reviewRow, resumeRow, apps] = await Promise.all([
     sb.from('profiles')
@@ -54,7 +50,8 @@ export async function GET(req: NextRequest) {
 
     sb.from('job_applications')
       .select('status')
-      .eq('user_id', uid),
+      .eq('user_id', uid)
+      .limit(500),
   ]);
 
   // Find current in-progress visa step

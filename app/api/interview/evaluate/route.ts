@@ -42,15 +42,25 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Invalid request body' }), { status: 400 });
   }
 
-  const { question, answer, roleTitle, questionType } = body;
-  if (!question || !answer || !roleTitle) {
+  const rawRoleTitle    = body.roleTitle;
+  const rawQuestion     = body.question;
+  const rawAnswer       = body.answer;
+  const rawQuestionType = body.questionType;
+
+  if (!rawQuestion || !rawAnswer || !rawRoleTitle) {
     return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400 });
   }
+
+  // Truncate all user inputs before they reach the AI — prevents prompt injection
+  const roleTitle    = String(rawRoleTitle).trim().slice(0, 100);
+  const question     = String(rawQuestion).trim().slice(0, 500);
+  const answer       = String(rawAnswer).trim().slice(0, 2000);
+  const questionType = String(rawQuestionType ?? '').trim().slice(0, 20);
 
   const isCode = questionType === 'code';
   const userPrompt = `Role: ${roleTitle}
 Question: ${question}
-Candidate's ${isCode ? 'code solution' : 'answer'}: ${answer.slice(0, 2000)}
+Candidate's ${isCode ? 'code solution' : 'answer'}: ${answer}
 
 Evaluate this ${isCode ? 'code solution' : 'answer'} now.`;
 

@@ -10,7 +10,10 @@ import { NextResponse }       from 'next/server';
 import type { User }          from '@supabase/supabase-js';
 
 // ── Owner email is read from env — never exposed to the browser ───────
-const OWNER_EMAIL = (process.env.OWNER_EMAIL ?? 'henry88002605@gmail.com').toLowerCase();
+// Deliberately NO hardcoded fallback: if OWNER_EMAIL is unset, isOwner()
+// returns false for every address (fail-closed), preventing accidental
+// admin access in misconfigured deployments.
+const OWNER_EMAIL = process.env.OWNER_EMAIL?.toLowerCase() ?? '';
 
 // ── Supabase SSR client (reads session from request cookies) ──────────
 export async function createSupabaseServer() {

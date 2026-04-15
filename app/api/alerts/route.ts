@@ -1,21 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
-
-function serverClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      global: {
-        headers: { Cookie: cookies().toString() },
-      },
-    },
-  );
-}
+import { createSupabaseServer } from '@/lib/auth-server';
 
 export async function GET() {
-  const sb = serverClient();
+  const sb = await createSupabaseServer();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -23,18 +10,21 @@ export async function GET() {
     .from('job_alerts')
     .select('*')
     .eq('user_id', user.id)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(100);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: 'Failed to fetch alerts' }, { status: 500 });
   return NextResponse.json({ alerts: data });
 }
 
 export async function POST(req: NextRequest) {
-  const sb = serverClient();
+  const sb = await createSupabaseServer();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+
   const keywords  = String(body.keywords  ?? '').trim().slice(0, 200);
   const location  = String(body.location  ?? 'Brisbane').trim().slice(0, 100);
   const full_time = Boolean(body.full_time);
@@ -48,25 +38,26 @@ export async function POST(req: NextRequest) {
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: 'Failed to create alert' }, { status: 500 });
   return NextResponse.json({ alert: data }, { status: 201 });
 }
 
 export async function DELETE(req: NextRequest) {
-  const sb = serverClient();
+  const sb = await createSupabaseServer();
   const { data: { user } } = await sb.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { searchParams } = req.nextUrl;
-  const id = searchParams.get('id');
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+  const id = req.nextUrl.searchParams.get('id');
+  if (!id || !/^[0-9a-f-]{36}$/.test(id)) {
+    return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
+  }
 
   const { error } = await sb
     .from('job_alerts')
     .delete()
     .eq('id', id)
-    .eq('user_id', user.id); // RLS double-check
+    .eq('user_id', user.id); // ownership check — user cannot delete another user's alert
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: 'Failed to delete alert' }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

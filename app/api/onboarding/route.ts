@@ -1,22 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const sb = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+import { createSupabaseServer, createSupabaseService } from '@/lib/auth-server';
 
 const VALID_ROLES = ['frontend', 'fullstack', 'backend', 'data-engineer', 'devops', 'mobile', 'qa', 'other'];
 const VALID_VISA  = ['outside', 'student', 'graduate', 'working', 'resident', 'unsure'];
 const VALID_STAGE = ['building', 'applying', 'interviews', 'offer'];
 
 export async function POST(req: NextRequest) {
-  // Verify auth via Bearer token
-  const token = req.headers.get('authorization')?.replace('Bearer ', '');
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { data: { user }, error: authErr } = await sb.auth.getUser(token);
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // Auth via SSR cookie session (not Bearer token — tokens can leak in logs/referrers)
+  const authSb = await createSupabaseServer();
+  const { data: { user } } = await authSb.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
   const { role, visaStatus, jobStage } = body as Record<string, string | undefined>;
@@ -26,6 +19,8 @@ export async function POST(req: NextRequest) {
   if (visaStatus && !VALID_VISA.includes(visaStatus))  return NextResponse.json({ error: 'Invalid visaStatus' }, { status: 400 });
   if (jobStage   && !VALID_STAGE.includes(jobStage))   return NextResponse.json({ error: 'Invalid jobStage' },   { status: 400 });
 
+  // Service role for the write (profiles table needs service role to bypass RLS on upsert)
+  const sb = createSupabaseService();
   const { error } = await sb.from('profiles').upsert({
     id:                      user.id,
     onboarding_role:         role          ?? null,
@@ -35,7 +30,7 @@ export async function POST(req: NextRequest) {
     onboarding_completed_at: new Date().toISOString(),
   });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: 'Failed to save onboarding' }, { status: 500 });
 
   return NextResponse.json({ ok: true });
 }

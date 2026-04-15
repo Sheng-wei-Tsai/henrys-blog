@@ -69,6 +69,20 @@ Product vision: The definitive career platform for international IT graduates en
 
 ## 🔴 Priority 0 — In Progress
 
+### ✅ Security Hardening Sprint
+**What:** Fix all Critical/High security issues before public launch.
+- [ ] Fix `o4-mini` → `gpt-4o-mini` and `gpt-4.1` → `gpt-4o` (5 files — `o4-mini` is not a stable model ID)
+- [ ] Replace Bearer token auth with cookie-based sessions (3 routes: onboarding, dashboard/summary, readiness-score)
+- [ ] Remove hardcoded owner email fallback from `lib/auth-server.ts` + `proxy.ts` — fail-closed
+- [ ] Truncate all user inputs before AI calls — `roleTitle.slice(0,100)`, `question.slice(0,500)` in interview routes
+- [ ] Add `.limit()` to unbounded queries in `comments/route.ts` + `alerts/route.ts`
+- [ ] Fix async `cookies()` in `alerts/route.ts` (Next.js 16 breaking change)
+- [ ] Stripe webhook tests — signature validation, checkout/renewal/cancellation event handling
+
+**Files:** `app/api/learn/{analyse,quiz}/route.ts`, `app/api/{cover-letter,resume-match,analytics/ai-insights}/route.ts`, `app/api/{onboarding,dashboard/summary,readiness-score}/route.ts`, `lib/auth-server.ts`, `proxy.ts`, `app/api/interview/evaluate/route.ts`, `app/api/{comments,alerts}/route.ts`, `app/api/stripe/webhook/route.test.ts`
+
+---
+
 ### ✅ Production Quality Sprint (6.2 → 8.0)
 **What:** Harden codebase for MVP launch — security, performance, correctness.
 - [x] `proxy.ts` — server-side auth guard for `/dashboard` and `/admin` already in place (Next.js 16 pattern)

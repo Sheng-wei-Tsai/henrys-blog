@@ -1,7 +1,8 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
 
-const OWNER_EMAIL = (process.env.OWNER_EMAIL ?? 'henry88002605@gmail.com').toLowerCase();
+// Fail-closed: empty string means isOwner never matches if env var is unset.
+const OWNER_EMAIL = process.env.OWNER_EMAIL?.toLowerCase() ?? '';
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

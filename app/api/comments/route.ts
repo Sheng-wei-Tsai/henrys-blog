@@ -27,9 +27,10 @@ export async function GET(req: NextRequest) {
       profiles ( full_name, avatar_url )
     `)
     .eq('post_slug', slug)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: true })
+    .limit(500);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: 'Failed to fetch comments' }, { status: 500 });
   return NextResponse.json({ comments: data ?? [] });
 }
 
@@ -52,6 +53,6 @@ export async function POST(req: NextRequest) {
     .select(`id, post_slug, content, parent_id, edited_at, created_at, profiles ( full_name, avatar_url )`)
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: 'Failed to post comment' }, { status: 500 });
   return NextResponse.json({ comment: data }, { status: 201 });
 }
