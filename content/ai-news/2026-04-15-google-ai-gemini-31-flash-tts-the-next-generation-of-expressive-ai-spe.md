@@ -22,6 +22,6 @@ This gives developers fine-grained control over TTS output without separate voic
 
 ## Key takeaways
 
-- Audio tags allow inline control of vocal style/pacing—concrete: <audio style='happy' pace='1.2'> syntax (exact format TBD, verify in Studio)
+- Audio tags allow inline control of vocal style/pacing—concrete: `<audio style='happy' pace='1.2'>` syntax (exact format TBD, verify in Studio)
 - SynthID watermarking is automatic and non-removable—critical for compliance in regulated industries and misinformation prevention
 - 70+ language support with consistent tag behavior across languages reduces localization complexity for global products
