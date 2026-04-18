@@ -10,6 +10,7 @@ const ALLOWED_JOB_TYPE = new Set(['all', 'onsite', 'remote', 'freelance']);
 const REMOTE_PATTERN   = /\bremote\b/i;
 const FREELANCE_PATTERN = /\bfreelanc/i;
 const CONTRACT_PATTERN  = /\bcontract/i;
+const INDEED_JK_RE      = /jk=([a-f0-9]+)/i;
 
 export type JobSource = 'adzuna' | 'jsearch' | 'jora' | 'indeed' | 'acs' | 'seek' | 'arbeitnow' | 'freelancer';
 export type JobType   = 'onsite' | 'remote' | 'freelance';
@@ -283,7 +284,7 @@ async function fetchIndeedAPI(keywords: string, location: string): Promise<Adzun
       }
 
       return {
-        id:            `indeed-${r.id ?? r.job_id ?? r.indeed_final_url?.match(/jk=([a-f0-9]+)/i)?.[1] ?? Math.random().toString(36).slice(2, 10)}`,
+        id:            `indeed-${r.id ?? r.job_id ?? r.indeed_final_url?.match(INDEED_JK_RE)?.[1] ?? Math.random().toString(36).slice(2, 10)}`,
         title,
         company,
         location:      loc,

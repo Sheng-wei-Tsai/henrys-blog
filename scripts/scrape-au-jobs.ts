@@ -93,6 +93,9 @@ function dedupKey(title: string, company: string) {
   return `${title}|${company}`.toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
+const REMOTE_PATTERN  = /\bremote\b/i;
+const INDEED_JK_RE    = /jk=([a-f0-9]+)/i;
+
 function stripHtmlTags(html: string): string {
   // Iteratively strip tags to handle nested/malformed HTML like <scr<script>ipt>
   let result = html;
@@ -185,7 +188,7 @@ async function scrapeJoraPage(keyword: string, location: string): Promise<Scrape
 
     if (!title || !effectiveId) return;
 
-    const isRemote = /\bremote\b/i.test(title) || /\bremote\b/i.test(loc);
+    const isRemote = REMOTE_PATTERN.test(title) || REMOTE_PATTERN.test(loc);
 
     jobs.push({
       id:            `jora-${effectiveId}`,
@@ -276,7 +279,7 @@ async function scrapeACS(): Promise<ScrapedJob[]> {
         created:       item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
         dedup_key:     dedupKey(title, company),
         expires_at:    expiresAt(),
-        job_type:      /\bremote\b/i.test(loc) ? 'remote' : 'onsite',
+        job_type:      REMOTE_PATTERN.test(loc) ? 'remote' : 'onsite',
       });
     }
 
@@ -318,7 +321,7 @@ async function scrapeIndeedPage(keyword: string, location: string): Promise<Scra
     const loc       = $(el).find('[data-testid="text-location"], [class*="companyLocation"]').text().trim() || location;
     const sal       = normalizeSalary($(el).find('[class*="salary-snippet"], [class*="salaryText"]').first().text());
     const href      = titleEl.attr('href') ?? '';
-    const jkMatch   = href.match(/jk=([a-f0-9]+)/i);
+    const jkMatch   = href.match(INDEED_JK_RE);
     const jobId     = jkMatch?.[1] ?? hashId('indeed', title, company, new Date().toDateString()).replace('indeed-', '');
 
     if (!title) return;
@@ -333,7 +336,7 @@ async function scrapeIndeedPage(keyword: string, location: string): Promise<Scra
       created:       new Date().toISOString(),
       dedup_key:     dedupKey(title, company),
       expires_at:    expiresAt(),
-      job_type:      /\bremote\b/i.test(title) || /\bremote\b/i.test(loc) ? 'remote' : 'onsite',
+      job_type:      REMOTE_PATTERN.test(title) || REMOTE_PATTERN.test(loc) ? 'remote' : 'onsite',
     });
   });
 
@@ -430,7 +433,7 @@ async function scrapeSeekViaApify(): Promise<ScrapedJob[]> {
             created:       item.listingDate ?? new Date().toISOString(),
             dedup_key:     dedupKey(item.title ?? '', item.advertiser ?? item.company ?? ''),
             expires_at:    expiresAt(),
-            job_type:      /\bremote\b/i.test(seekTitle) || /\bremote\b/i.test(seekLoc) ? 'remote' : 'onsite',
+            job_type:      REMOTE_PATTERN.test(seekTitle) || REMOTE_PATTERN.test(seekLoc) ? 'remote' : 'onsite',
           });
         }
 
@@ -503,7 +506,7 @@ async function scrapeIndeedRapidAPI(): Promise<ScrapedJob[]> {
           const title   = r.title ?? r.job_title ?? '';
           const company = r.company_name ?? r.company ?? 'Unknown';
           const loc     = r.location ?? `${location}, Australia`;
-          const isRemote = /\bremote\b/i.test(title) || /\bremote\b/i.test(loc);
+          const isRemote = REMOTE_PATTERN.test(title) || REMOTE_PATTERN.test(loc);
 
           let salText: string | null = null;
           let salMin: number | null = null;
@@ -516,7 +519,7 @@ async function scrapeIndeedRapidAPI(): Promise<ScrapedJob[]> {
             salText = r.formatted_salary;
           }
 
-          const jobId = r.id ?? r.job_id ?? r.indeed_final_url?.match(/jk=([a-f0-9]+)/i)?.[1] ?? hashId('indeed-api', title, company, loc).replace('indeed-api-', '');
+          const jobId = r.id ?? r.job_id ?? r.indeed_final_url?.match(INDEED_JK_RE)?.[1] ?? hashId('indeed-api', title, company, loc).replace('indeed-api-', '');
 
           allJobs.push({
             id:            `indeed-${jobId}`,
