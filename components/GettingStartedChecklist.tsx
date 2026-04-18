@@ -66,13 +66,7 @@ export default function GettingStartedChecklist({ hasResume, hasSkills, hasInter
   const pct = Math.round((completedCount / steps.length) * 100);
 
   return (
-    <div style={{
-      background: 'var(--warm-white)',
-      border: '1px solid var(--parchment)',
-      borderRadius: '16px',
-      padding: '1.4rem',
-      marginBottom: '2rem',
-    }}>
+    <div className="checklist-wrapper">
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <div>
@@ -97,22 +91,9 @@ export default function GettingStartedChecklist({ hasResume, hasSkills, hasInter
       {/* Steps */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
         {steps.map((step, i) => (
-          <div key={i} style={{
-            display: 'flex', alignItems: 'center', gap: '0.85rem',
-            padding: '0.75rem 0.9rem',
-            borderRadius: '10px',
-            background: step.done ? 'rgba(30,122,82,0.05)' : 'white',
-            border: `1px solid ${step.done ? 'rgba(30,122,82,0.18)' : 'var(--parchment)'}`,
-            opacity: step.done ? 0.7 : 1,
-          }}>
+          <div key={i} className={`checklist-step${step.done ? ' done' : ''}`}>
             {/* Status indicator */}
-            <div style={{
-              width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: step.done ? 'rgba(30,122,82,0.12)' : 'var(--parchment)',
-              fontSize: step.done ? '0.85rem' : '1rem',
-              border: step.done ? '1.5px solid rgba(30,122,82,0.3)' : 'none',
-            }}>
+            <div className={`checklist-step-icon${step.done ? ' done' : ''}`}>
               {step.done ? '✓' : step.emoji}
             </div>
 

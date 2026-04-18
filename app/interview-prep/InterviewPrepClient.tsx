@@ -581,18 +581,14 @@ export default function InterviewPrepClient() {
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
-            style={{ border: '1px solid var(--parchment)', borderRadius: '14px', overflow: 'hidden' }}
+            className="role-list-container"
           >
             {INTERVIEW_ROLES.map((role, i) => (
               <motion.div
                 key={role.id}
-                whileHover={{ backgroundColor: 'var(--parchment)' }}
+                className="role-list-item"
                 style={{
-                  background: 'var(--warm-white)',
-                  padding: '1rem 1.3rem',
                   borderBottom: i < INTERVIEW_ROLES.length - 1 ? '1px solid var(--parchment)' : 'none',
-                  cursor: 'pointer',
-                  transition: 'background 0.15s',
                 }}
                 onClick={() => setRolesOpen(true)}
               >
@@ -600,7 +596,7 @@ export default function InterviewPrepClient() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                     <span style={{ fontSize: '1.1rem' }}>{role.emoji}</span>
                     <div>
-                      <span style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--brown-dark)' }}>{role.title}</span>
+                      <span className="role-list-item-title">{role.title}</span>
                       {role.badge ? (
                         <span style={{ marginLeft: '0.5rem', fontSize: '0.63rem', fontWeight: 700, color: '#0d9488' }}>● Start here</span>
                       ) : (
@@ -608,7 +604,7 @@ export default function InterviewPrepClient() {
                       )}
                     </div>
                   </div>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>→</span>
+                  <span className="role-list-item-arrow">→</span>
                 </div>
               </motion.div>
             ))}

@@ -1,11 +1,19 @@
 'use client';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import type { AdzunaJob } from '../api/jobs/route';
 import GapAnalysisPanel from '@/components/GapAnalysisPanel';
+
+type JobTab = 'au' | 'remote' | 'freelance';
+
+const JOB_TABS: { id: JobTab; label: string; keyword: string; location?: string }[] = [
+  { id: 'au',        label: 'AU Jobs',        keyword: '' },
+  { id: 'remote',    label: 'Remote Jobs',    keyword: 'remote',             location: 'Remote' },
+  { id: 'freelance', label: 'Freelance Jobs', keyword: 'freelance contract' },
+];
 
 const LOCATIONS    = ['Brisbane', 'Sydney', 'Melbourne', 'Perth', 'Adelaide', 'Remote', 'Australia'];
 const SORT_OPTIONS = [
@@ -14,25 +22,36 @@ const SORT_OPTIONS = [
 ];
 // Category → keyword appended to query (server-side, not client-side filter)
 const CATEGORIES: { label: string; keyword: string }[] = [
-  { label: 'All',             keyword: '' },
-  { label: 'Developer',       keyword: 'developer' },
-  { label: 'DevOps',          keyword: 'devops' },
-  { label: 'Data',            keyword: 'data engineer' },
-  { label: 'QA',              keyword: 'QA tester' },
+  { label: 'All',       keyword: '' },
+  { label: 'Developer', keyword: 'developer' },
+  { label: 'DevOps',    keyword: 'devops' },
+  { label: 'Data',      keyword: 'data engineer' },
+  { label: 'Security',  keyword: 'cyber security' },
+  { label: 'QA',        keyword: 'QA tester' },
 ];
 
 const QUICK_STARTS = [
-  'Graduate Developer',
-  'Junior Full Stack',
-  'Junior DevOps',
-  'Data Engineer Graduate',
-  'Junior QA',
-  'IT Support Graduate',
+  'Software Developer',
+  'Full Stack Developer',
+  'DevOps Engineer',
+  'Data Engineer',
+  'Cyber Security',
+  'QA Engineer',
+  'Python Developer',
+  'ML Engineer',
 ];
 
 const LS_KEY        = 'job-search-prefs';
-const JOBS_CACHE_KEY = 'job-search-cache';
-const JOBS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+// v5: ScraperAPI Google Jobs added (googleCount), Jobicy added to remote tab
+const JOBS_CACHE_KEY = 'job-search-cache-v5';
+const JOBS_CACHE_TTL = 10 * 60 * 1000;
+// Evict all prior cache versions on load
+if (typeof window !== 'undefined') {
+  localStorage.removeItem('job-search-cache');
+  localStorage.removeItem('job-search-cache-v2');
+  localStorage.removeItem('job-search-cache-v3');
+  localStorage.removeItem('job-search-cache-v4');
+}
 
 function loadPrefs() {
   if (typeof window === 'undefined') return null;
@@ -44,18 +63,25 @@ function savePrefs(prefs: object) {
 }
 
 interface SourceCounts {
-  jsearch: number;
-  scraped: number;
-  adzuna:  number;
+  jsearch?:  number;
+  scraped?:  number;
+  google?:   number;
+  adzuna?:   number;
+  remotive?: number;
+  jobicy?:   number;
 }
 
 interface JobsCache {
-  jobs:     AdzunaJob[];
-  total:    number;  // Adzuna total (for pagination)
-  count:    number;  // merged jobs on this page
-  sources?: SourceCounts;
-  query:    string;
-  cachedAt: number;
+  jobs:         AdzunaJob[];
+  scrapedCount: number;
+  googleCount:  number;
+  adzunaCount:  number;
+  total:        number;
+  count:        number;
+  hasMore:      boolean;
+  sources?:     SourceCounts;
+  query:        string;
+  cachedAt:     number;
 }
 
 function loadJobsCache(query: string): JobsCache | null {
@@ -69,23 +95,51 @@ function loadJobsCache(query: string): JobsCache | null {
   } catch { return null; }
 }
 
-function saveJobsCache(jobs: AdzunaJob[], total: number, count: number, sources: SourceCounts | undefined, query: string) {
-  try { localStorage.setItem(JOBS_CACHE_KEY, JSON.stringify({ jobs, total, count, sources, query, cachedAt: Date.now() })); } catch { /* quota */ }
+function saveJobsCache(cache: Omit<JobsCache, 'cachedAt'>) {
+  try {
+    localStorage.setItem(JOBS_CACHE_KEY, JSON.stringify({ ...cache, cachedAt: Date.now() }));
+  } catch { /* quota */ }
 }
 
 function clearJobsCache() {
   localStorage.removeItem(JOBS_CACHE_KEY);
 }
 
+// ─── Section divider (AU tab only) ───────────────────────────────────────────
+
+function SectionDivider({ label, count }: { label: string; count: number }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '1.2rem 0 0.5rem' }}>
+      <span style={{ fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+        {label}
+      </span>
+      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'var(--parchment)', borderRadius: '99px', padding: '0.1em 0.55em' }}>
+        {count}
+      </span>
+      <div style={{ flex: 1, height: '1px', background: 'var(--parchment)' }} />
+    </div>
+  );
+}
+
+// ─── HTML stripping ──────────────────────────────────────────────────────────
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function hasHtmlTags(str: string): boolean {
+  return /<[a-z][\s\S]*?>/i.test(str);
+}
+
 // ─── Freshness ───────────────────────────────────────────────────────────────
 
 function freshness(dateStr: string): { label: string; color: string } {
   const hours = (Date.now() - new Date(dateStr).getTime()) / 3_600_000;
-  if (hours < 24)  return { label: 'Today',                             color: '#16a34a' };
-  if (hours < 72)  return { label: `${Math.floor(hours / 24)}d ago`,    color: '#d97706' };
+  if (hours < 24)  return { label: 'Today',                             color: 'var(--jade)' };
+  if (hours < 72)  return { label: `${Math.floor(hours / 24)}d ago`,    color: 'var(--gold)' };
   const days = Math.floor(hours / 24);
-  if (days  < 30)  return { label: `${days}d ago`,                      color: '#dc2626' };
-  return             { label: `${Math.floor(days / 30)}mo ago`,          color: '#9ca3af' };
+  if (days  < 30)  return { label: `${days}d ago`,                      color: 'var(--vermilion)' };
+  return             { label: `${Math.floor(days / 30)}mo ago`,          color: 'var(--text-muted)' };
 }
 
 // ─── Job card ─────────────────────────────────────────────────────────────────
@@ -101,28 +155,27 @@ function JobCard({ job, savedIds, onSaveToggle, onApply, isLoggedIn }: {
   const isSaved = savedIds.has(job.id);
   const { label: ageLabel, color: ageColor } = freshness(job.created);
 
-  const SOURCE_STYLES: Record<string, { label: string; color: string; bg: string; border: string }> = {
-    jsearch: { label: job.publisher ?? 'Google Jobs', color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
-    jora:    { label: 'Jora',   color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
-    indeed:  { label: 'Indeed', color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
-    acs:     { label: 'ACS',    color: '#047857', bg: '#ecfdf5', border: '#a7f3d0' },
-    seek:    { label: 'Seek',   color: '#1e40af', bg: '#eff6ff', border: '#93c5fd' },
-    adzuna:  { label: 'Adzuna', color: '#0369a1', bg: '#f0f9ff', border: '#bae6fd' },
+  const SOURCE_META: Record<string, { label: string; cls: string }> = {
+    jsearch:     { label: job.publisher ?? 'Google Jobs', cls: 'tag tag-jsearch' },
+    google_jobs: { label: job.publisher ?? 'Google Jobs', cls: 'tag tag-google' },
+    jora:        { label: 'Jora',     cls: 'tag tag-jora' },
+    indeed:      { label: 'Indeed',   cls: 'tag tag-indeed' },
+    acs:         { label: 'ACS',      cls: 'tag tag-acs' },
+    seek:        { label: 'Seek',     cls: 'tag tag-seek' },
+    adzuna:      { label: 'Adzuna',   cls: 'tag tag-adzuna' },
+    linkedin:    { label: 'LinkedIn', cls: 'tag tag-linkedin' },
+    remotive:    { label: 'Remotive', cls: 'tag tag-remotive' },
+    jobicy:      { label: 'Jobicy',   cls: 'tag tag-jobicy' },
   };
-  const sourceStyle = SOURCE_STYLES[job.source] ?? { label: job.source, color: 'var(--text-muted)', bg: 'var(--warm-white)', border: 'var(--parchment)' };
+  const srcMeta = SOURCE_META[job.source] ?? { label: job.source, cls: 'tag' };
+  const isHtml = hasHtmlTags(job.description);
 
   return (
-    <div style={{
-      background: 'var(--warm-white)', border: '1px solid var(--parchment)',
-      borderRadius: '14px', padding: '1.4rem 1.6rem', transition: 'box-shadow 0.2s',
-    }}
-      onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 6px 24px rgba(44,31,20,0.08)')}
-      onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
-    >
+    <div className="job-card">
       {/* Top row: title/meta + age badge */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.75rem' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h3 style={{ fontFamily: "'Lora', serif", fontSize: '1.05rem', fontWeight: 600, color: 'var(--brown-dark)', marginBottom: '0.3rem' }}>
+          <h3 className="job-card-title">
             {job.title}
           </h3>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
@@ -132,9 +185,7 @@ function JobCard({ job, savedIds, onSaveToggle, onApply, isLoggedIn }: {
             {job.contract_type && <span className="tag">{job.contract_type}</span>}
             {job.category      && <span className="tag">{job.category}</span>}
             {job.salary        && <span className="tag" style={{ color: 'var(--terracotta)' }}>💰 {job.salary}</span>}
-            <span className="tag" style={{ color: sourceStyle.color, background: sourceStyle.bg, borderColor: sourceStyle.border }}>
-              via {sourceStyle.label}
-            </span>
+            <span className={srcMeta.cls}>via {srcMeta.label}</span>
           </div>
         </div>
         <span style={{ fontSize: '0.78rem', fontWeight: 600, color: ageColor, flexShrink: 0 }}>{ageLabel}</span>
@@ -145,25 +196,18 @@ function JobCard({ job, savedIds, onSaveToggle, onApply, isLoggedIn }: {
         <button
           onClick={() => onSaveToggle(job)}
           title={isSaved ? 'Remove from saved' : 'Save job'}
+          className="job-btn-save"
           style={{
-            background: isSaved ? '#fff3f0' : 'var(--warm-white)',
-            border: `1px solid ${isSaved ? 'var(--terracotta)' : 'var(--parchment)'}`,
-            borderRadius: '99px', padding: '0.4rem 0.8rem',
-            fontSize: '0.85rem', cursor: 'pointer',
-            color: isSaved ? 'var(--terracotta)' : 'var(--text-muted)',
-            transition: 'all 0.2s',
+            background: isSaved ? '#fff3f0' : undefined,
+            border: isSaved ? '1px solid var(--terracotta)' : undefined,
+            color: isSaved ? 'var(--terracotta)' : undefined,
           }}
         >
           {isSaved ? '♥ Saved' : '♡ Save'}
         </button>
         <Link
           href={`/cover-letter?title=${encodeURIComponent(job.title)}&company=${encodeURIComponent(job.company)}&desc=${encodeURIComponent(job.description)}`}
-          style={{
-            background: 'white', color: 'var(--terracotta)',
-            padding: '0.4rem 0.8rem', borderRadius: '99px',
-            border: '1px solid var(--terracotta)',
-            fontSize: '0.85rem', fontWeight: 500, textDecoration: 'none',
-          }}>
+          className="job-btn-cover">
           ✍️ Cover Letter
         </Link>
         <a href={job.url} target="_blank" rel="noopener noreferrer"
@@ -189,9 +233,17 @@ function JobCard({ job, savedIds, onSaveToggle, onApply, isLoggedIn }: {
       </div>
 
       <div style={{ marginTop: '0.8rem', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-        <p style={expanded ? {} : { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
-          {job.description}
-        </p>
+        {expanded ? (
+          isHtml
+            /* Description is server-sanitized (script/iframe/on* stripped) before reaching client */
+            // eslint-disable-next-line react/no-danger
+            ? <div className="job-description-html" dangerouslySetInnerHTML={{ __html: job.description }} />
+            : <p>{job.description}</p>
+        ) : (
+          <p style={{ overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+            {isHtml ? stripHtml(job.description) : job.description}
+          </p>
+        )}
         <button onClick={() => setExpanded(v => !v)} style={{
           background: 'none', border: 'none', color: 'var(--terracotta)',
           cursor: 'pointer', fontSize: '0.82rem', padding: '0.2rem 0',
@@ -211,6 +263,8 @@ export default function JobsPage() {
 
   const prefs = loadPrefs() ?? {};
 
+  const [activeTab, setActiveTab] = useState<JobTab>('au');
+
   const [keywords,  setKeywords]  = useState<string>(prefs.keywords  ?? 'software developer');
   const [location,  setLocation]  = useState<string>(prefs.location  ?? 'Brisbane');
   const [sortBy,    setSortBy]    = useState<string>(prefs.sortBy    ?? 'date');
@@ -220,21 +274,33 @@ export default function JobsPage() {
   const [salaryMin, setSalaryMin] = useState<string>(prefs.salaryMin ?? '');
   const [salaryMax, setSalaryMax] = useState<string>(prefs.salaryMax ?? '');
 
-  const [jobs,       setJobs]       = useState<AdzunaJob[]>([]);
-  const [total,      setTotal]      = useState(0);  // Adzuna total for pagination
-  const [count,      setCount]      = useState(0);  // merged jobs on this page
-  const [sources,    setSources]    = useState<SourceCounts | null>(null);
-  const [page,       setPage]       = useState(1);
-  const [loading,    setLoading]    = useState(false);
-  const [searched,   setSearched]   = useState(false);
-  const [fromCache,  setFromCache]  = useState(false);
-  const [error,      setError]      = useState('');
-  const [savedIds,   setSavedIds]   = useState<Set<string>>(new Set());
-  const [alertSaved, setAlertSaved] = useState(false);
-  const [applyToast, setApplyToast] = useState<{ id: string; company: string } | null>(null);
+  const [jobs,         setJobs]         = useState<AdzunaJob[]>([]);
+  const [scrapedCount, setScrapedCount] = useState(0);
+  const [googleCount,  setGoogleCount]  = useState(0);
+  const [adzunaCount,  setAdzunaCount]  = useState(0);
+  const [total,        setTotal]        = useState(0);
+  const [count,        setCount]        = useState(0);
+  const [hasMore,      setHasMore]      = useState(false);
+  const [sources,      setSources]      = useState<SourceCounts | null>(null);
+  const [filterSource, setFilterSource] = useState<string>('all');
+  const [page,         setPage]         = useState(1);
+  const [loading,      setLoading]      = useState(false);
+  const [searched,     setSearched]     = useState(false);
+  const [fromCache,    setFromCache]    = useState(false);
+  const [error,        setError]        = useState('');
+  const [savedIds,     setSavedIds]     = useState<Set<string>>(new Set());
+  const [alertSaved,   setAlertSaved]   = useState(false);
+  const [applyToast,   setApplyToast]   = useState<{ id: string; company: string } | null>(null);
 
   // Fire default search on first load — tries cache first
   useEffect(() => { search(1); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-search when tab changes (force refresh — different query shape)
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    search(1, true);
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load saved job IDs
   useEffect(() => {
@@ -254,31 +320,40 @@ export default function JobsPage() {
   }, [keywords, location, sortBy, fullTime, workingRights, category, salaryMin, salaryMax]);
 
   // overrideKeywords: used by quick-start pills to pass the new value before state updates
-  const search = useCallback(async (p = 1, forceRefresh = false, overrideKeywords?: string) => {
+  // overrideTab: used by tab buttons to pass the new tab before state updates
+  const search = useCallback(async (p = 1, forceRefresh = false, overrideKeywords?: string, overrideTab?: JobTab) => {
     setLoading(true);
     setError('');
     setAlertSaved(false);
 
     const effectiveKeywords = overrideKeywords ?? keywords;
+    const effectiveTab      = overrideTab ?? activeTab;
+    const tabConfig         = JOB_TABS.find(t => t.id === effectiveTab)!;
     const catKeyword        = CATEGORIES.find(c => c.label === category)?.keyword ?? '';
     const rightsKeyword     = workingRights ? 'full working rights' : '';
-    const fullQuery         = [effectiveKeywords, catKeyword, rightsKeyword].filter(Boolean).join(' ');
+    const fullQuery         = [effectiveKeywords, catKeyword, rightsKeyword, tabConfig.keyword].filter(Boolean).join(' ');
+    const effectiveLocation = tabConfig.location ?? location;
     const params = new URLSearchParams({
-      keywords: fullQuery, location, sort_by: sortBy, page: String(p),
+      keywords: fullQuery, location: effectiveLocation, sort_by: sortBy, page: String(p),
+      tab: effectiveTab,
       ...(fullTime  ? { full_time: '1' }      : {}),
       ...(salaryMin ? { salary_min: salaryMin } : {}),
       ...(salaryMax ? { salary_max: salaryMax } : {}),
     });
-    const cacheKey = params.toString();
+    const cacheKey = `${effectiveTab}:${params.toString()}`;
 
-    // Serve from cache for page 1 requests (not forced refresh)
     if (p === 1 && !forceRefresh) {
       const cached = loadJobsCache(cacheKey);
       if (cached) {
         setJobs(cached.jobs);
+        setScrapedCount(cached.scrapedCount ?? 0);
+        setGoogleCount(cached.googleCount   ?? 0);
+        setAdzunaCount(cached.adzunaCount   ?? 0);
         setTotal(cached.total);
         setCount(cached.count ?? cached.jobs.length);
+        setHasMore(cached.hasMore ?? false);
         setSources(cached.sources ?? null);
+        setFilterSource('all');
         setPage(1);
         setSearched(true);
         setFromCache(true);
@@ -288,23 +363,36 @@ export default function JobsPage() {
     }
 
     setFromCache(false);
+    setFilterSource('all');
     try {
       const res  = await fetch(`/api/jobs?${params}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to fetch jobs. Please try again.');
+      const sc = data.scrapedCount ?? 0;
+      const gc = data.googleCount  ?? 0;
+      const ac = data.adzunaCount  ?? 0;
+      const c  = data.count ?? data.jobs?.length ?? 0;
       setJobs(data.jobs);
+      setScrapedCount(sc);
+      setGoogleCount(gc);
+      setAdzunaCount(ac);
       setTotal(data.total);
-      setCount(data.count ?? data.jobs?.length ?? 0);
+      setCount(c);
+      setHasMore(data.hasMore ?? false);
       setSources(data.sources ?? null);
       setPage(p);
       setSearched(true);
-      if (p === 1) saveJobsCache(data.jobs, data.total, data.count ?? data.jobs?.length ?? 0, data.sources, cacheKey);
+      if (p === 1) saveJobsCache({
+        jobs: data.jobs, scrapedCount: sc, googleCount: gc, adzunaCount: ac,
+        total: data.total, count: c, hasMore: data.hasMore ?? false,
+        sources: data.sources, query: cacheKey,
+      });
     } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, [keywords, location, sortBy, fullTime, workingRights, salaryMin, salaryMax, category]);
+  }, [keywords, location, sortBy, fullTime, workingRights, salaryMin, salaryMax, category, activeTab]);
 
   const handleSaveToggle = async (job: AdzunaJob) => {
     if (!user) { router.push('/login'); return; }
@@ -349,27 +437,50 @@ export default function JobsPage() {
     setAlertSaved(true);
   };
 
-  const totalPages = Math.ceil(total / 100); // 2 Adzuna pages × 50 each
+  // AU tab: split flat jobs array into three sections (scraped / google / adzuna)
+  const showSections   = activeTab === 'au' && filterSource === 'all' && (scrapedCount > 0 || googleCount > 0 || adzunaCount > 0);
+  const sectionScraped = showSections ? jobs.slice(0, scrapedCount) : [];
+  const sectionGoogle  = showSections ? jobs.slice(scrapedCount, scrapedCount + googleCount) : [];
+  const sectionAdzuna  = showSections ? jobs.slice(scrapedCount + googleCount) : [];
+  const visibleJobs    = filterSource === 'all' ? jobs : jobs.filter(j => j.source === filterSource);
+  const jobCardProps   = { savedIds, onSaveToggle: handleSaveToggle, onApply: handleApply, isLoggedIn: !!user };
 
   return (
     <div style={{ maxWidth: '760px', margin: '0 auto', padding: '0 1.5rem' }}>
       {/* Header */}
       <div style={{ paddingTop: '3.5rem', paddingBottom: '2rem' }}>
         <h1 className="animate-fade-up" style={{ fontFamily: "'Lora', serif", fontSize: '2.4rem', fontWeight: 700, color: 'var(--brown-dark)', marginBottom: '0.5rem' }}>
-          IT Jobs in Australia
+          {activeTab === 'au' ? 'IT Jobs in Australia' : activeTab === 'remote' ? 'Remote IT Jobs' : 'Freelance IT Jobs'}
         </h1>
         <p className="animate-fade-up delay-1" style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
-          Aggregated from Jora, ACS TechCareers, Adzuna + Google for Jobs — same-day listings.
+          {activeTab === 'au'
+            ? 'IT roles from Jora, ACS, Google Jobs (Seek · LinkedIn · Indeed) and Adzuna.'
+            : activeTab === 'remote'
+            ? 'Remote IT roles from Remotive, Jobicy, Google Jobs and Adzuna.'
+            : 'Contract & freelance IT roles from Google Jobs and Adzuna.'}
           {user
             ? <span> <Link href="/dashboard" style={{ color: 'var(--terracotta)' }}>View saved jobs →</Link></span>
             : ' Sign in to save jobs.'}
         </p>
       </div>
 
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.2rem' }}>
+        {JOB_TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={activeTab === tab.id ? 'job-tab-active' : 'job-tab'}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Quick-start pills */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', marginBottom: '1rem' }}>
         {QUICK_STARTS.map(q => (
-          <button key={q} onClick={() => { setKeywords(q); search(1, false, q); }}
+          <button key={q} onClick={() => { setKeywords(q); search(1, true, q); }}
             style={{
               padding: '0.35rem 0.9rem', borderRadius: '99px', fontSize: '0.82rem',
               border: '1px solid var(--parchment)', background: 'var(--warm-white)',
@@ -381,11 +492,7 @@ export default function JobsPage() {
       </div>
 
       {/* Search panel */}
-      <div className="animate-fade-up delay-2" style={{
-        background: 'var(--warm-white)', border: '1px solid var(--parchment)',
-        borderRadius: '16px', padding: '1.4rem', marginBottom: '1.5rem',
-        display: 'flex', flexDirection: 'column', gap: '1rem',
-      }}>
+      <div className="animate-fade-up delay-2 search-panel">
         {/* Row 1: keywords + location */}
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <input
@@ -393,10 +500,12 @@ export default function JobsPage() {
             onChange={e => setKeywords(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && search(1)}
             placeholder="e.g. software developer, devops, data engineer"
-            style={{ flex: 2, minWidth: '200px', padding: '0.65rem 1rem', borderRadius: '10px', border: '1px solid var(--parchment)', fontSize: '0.95rem', background: 'white', color: 'var(--brown-dark)', outline: 'none' }}
+            className="search-input search-select-lg"
+            style={{ flex: 2, minWidth: '200px' }}
           />
           <select value={location} onChange={e => setLocation(e.target.value)}
-            style={{ flex: 1, minWidth: '130px', padding: '0.65rem 1rem', borderRadius: '10px', border: '1px solid var(--parchment)', fontSize: '0.95rem', background: 'white', color: 'var(--brown-dark)', cursor: 'pointer' }}>
+            className="search-select search-select-lg"
+            style={{ flex: 1, minWidth: '130px' }}>
             {LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
           </select>
         </div>
@@ -404,12 +513,12 @@ export default function JobsPage() {
         {/* Row 2: filters */}
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <select value={sortBy} onChange={e => setSortBy(e.target.value)}
-            style={{ padding: '0.5rem 0.9rem', borderRadius: '10px', border: '1px solid var(--parchment)', fontSize: '0.88rem', background: 'white', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+            className="search-select">
             {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
 
           <select value={category} onChange={e => setCategory(e.target.value)}
-            style={{ padding: '0.5rem 0.9rem', borderRadius: '10px', border: '1px solid var(--parchment)', fontSize: '0.88rem', background: 'white', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+            className="search-select">
             {CATEGORIES.map(c => <option key={c.label} value={c.label}>{c.label === 'All' ? 'All categories' : c.label}</option>)}
           </select>
 
@@ -442,13 +551,13 @@ export default function JobsPage() {
           <input
             type="number" value={salaryMin} onChange={e => setSalaryMin(e.target.value)}
             placeholder="Min" min="0" step="10000"
-            style={{ width: '100px', padding: '0.45rem 0.75rem', borderRadius: '10px', border: '1px solid var(--parchment)', fontSize: '0.88rem', background: 'white', color: 'var(--brown-dark)', outline: 'none' }}
+            className="search-input search-input-sm"
           />
           <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>–</span>
           <input
             type="number" value={salaryMax} onChange={e => setSalaryMax(e.target.value)}
             placeholder="Max" min="0" step="10000"
-            style={{ width: '100px', padding: '0.45rem 0.75rem', borderRadius: '10px', border: '1px solid var(--parchment)', fontSize: '0.88rem', background: 'white', color: 'var(--brown-dark)', outline: 'none' }}
+            className="search-input search-input-sm"
           />
         </div>
       </div>
@@ -460,55 +569,68 @@ export default function JobsPage() {
       )}
 
       {searched && !loading && (
-        <div style={{ marginBottom: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <div>
+        <div style={{ marginBottom: '0.75rem' }}>
+          {/* Top row: count + controls */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.6rem' }}>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               {count > 0
-                ? `Showing ${count} jobs${total > count ? ` of ${total.toLocaleString()} available` : ''}`
-                : 'No jobs found — try different keywords'}
+                ? `${visibleJobs.length} IT jobs found${hasMore ? ' — more on next page' : ''}`
+                : 'No IT jobs found — try broader keywords'}
               {fromCache && (
                 <span style={{ fontSize: '0.72rem', color: 'var(--jade)', background: 'rgba(30,122,82,0.08)', border: '1px solid rgba(30,122,82,0.2)', padding: '0.1em 0.5em', borderRadius: '4px' }}>
                   ⚡ cached
                 </span>
               )}
             </p>
-            {sources && (() => {
-              const active = [
-                sources.jsearch > 0 && 'Google Jobs',
-                sources.scraped > 0 && 'Jora/ACS',
-                sources.adzuna  > 0 && 'Adzuna',
-              ].filter(Boolean) as string[];
-              if (active.length === 3) return null;
-              return (
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                  {active.length > 0
-                    ? `${active.length} of 3 sources active (${active.join(', ')})`
-                    : 'All sources unavailable — check Vercel env vars'}
-                </p>
-              );
-            })()}
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            {fromCache && (
-              <button onClick={() => { clearJobsCache(); search(1, true); }}
-                style={{ background: 'none', border: '1px solid var(--parchment)', borderRadius: '99px', padding: '0.3rem 0.8rem', fontSize: '0.82rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                ↻ Refresh
-              </button>
-            )}
-            {total > 100 && <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Page {page} of {totalPages}</span>}
-            {alertSaved
-              ? <span style={{ fontSize: '0.82rem', color: '#16a34a' }}>✓ Alert saved</span>
-              : (
-                <button onClick={handleSaveSearch} style={{
-                  background: 'none', border: '1px solid var(--parchment)',
-                  borderRadius: '99px', padding: '0.3rem 0.8rem',
-                  fontSize: '0.82rem', cursor: 'pointer', color: 'var(--text-secondary)',
-                }}>
-                  🔔 Save this search
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              {fromCache && (
+                <button onClick={() => { clearJobsCache(); search(1, true); }}
+                  style={{ background: 'none', border: '1px solid var(--parchment)', borderRadius: '99px', padding: '0.3rem 0.8rem', fontSize: '0.82rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                  ↻ Refresh
                 </button>
-              )
-            }
+              )}
+              {page > 1 && <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Page {page}</span>}
+              {alertSaved
+                ? <span style={{ fontSize: '0.82rem', color: '#16a34a' }}>✓ Alert saved</span>
+                : (
+                  <button onClick={handleSaveSearch} style={{
+                    background: 'none', border: '1px solid var(--parchment)',
+                    borderRadius: '99px', padding: '0.3rem 0.8rem',
+                    fontSize: '0.82rem', cursor: 'pointer', color: 'var(--text-secondary)',
+                  }}>
+                    🔔 Save this search
+                  </button>
+                )
+              }
+            </div>
           </div>
+
+          {/* Source filter chips — hidden on AU tab (sections replace them) */}
+          {count > 0 && !showSections && (() => {
+            const presentSources = Array.from(new Set(jobs.map(j => j.source)));
+            if (presentSources.length <= 1) return null;
+            const LABELS: Record<string, string> = {
+              adzuna: 'Adzuna', jsearch: 'Google Jobs', google_jobs: 'Google Jobs',
+              jora: 'Jora', indeed: 'Indeed', acs: 'ACS', seek: 'Seek',
+              linkedin: 'LinkedIn', remotive: 'Remotive', jobicy: 'Jobicy',
+            };
+            return (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Source:</span>
+                <button onClick={() => setFilterSource('all')}
+                  className={filterSource === 'all' ? 'source-chip source-chip-active' : 'source-chip'}>
+                  All ({count})
+                </button>
+                {presentSources.map(src => (
+                  <button key={src}
+                    onClick={() => setFilterSource(filterSource === src ? 'all' : src)}
+                    className={filterSource === src ? 'source-chip source-chip-active' : 'source-chip'}>
+                    {LABELS[src] ?? src} ({jobs.filter(j => j.source === src).length})
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -519,10 +641,40 @@ export default function JobsPage() {
         </div>
       )}
 
+      {/* Job list — two labelled sections for AU tab, flat list for Remote/Freelance */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', paddingBottom: '2rem' }}>
-        {jobs.map(job => (
-          <JobCard key={job.id} job={job} savedIds={savedIds} onSaveToggle={handleSaveToggle} onApply={handleApply} isLoggedIn={!!user} />
-        ))}
+        {showSections ? (
+          <>
+            {sectionScraped.length > 0 && (
+              <>
+                <SectionDivider label="Jora · ACS" count={sectionScraped.length} />
+                {sectionScraped.map(job => (
+                  <JobCard key={job.id} job={job} {...jobCardProps} />
+                ))}
+              </>
+            )}
+            {sectionGoogle.length > 0 && (
+              <>
+                <SectionDivider label="Google Jobs — Seek · LinkedIn · Indeed" count={sectionGoogle.length} />
+                {sectionGoogle.map(job => (
+                  <JobCard key={job.id} job={job} {...jobCardProps} />
+                ))}
+              </>
+            )}
+            {sectionAdzuna.length > 0 && (
+              <>
+                <SectionDivider label="Adzuna" count={sectionAdzuna.length} />
+                {sectionAdzuna.map(job => (
+                  <JobCard key={job.id} job={job} {...jobCardProps} />
+                ))}
+              </>
+            )}
+          </>
+        ) : (
+          visibleJobs.map(job => (
+            <JobCard key={job.id} job={job} {...jobCardProps} />
+          ))
+        )}
       </div>
 
       {/* Apply → Track toast */}
@@ -546,14 +698,14 @@ export default function JobsPage() {
         </div>
       )}
 
-      {total > 100 && (
+      {(page > 1 || hasMore) && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', paddingBottom: '4rem' }}>
           <button onClick={() => search(page - 1)} disabled={page <= 1 || loading}
             style={{ padding: '0.5rem 1.2rem', borderRadius: '99px', border: '1px solid var(--parchment)', background: 'var(--warm-white)', cursor: page <= 1 ? 'not-allowed' : 'pointer', color: page <= 1 ? 'var(--text-muted)' : 'var(--brown-dark)', fontSize: '0.9rem' }}>
             ← Prev
           </button>
-          <button onClick={() => search(page + 1)} disabled={page >= totalPages || loading}
-            style={{ padding: '0.5rem 1.2rem', borderRadius: '99px', border: '1px solid var(--parchment)', background: 'var(--warm-white)', cursor: page >= totalPages ? 'not-allowed' : 'pointer', color: page >= totalPages ? 'var(--text-muted)' : 'var(--brown-dark)', fontSize: '0.9rem' }}>
+          <button onClick={() => search(page + 1)} disabled={!hasMore || loading}
+            style={{ padding: '0.5rem 1.2rem', borderRadius: '99px', border: '1px solid var(--parchment)', background: 'var(--warm-white)', cursor: !hasMore ? 'not-allowed' : 'pointer', color: !hasMore ? 'var(--text-muted)' : 'var(--brown-dark)', fontSize: '0.9rem' }}>
             Next →
           </button>
         </div>

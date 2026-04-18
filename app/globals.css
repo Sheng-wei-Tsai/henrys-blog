@@ -477,11 +477,310 @@ h3, h4 {
   border-color: rgba(240, 230, 208, 0.2);
   box-shadow: 2px 2px 0 rgba(232, 64, 64, 0.3);
 }
-[data-theme="dark"] .tag:hover {
+[data-theme="dark"] .tag:hover,
+:root:not([data-theme="light"]) .tag:hover {
+  background: rgba(232, 64, 64, 0.18);
+  color: var(--vermilion);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 rgba(232, 64, 64, 0.35);
+}
+
+/* ── Source badges — design-token colours, dark mode aware ── */
+.tag-adzuna   { color: var(--jade);      background: rgba(30,122,82,0.08);   border-color: rgba(30,122,82,0.3); }
+.tag-seek     { color: var(--vermilion); background: rgba(192,40,28,0.06);   border-color: rgba(192,40,28,0.25); }
+.tag-jora     { color: var(--gold);      background: rgba(200,138,20,0.08);  border-color: rgba(200,138,20,0.3); }
+.tag-indeed   { color: var(--gold);      background: rgba(200,138,20,0.06);  border-color: rgba(200,138,20,0.25); }
+.tag-jsearch  { color: var(--jade);      background: rgba(30,122,82,0.06);   border-color: rgba(30,122,82,0.25); }
+.tag-acs      { color: var(--jade);      background: rgba(30,122,82,0.06);   border-color: rgba(30,122,82,0.25); }
+.tag-linkedin    { color: var(--vermilion); background: rgba(192,40,28,0.06);   border-color: rgba(192,40,28,0.25); }
+.tag-google      { color: #1a73e8;          background: rgba(26,115,232,0.07);  border-color: rgba(26,115,232,0.25); }
+.tag-jobicy      { color: var(--jade);      background: rgba(30,122,82,0.06);   border-color: rgba(30,122,82,0.25); }
+.tag-remotive    { color: var(--gold);      background: rgba(200,138,20,0.07);  border-color: rgba(200,138,20,0.28); }
+
+/* ── Job tabs ── */
+.job-tab {
+  background: var(--warm-white);
+  color: var(--text-secondary);
+  border: 1px solid var(--parchment);
+  padding: 0.45rem 1.2rem; border-radius: 99px;
+  font-size: 0.9rem; font-weight: 600; cursor: pointer;
+  transition: background 0.15s ease;
+}
+.job-tab:hover { background: var(--parchment); }
+.job-tab-active {
   background: var(--vermilion);
   color: white;
-  box-shadow: 3px 3px 0 rgba(232, 64, 64, 0.6);
+  border: 1px solid var(--vermilion);
+  padding: 0.45rem 1.2rem; border-radius: 99px;
+  font-size: 0.9rem; font-weight: 600; cursor: pointer;
 }
+
+/* ── Source filter chips ── */
+.source-chip {
+  background: var(--warm-white);
+  color: var(--text-secondary);
+  border: 1px solid var(--parchment);
+  padding: 0.25rem 0.75rem; border-radius: 99px;
+  font-size: 0.78rem; font-weight: 500; cursor: pointer;
+  transition: all 0.15s ease;
+}
+.source-chip:hover { background: var(--parchment); }
+.source-chip-active {
+  background: var(--ink);
+  color: var(--cream);
+  border-color: var(--ink);
+}
+[data-theme="dark"] .source-chip-active {
+  background: var(--parchment);
+  color: var(--ink);
+  border-color: var(--parchment);
+}
+
+/* ── Job card ── */
+.job-card {
+  background: var(--warm-white);
+  border: 1px solid var(--parchment);
+  border-radius: 14px;
+  padding: 1.4rem 1.6rem;
+  transition: box-shadow 0.2s;
+}
+.job-card:hover { box-shadow: 0 6px 24px rgba(44,31,20,0.08); }
+.job-card-title {
+  font-family: 'Lora', serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--brown-dark);
+  margin-bottom: 0.3rem;
+}
+.job-btn-save {
+  background: var(--warm-white);
+  border: 1px solid var(--parchment);
+  border-radius: 99px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.job-btn-cover {
+  background: white;
+  color: var(--terracotta);
+  padding: 0.4rem 0.8rem;
+  border-radius: 99px;
+  border: 1px solid var(--terracotta);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+/* Dark mode overrides */
+[data-theme="dark"] .job-card,
+:root:not([data-theme="light"]) .job-card {
+  border-color: rgba(240,230,208,0.1);
+}
+[data-theme="dark"] .job-card:hover,
+:root:not([data-theme="light"]) .job-card:hover {
+  box-shadow: 0 6px 28px rgba(0,0,0,0.4);
+}
+[data-theme="dark"] .job-card-title,
+:root:not([data-theme="light"]) .job-card-title {
+  color: var(--text-secondary); /* #c8b090 — warm, readable, not glaring */
+}
+[data-theme="dark"] .job-btn-save,
+:root:not([data-theme="light"]) .job-btn-save {
+  border-color: rgba(240,230,208,0.15);
+  color: var(--text-secondary);
+}
+[data-theme="dark"] .job-btn-cover,
+:root:not([data-theme="light"]) .job-btn-cover {
+  background: rgba(192,40,28,0.12);
+  color: var(--vermilion);
+  border-color: rgba(192,40,28,0.4);
+}
+
+/* ── Interview-prep role list (collapsed view) ── */
+.role-list-container {
+  border: 1px solid var(--parchment);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.role-list-item {
+  background: var(--warm-white);
+  padding: 1rem 1.3rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.role-list-item:hover { background: var(--parchment); }
+.role-list-item-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--brown-dark);
+}
+.role-list-item-arrow {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Dark mode: soften bright cream titles, make borders visible, improve hover */
+[data-theme="dark"] .role-list-container,
+:root:not([data-theme="light"]) .role-list-container {
+  border-color: rgba(240,230,208,0.12);
+}
+[data-theme="dark"] .role-list-item,
+:root:not([data-theme="light"]) .role-list-item {
+  background: var(--warm-white);
+  border-bottom-color: rgba(240,230,208,0.08) !important;
+}
+[data-theme="dark"] .role-list-item:hover,
+:root:not([data-theme="light"]) .role-list-item:hover {
+  background: rgba(240,230,208,0.05);
+}
+[data-theme="dark"] .role-list-item-title,
+:root:not([data-theme="light"]) .role-list-item-title {
+  color: var(--text-secondary); /* #c8b090 — warm, readable, not glaring */
+}
+[data-theme="dark"] .role-list-item-arrow,
+:root:not([data-theme="light"]) .role-list-item-arrow {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+/* ── Jobs search panel ── */
+.search-panel {
+  background: var(--warm-white);
+  border: 1px solid var(--parchment);
+  border-radius: 16px;
+  padding: 1.4rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.search-input {
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--parchment);
+  font-size: 0.95rem;
+  background: var(--warm-white);
+  color: var(--text-primary);
+  outline: none;
+  font-family: inherit;
+}
+.search-input:focus {
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 2px rgba(192,40,28,0.12);
+}
+.search-select {
+  padding: 0.5rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid var(--parchment);
+  font-size: 0.88rem;
+  background: var(--warm-white);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+}
+.search-select-lg {
+  padding: 0.65rem 1rem;
+  font-size: 0.95rem;
+}
+.search-input-sm {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.88rem;
+  width: 100px;
+}
+[data-theme="dark"] .search-panel,
+:root:not([data-theme="light"]) .search-panel {
+  border-color: rgba(240,230,208,0.1);
+}
+[data-theme="dark"] .search-input,
+:root:not([data-theme="light"]) .search-input,
+[data-theme="dark"] .search-select,
+:root:not([data-theme="light"]) .search-select {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(240,230,208,0.15);
+  color: var(--text-secondary);
+}
+[data-theme="dark"] .search-input::placeholder,
+:root:not([data-theme="light"]) .search-input::placeholder {
+  color: var(--text-muted);
+}
+[data-theme="dark"] .search-input:focus,
+:root:not([data-theme="light"]) .search-input:focus {
+  border-color: rgba(232,64,64,0.5);
+  box-shadow: 0 0 0 2px rgba(232,64,64,0.1);
+}
+[data-theme="dark"] .search-select option,
+:root:not([data-theme="light"]) .search-select option {
+  background: #0f0b1a;
+  color: var(--text-secondary);
+}
+
+/* ── Getting Started Checklist ── */
+.checklist-wrapper {
+  background: var(--warm-white);
+  border: 1px solid var(--parchment);
+  border-radius: 16px;
+  padding: 1.4rem;
+  margin-bottom: 2rem;
+}
+.checklist-step {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  background: white;
+  border: 1px solid var(--parchment);
+}
+.checklist-step.done {
+  background: rgba(30,122,82,0.05);
+  border-color: rgba(30,122,82,0.18);
+  opacity: 0.7;
+}
+.checklist-step-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--parchment);
+  font-size: 1rem;
+}
+.checklist-step-icon.done {
+  background: rgba(30,122,82,0.12);
+  border: 1.5px solid rgba(30,122,82,0.3);
+  font-size: 0.85rem;
+}
+[data-theme="dark"] .checklist-wrapper,
+:root:not([data-theme="light"]) .checklist-wrapper {
+  border-color: rgba(240,230,208,0.1);
+}
+[data-theme="dark"] .checklist-step,
+:root:not([data-theme="light"]) .checklist-step {
+  background: rgba(255,255,255,0.03);
+  border-color: rgba(240,230,208,0.1);
+}
+[data-theme="dark"] .checklist-step.done,
+:root:not([data-theme="light"]) .checklist-step.done {
+  background: rgba(30,122,82,0.08);
+  border-color: rgba(30,122,82,0.22);
+}
+[data-theme="dark"] .checklist-step-icon,
+:root:not([data-theme="light"]) .checklist-step-icon {
+  background: rgba(240,230,208,0.08);
+}
+
+/* ── Job description HTML (from Seek / Remotive — server-sanitized) ── */
+.job-description-html p  { margin: 0.5em 0; }
+.job-description-html ul { margin: 0.4em 0 0.4em 1.4em; }
+.job-description-html li { margin: 0.2em 0; }
+.job-description-html strong { font-weight: 600; color: var(--text-primary); }
+.job-description-html br { display: none; } /* strip empty <br> spacers */
+
+/* ── Remotive source badge ── */
+.tag-remotive { color: var(--gold); background: rgba(200,138,20,0.08); border-color: rgba(200,138,20,0.3); }
 
 /* ── Card hover — comic panel style ── */
 .path-card-link .card {
