@@ -500,7 +500,7 @@ async function scrapeIndeedRapidAPI(): Promise<ScrapedJob[]> {
           if (r.salary_min && r.salary_max) {
             salMin = r.salary_min;
             salMax = r.salary_max;
-            salText = `$${Math.round(salMin / 1000)}k – $${Math.round(salMax / 1000)}k`;
+            salText = `$${Math.round(r.salary_min / 1000)}k – $${Math.round(r.salary_max / 1000)}k`;
           } else if (r.formatted_salary) {
             salText = r.formatted_salary;
           }
