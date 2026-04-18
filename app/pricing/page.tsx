@@ -145,7 +145,7 @@ export default function PricingPage() {
           ['Can I cancel anytime?', 'Yes. Cancel from your dashboard and you keep access until the end of the billing period. No questions asked.'],
           ['What payment methods are accepted?', 'All major credit/debit cards via Stripe. Your payment info is handled entirely by Stripe — we never see your card details.'],
           ['Is my data private?', 'Your generated content (cover letters, study guides) is tied to your account only. We never share or sell user data.'],
-          ['What happens if I exceed 100 calls/day?', 'You get a friendly message and your access resets at midnight UTC. This limit is generous — most users use fewer than 20 calls/day.'],
+          ['What happens if I exceed 100 calls/day?', 'You get a friendly message and your limit resets on a rolling 24-hour window. This limit is generous — most users use fewer than 20 calls/day.'],
         ].map(([q, a]) => (
           <div key={q} style={{ borderBottom: '1px solid var(--parchment)', padding: '1rem 0' }}>
             <p style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--brown-dark)', marginBottom: '0.4rem' }}>{q}</p>

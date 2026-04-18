@@ -1,3 +1,6 @@
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createSupabaseService } from '@/lib/auth-server';
@@ -6,15 +9,17 @@ async function updateSubscription(
   userId: string,
   tier: 'free' | 'pro',
   expiresAt: string | null,
+  eventId: string,
 ) {
   const sb = createSupabaseService();
-  await sb
+  const { error } = await sb
     .from('profiles')
     .update({
       subscription_tier:       tier,
       subscription_expires_at: expiresAt,
     })
     .eq('id', userId);
+  if (error) console.error(`[stripe/webhook] DB update failed event=${eventId} user=${userId}:`, error.message);
 }
 
 function periodEndToISO(sub: Stripe.Subscription): string {
@@ -58,7 +63,7 @@ export async function POST(req: NextRequest) {
         const sub = await stripe.subscriptions.retrieve(session.subscription as string);
         expiresAt = periodEndToISO(sub);
       }
-      await updateSubscription(userId, 'pro', expiresAt);
+      await updateSubscription(userId, 'pro', expiresAt, event.id);
       break;
     }
 
@@ -73,7 +78,7 @@ export async function POST(req: NextRequest) {
       const sub    = await stripe.subscriptions.retrieve(subRef as string);
       const userId = sub.metadata?.supabase_user_id;
       if (!userId) break;
-      await updateSubscription(userId, 'pro', periodEndToISO(sub));
+      await updateSubscription(userId, 'pro', periodEndToISO(sub), event.id);
       break;
     }
 
@@ -82,7 +87,7 @@ export async function POST(req: NextRequest) {
       const sub    = event.data.object as Stripe.Subscription;
       const userId = sub.metadata?.supabase_user_id;
       if (!userId) break;
-      await updateSubscription(userId, 'free', null);
+      await updateSubscription(userId, 'free', null, event.id);
       break;
     }
 
@@ -110,7 +115,7 @@ export async function POST(req: NextRequest) {
       if (!userId) break;
 
       const isActive = sub.status === 'active' || sub.status === 'trialing';
-      await updateSubscription(userId, isActive ? 'pro' : 'free', isActive ? periodEndToISO(sub) : null);
+      await updateSubscription(userId, isActive ? 'pro' : 'free', isActive ? periodEndToISO(sub) : null, event.id);
       break;
     }
   }

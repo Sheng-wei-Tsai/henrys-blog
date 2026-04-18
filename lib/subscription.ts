@@ -17,7 +17,7 @@ import {
 export { rateLimitResponse } from './auth-server';
 
 // Pro users: max AI calls per 24-hour rolling window (global across all endpoints)
-const PRO_DAILY_LIMIT = 50;
+const PRO_DAILY_LIMIT = 100;
 
 // Per-endpoint daily limits — checked via checkEndpointRateLimit() in each route.
 // Every route that calls an AI API must be registered here.
