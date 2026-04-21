@@ -1,0 +1,179 @@
+name: Copilot Fallback
+
+# Runs daily at 8am UTC = 6pm Brisbane (AEST).
+# By this point the Anthropic agents should have fired if quota was available.
+# If they didn't run, this creates a GitHub Issue assigned to Copilot
+# so your GitHub Pro+ quota (50 req/day) picks up the task instead.
+
+on:
+  schedule:
+    - cron: '0 8 * * 1-5'   # Weekdays Mon-Fri 8am UTC = 6pm Brisbane
+  workflow_dispatch:          # Manual trigger from GitHub UI or phone
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  check-and-fallback:
+    name: Copilot Fallback Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ── Step 1: Did Anthropic agents run today? ──────────────────────────
+      - name: Check Anthropic agent activity
+        id: check
+        run: |
+          TODAY=$(date -u +%Y-%m-%d)
+          echo "today=${TODAY}" >> $GITHUB_OUTPUT
+
+          AUTO=$(git ls-remote --heads origin "auto/${TODAY}/" 2>/dev/null | wc -l | tr -d ' ')
+          ANALYSIS=$(git ls-remote --heads origin "analysis/${TODAY}" 2>/dev/null | wc -l | tr -d ' ')
+
+          echo "auto_branches=${AUTO}" >> $GITHUB_OUTPUT
+
+          if [ "$AUTO" -gt "0" ] || [ "$ANALYSIS" -gt "0" ]; then
+            echo "ran=true" >> $GITHUB_OUTPUT
+            echo "Anthropic agents ran today. No fallback needed."
+          else
+            echo "ran=false" >> $GITHUB_OUTPUT
+            echo "No Anthropic activity today. Will check for Copilot fallback."
+          fi
+
+      # ── Step 2: Already created a fallback issue today? ─────────────────
+      - name: Check for existing fallback issue
+        id: existing
+        if: steps.check.outputs.ran == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TODAY: ${{ steps.check.outputs.today }}
+        run: |
+          COUNT=$(gh issue list \
+            --search "Copilot Fallback ${TODAY} in:title" \
+            --state all \
+            --json number \
+            --jq 'length')
+          echo "count=${COUNT}" >> $GITHUB_OUTPUT
+
+      # ── Step 3: Pick next task from TODO.md ─────────────────────────────
+      - name: Parse next TODO task
+        id: todo
+        if: steps.check.outputs.ran == 'false' && steps.existing.outputs.count == '0'
+        run: |
+          python3 - << 'PYEOF'
+          import re, os
+
+          with open("TODO.md", "r") as f:
+              content = f.read()
+
+          skip_sections = ["Stripe Production Launch"]
+          skip_keywords = [
+              "community network", "b2b", "claude lab", "i18n", "zh-tw",
+              "navigation restructure", "gemini multimodal", "vercel kv",
+              "anonymous job seeker", "company research ai"
+          ]
+
+          lines = content.split("\n")
+          in_skip = False
+          tasks = []
+
+          for line in lines:
+              for s in skip_sections:
+                  if s in line:
+                      in_skip = True
+              if in_skip and re.match(r'^## ', line) and not any(s in line for s in skip_sections):
+                  in_skip = False
+              if in_skip:
+                  continue
+              if re.match(r'^- \[ \] .+', line):
+                  clean = line.replace("- [ ] ", "").strip()
+                  if not any(k in clean.lower() for k in skip_keywords):
+                      tasks.append(clean)
+
+          task = tasks[0] if tasks else "NO_TASK"
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"task={task}\n")
+
+          print(f"Next task: {task}")
+          PYEOF
+
+      # ── Step 4: Create issue assigned to Copilot ────────────────────────
+      - name: Create Copilot fallback issue
+        if: |
+          steps.check.outputs.ran == 'false' &&
+          steps.existing.outputs.count == '0' &&
+          steps.todo.outputs.task != 'NO_TASK'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TASK: ${{ steps.todo.outputs.task }}
+          TODAY: ${{ steps.check.outputs.today }}
+        run: |
+          gh issue create \
+            --title "[Copilot Fallback] ${TODAY} — ${TASK}" \
+            --assignee "copilot" \
+            --label "copilot-fallback" \
+            --body "## Task
+
+${TASK}
+
+This issue was created automatically. The Anthropic API quota was exhausted today so GitHub Copilot is handling this task using the GitHub Pro+ allocation.
+
+---
+
+## Project context
+
+**TechPath AU** — career platform for international IT graduates in Australia.
+Live at: https://henrysdigitallife.com
+
+**Stack:** Next.js 16.2 App Router, TypeScript strict, Supabase, Stripe, Vercel
+
+**Critical rules (read AGENTS.md before touching any file):**
+- \`cookies()\`, \`headers()\`, \`params\` are async in Next.js 16 — always \`await\` them
+- Every AI-calling API route must call \`requireSubscription()\` first
+- Colours: \`var(--token-name)\` only — never hardcoded hex
+- Images: \`next/image\` only — never raw \`<img>\`
+- Internal links: \`<Link>\` only — never \`<a href>\`
+- Styling: CSS custom properties + inline styles — no Tailwind
+
+## Quality gate — run before opening PR
+
+\`\`\`bash
+export OPENAI_API_KEY=sk-dummy-ci-build STRIPE_SECRET_KEY=sk_test_dummy_ci
+export STRIPE_PRICE_ID=price_dummy_ci STRIPE_WEBHOOK_SECRET=whsec_dummy_ci
+export NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co
+export NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key-ci
+export SUPABASE_SERVICE_ROLE_KEY=dummy-service-role-ci
+export NEXT_PUBLIC_APP_URL=https://henrysdigitallife.com
+
+npx tsc --noEmit && npm audit --audit-level=moderate && npx vitest run && npm run build
+\`\`\`
+
+## Commit format
+
+\`\`\`
+type(scope): summary under 72 chars
+\`\`\`
+Types: feat | fix | security | perf | refactor | style | chore
+
+## When done
+
+- Open PR titled \`[Copilot] type(scope): description\`
+- Mark task done in TODO.md: \`- [ ]\` → \`- [x] ${TODAY}\`
+- Do NOT merge — owner reviews on phone and merges
+
+---
+*Copilot Fallback — Anthropic quota exhausted on ${TODAY}*"
+
+      # ── Step 5: No task available ────────────────────────────────────────
+      - name: Log no-task result
+        if: |
+          steps.check.outputs.ran == 'false' &&
+          steps.existing.outputs.count == '0' &&
+          steps.todo.outputs.task == 'NO_TASK'
+        run: |
+          echo "No suitable task in TODO.md. Opus agent will populate tasks next quota reset."
