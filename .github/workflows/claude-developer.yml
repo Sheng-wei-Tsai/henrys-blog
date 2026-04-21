@@ -46,7 +46,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "TechPath Sonnet Developer"
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          echo "${GITHUB_TOKEN}" | gh auth login --with-token
+          gh auth status 2>&1 || true  # GH_TOKEN env var handles auth automatically
 
       - uses: actions/setup-node@v4
         if: steps.guard.outputs.skip == 'false'
