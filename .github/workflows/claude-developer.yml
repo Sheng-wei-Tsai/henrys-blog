@@ -179,6 +179,23 @@ jobs:
           print(f"Next task: {task}")
           PYEOF
 
+      - name: Fetch latest Opus analysis for Copilot context
+        id: analysis
+        if: |
+          steps.guard.outputs.skip == 'false' &&
+          steps.claude.outputs.quota_exhausted == 'true' &&
+          steps.existing_issue.outputs.count == '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue list \
+            --search "[Daily Analysis] in:title" \
+            --state all \
+            --json body,createdAt \
+            --jq 'sort_by(.createdAt) | last | .body' \
+            --limit 10 2>/dev/null | head -c 3000 > /tmp/analysis_context.txt || true
+          [ -s /tmp/analysis_context.txt ] || echo "No recent Opus analysis found." > /tmp/analysis_context.txt
+
       - name: Create Copilot fallback issue
         if: |
           steps.guard.outputs.skip == 'false' &&
@@ -190,61 +207,67 @@ jobs:
           TASK: ${{ steps.todo.outputs.task }}
           TODAY: ${{ steps.guard.outputs.today }}
         run: |
+          python3 - << 'PYEOF'
+          import os
+          task = os.environ['TASK']
+          today = os.environ['TODAY']
+          analysis = 'No analysis available.'
+          try:
+              analysis = open('/tmp/analysis_context.txt').read().strip()
+          except OSError:
+              pass
+          b3 = '`' * 3
+          lines = [
+              '## Task', '',
+              task, '',
+              'Anthropic quota exhausted today — GitHub Copilot Pro+ is picking up.', '',
+              '---', '',
+              '## Codebase analysis (from Opus analyst — read before implementing)', '',
+              analysis, '',
+              '---', '',
+              '## Project context', '',
+              '**TechPath AU** — career platform for international IT graduates in Australia.',
+              'Live at: https://henrysdigitallife.com', '',
+              '**Stack:** Next.js 16.2 App Router, TypeScript strict, Supabase, Stripe, Vercel', '',
+              '**Critical rules (read AGENTS.md before touching any file):**',
+              '- `cookies()`, `headers()`, `params` are async in Next.js 16 — always `await` them',
+              '- Every AI-calling API route must call `requireSubscription()` first',
+              '- Colours: `var(--token-name)` only — never hardcoded hex',
+              '- Images: `next/image` only — never raw `<img>`',
+              '- Internal links: `<Link>` only — never `<a href>`',
+              '- Styling: CSS custom properties + inline styles — no Tailwind', '',
+              '## Quality gate — run before opening PR', '',
+              f'{b3}bash',
+              'export OPENAI_API_KEY=sk-dummy-ci-build STRIPE_SECRET_KEY=sk_test_dummy_ci',
+              'export STRIPE_PRICE_ID=price_dummy_ci STRIPE_WEBHOOK_SECRET=whsec_dummy_ci',
+              'export NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co',
+              'export NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key-ci',
+              'export SUPABASE_SERVICE_ROLE_KEY=dummy-service-role-ci',
+              'export NEXT_PUBLIC_APP_URL=https://henrysdigitallife.com',
+              '',
+              'npx tsc --noEmit && npm audit --audit-level=moderate && npx vitest run && npm run build',
+              f'{b3}', '',
+              '## Commit format', '',
+              f'{b3}',
+              'type(scope): summary under 72 chars',
+              f'{b3}',
+              'Types: feat | fix | security | perf | refactor | style | chore', '',
+              '## When done', '',
+              '- Open PR titled `[Copilot] type(scope): description`',
+              f'- Mark task done in TODO.md: `- [ ]` → `- [x] {today}`',
+              '- Do NOT merge — owner reviews on phone and merges', '',
+              '---',
+              f'*Copilot Fallback — Anthropic credit balance exhausted on {today}*',
+          ]
+          with open('/tmp/issue_body.txt', 'w') as fh:
+              fh.write('\n'.join(lines))
+          PYEOF
+
           gh issue create \
             --title "[Copilot Fallback] ${TODAY} — ${TASK}" \
             --assignee "copilot" \
             --label "copilot-fallback" \
-            --body "## Task
-
-${TASK}
-
-This issue was created automatically. The Anthropic API quota was exhausted today so GitHub Copilot is handling this task using the GitHub Pro+ allocation.
-
----
-
-## Project context
-
-**TechPath AU** — career platform for international IT graduates in Australia.
-Live at: https://henrysdigitallife.com
-
-**Stack:** Next.js 16.2 App Router, TypeScript strict, Supabase, Stripe, Vercel
-
-**Critical rules (read AGENTS.md before touching any file):**
-- \`cookies()\`, \`headers()\`, \`params\` are async in Next.js 16 — always \`await\` them
-- Every AI-calling API route must call \`requireSubscription()\` first
-- Colours: \`var(--token-name)\` only — never hardcoded hex
-- Images: \`next/image\` only — never raw \`<img>\`
-- Internal links: \`<Link>\` only — never \`<a href>\`
-- Styling: CSS custom properties + inline styles — no Tailwind
-
-## Quality gate — run before opening PR
-
-\`\`\`bash
-export OPENAI_API_KEY=sk-dummy-ci-build STRIPE_SECRET_KEY=sk_test_dummy_ci
-export STRIPE_PRICE_ID=price_dummy_ci STRIPE_WEBHOOK_SECRET=whsec_dummy_ci
-export NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co
-export NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key-ci
-export SUPABASE_SERVICE_ROLE_KEY=dummy-service-role-ci
-export NEXT_PUBLIC_APP_URL=https://henrysdigitallife.com
-
-npx tsc --noEmit && npm audit --audit-level=moderate && npx vitest run && npm run build
-\`\`\`
-
-## Commit format
-
-\`\`\`
-type(scope): summary under 72 chars
-\`\`\`
-Types: feat | fix | security | perf | refactor | style | chore
-
-## When done
-
-- Open PR titled \`[Copilot] type(scope): description\`
-- Mark task done in TODO.md: \`- [ ]\` → \`- [x] ${TODAY}\`
-- Do NOT merge — owner reviews on phone and merges
-
----
-*Copilot Fallback — Anthropic credit balance exhausted on ${TODAY}*"
+            --body-file /tmp/issue_body.txt
 
       - name: Propagate non-credit Claude failure
         if: |

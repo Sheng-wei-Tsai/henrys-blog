@@ -1,18 +1,19 @@
 name: Copilot Fallback
 
-# Runs daily at 8am UTC = 6pm Brisbane (AEST).
-# By this point the Anthropic agents should have fired if quota was available.
-# If they didn't run, this creates a GitHub Issue assigned to Copilot
-# so your GitHub Pro+ quota (50 req/day) picks up the task instead.
+# Runs daily at 8am UTC = 6pm AEST (including weekends).
+# By this point Anthropic agents should have fired if quota was available.
+# If they didn't (or quota was exhausted inline), creates a GitHub Issue
+# assigned to Copilot so your GitHub Pro+ quota picks up the task.
+# Also cleans up sentinel branches older than 7 days.
 
 on:
   schedule:
-    - cron: '0 8 * * 1-5'   # Weekdays Mon-Fri 8am UTC = 6pm Brisbane
-  workflow_dispatch:          # Manual trigger from GitHub UI or phone
+    - cron: '0 8 * * *'   # Daily — was weekdays only, now every day
+  workflow_dispatch:        # Manual trigger from GitHub UI or phone
 
 permissions:
   issues: write
-  contents: read
+  contents: write
 
 jobs:
   check-and-fallback:
@@ -24,7 +25,33 @@ jobs:
         with:
           fetch-depth: 0
 
-      # ── Step 1: Did Anthropic agents run today? ──────────────────────────
+      # ── Step 1: Clean up old sentinel branches (>7 days) ────────────────
+      - name: Clean up old sentinel branches
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "TechPath Cleanup Bot"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          python3 - << 'PYEOF'
+          import subprocess, re
+          from datetime import datetime, timedelta, timezone
+
+          cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).strftime('%Y-%m-%d')
+          result = subprocess.run(['git', 'ls-remote', '--heads', 'origin'], capture_output=True, text=True)
+          deleted = 0
+          for line in result.stdout.splitlines():
+              m = re.search(r'refs/heads/(analysis|quota-exhausted)/(\d{4}-\d{2}-\d{2})$', line)
+              if m and m.group(2) < cutoff:
+                  branch = f"{m.group(1)}/{m.group(2)}"
+                  subprocess.run(['git', 'push', 'origin', '--delete', branch], capture_output=True)
+                  print(f"Deleted stale branch: {branch}")
+                  deleted += 1
+          if deleted == 0:
+              print("No stale sentinel branches to clean up.")
+          PYEOF
+
+      # ── Step 2: Did Anthropic agents run today? ──────────────────────────
       - name: Check Anthropic agent activity
         id: check
         run: |
@@ -35,17 +62,15 @@ jobs:
           ANALYSIS=$(git ls-remote --heads origin "analysis/${TODAY}" 2>/dev/null | wc -l | tr -d ' ')
           EXHAUSTED=$(git ls-remote --heads origin "quota-exhausted/${TODAY}" 2>/dev/null | wc -l | tr -d ' ')
 
-          echo "auto_branches=${AUTO}" >> $GITHUB_OUTPUT
-
           if [ "$AUTO" -gt "0" ] || [ "$ANALYSIS" -gt "0" ] || [ "$EXHAUSTED" -gt "0" ]; then
             echo "ran=true" >> $GITHUB_OUTPUT
-            echo "Anthropic agents ran (or credits exhausted and Copilot issue already created) today. No fallback needed."
+            echo "Anthropic agents ran today (or Copilot issue already created). No fallback needed."
           else
             echo "ran=false" >> $GITHUB_OUTPUT
-            echo "No Anthropic activity today. Will check for Copilot fallback."
+            echo "No Anthropic activity today. Will create Copilot fallback."
           fi
 
-      # ── Step 2: Already created a fallback issue today? ─────────────────
+      # ── Step 3: Already created a fallback issue today? ─────────────────
       - name: Check for existing fallback issue
         id: existing
         if: steps.check.outputs.ran == 'false'
@@ -60,7 +85,27 @@ jobs:
             --jq 'length')
           echo "count=${COUNT}" >> $GITHUB_OUTPUT
 
-      # ── Step 3: Pick next task from TODO.md ─────────────────────────────
+      # ── Step 4: Fetch latest Opus analysis for Copilot context ──────────
+      - name: Fetch latest Opus analysis
+        id: analysis
+        if: steps.check.outputs.ran == 'false' && steps.existing.outputs.count == '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue list \
+            --search "[Daily Analysis] in:title" \
+            --state all \
+            --json body,createdAt \
+            --jq 'sort_by(.createdAt) | last | .body' \
+            --limit 10 2>/dev/null | head -c 3000 > /tmp/analysis_context.txt || true
+          if [ -s /tmp/analysis_context.txt ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "No recent Opus analysis found." > /tmp/analysis_context.txt
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
+      # ── Step 5: Pick next task from TODO.md ─────────────────────────────
       - name: Parse next TODO task
         id: todo
         if: steps.check.outputs.ran == 'false' && steps.existing.outputs.count == '0'
@@ -103,7 +148,7 @@ jobs:
           print(f"Next task: {task}")
           PYEOF
 
-      # ── Step 4: Create issue assigned to Copilot ────────────────────────
+      # ── Step 6: Create issue assigned to Copilot ────────────────────────
       - name: Create Copilot fallback issue
         if: |
           steps.check.outputs.ran == 'false' &&
@@ -114,67 +159,74 @@ jobs:
           TASK: ${{ steps.todo.outputs.task }}
           TODAY: ${{ steps.check.outputs.today }}
         run: |
+          python3 - << 'PYEOF'
+          import os
+          task = os.environ['TASK']
+          today = os.environ['TODAY']
+          analysis = 'No analysis available.'
+          try:
+              analysis = open('/tmp/analysis_context.txt').read().strip()
+          except OSError:
+              pass
+          b3 = '`' * 3
+          lines = [
+              '## Task', '',
+              task, '',
+              'This issue was created automatically because no Anthropic agent ran today.',
+              'GitHub Copilot Pro+ is handling this task.', '',
+              '---', '',
+              '## Codebase analysis (from Opus analyst — read before implementing)', '',
+              analysis, '',
+              '---', '',
+              '## Project context', '',
+              '**TechPath AU** — career platform for international IT graduates in Australia.',
+              'Live at: https://henrysdigitallife.com', '',
+              '**Stack:** Next.js 16.2 App Router, TypeScript strict, Supabase, Stripe, Vercel', '',
+              '**Critical rules (read AGENTS.md before touching any file):**',
+              '- `cookies()`, `headers()`, `params` are async in Next.js 16 — always `await` them',
+              '- Every AI-calling API route must call `requireSubscription()` first',
+              '- Colours: `var(--token-name)` only — never hardcoded hex',
+              '- Images: `next/image` only — never raw `<img>`',
+              '- Internal links: `<Link>` only — never `<a href>`',
+              '- Styling: CSS custom properties + inline styles — no Tailwind', '',
+              '## Quality gate — run before opening PR', '',
+              f'{b3}bash',
+              'export OPENAI_API_KEY=sk-dummy-ci-build STRIPE_SECRET_KEY=sk_test_dummy_ci',
+              'export STRIPE_PRICE_ID=price_dummy_ci STRIPE_WEBHOOK_SECRET=whsec_dummy_ci',
+              'export NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co',
+              'export NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key-ci',
+              'export SUPABASE_SERVICE_ROLE_KEY=dummy-service-role-ci',
+              'export NEXT_PUBLIC_APP_URL=https://henrysdigitallife.com',
+              '',
+              'npx tsc --noEmit && npm audit --audit-level=moderate && npx vitest run && npm run build',
+              f'{b3}', '',
+              '## Commit format', '',
+              f'{b3}',
+              'type(scope): summary under 72 chars',
+              f'{b3}',
+              'Types: feat | fix | security | perf | refactor | style | chore', '',
+              '## When done', '',
+              '- Open PR titled `[Copilot] type(scope): description`',
+              f'- Mark task done in TODO.md: `- [ ]` → `- [x] {today}`',
+              '- Do NOT merge — owner reviews and merges', '',
+              '---',
+              f'*Copilot Fallback — no Anthropic activity on {today}*',
+          ]
+          with open('/tmp/issue_body.txt', 'w') as fh:
+              fh.write('\n'.join(lines))
+          PYEOF
+
           gh issue create \
             --title "[Copilot Fallback] ${TODAY} — ${TASK}" \
             --assignee "copilot" \
             --label "copilot-fallback" \
-            --body "## Task
+            --body-file /tmp/issue_body.txt
 
-${TASK}
-
-This issue was created automatically. The Anthropic API quota was exhausted today so GitHub Copilot is handling this task using the GitHub Pro+ allocation.
-
----
-
-## Project context
-
-**TechPath AU** — career platform for international IT graduates in Australia.
-Live at: https://henrysdigitallife.com
-
-**Stack:** Next.js 16.2 App Router, TypeScript strict, Supabase, Stripe, Vercel
-
-**Critical rules (read AGENTS.md before touching any file):**
-- \`cookies()\`, \`headers()\`, \`params\` are async in Next.js 16 — always \`await\` them
-- Every AI-calling API route must call \`requireSubscription()\` first
-- Colours: \`var(--token-name)\` only — never hardcoded hex
-- Images: \`next/image\` only — never raw \`<img>\`
-- Internal links: \`<Link>\` only — never \`<a href>\`
-- Styling: CSS custom properties + inline styles — no Tailwind
-
-## Quality gate — run before opening PR
-
-\`\`\`bash
-export OPENAI_API_KEY=sk-dummy-ci-build STRIPE_SECRET_KEY=sk_test_dummy_ci
-export STRIPE_PRICE_ID=price_dummy_ci STRIPE_WEBHOOK_SECRET=whsec_dummy_ci
-export NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co
-export NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key-ci
-export SUPABASE_SERVICE_ROLE_KEY=dummy-service-role-ci
-export NEXT_PUBLIC_APP_URL=https://henrysdigitallife.com
-
-npx tsc --noEmit && npm audit --audit-level=moderate && npx vitest run && npm run build
-\`\`\`
-
-## Commit format
-
-\`\`\`
-type(scope): summary under 72 chars
-\`\`\`
-Types: feat | fix | security | perf | refactor | style | chore
-
-## When done
-
-- Open PR titled \`[Copilot] type(scope): description\`
-- Mark task done in TODO.md: \`- [ ]\` → \`- [x] ${TODAY}\`
-- Do NOT merge — owner reviews on phone and merges
-
----
-*Copilot Fallback — Anthropic quota exhausted on ${TODAY}*"
-
-      # ── Step 5: No task available ────────────────────────────────────────
+      # ── Step 7: No task available ────────────────────────────────────────
       - name: Log no-task result
         if: |
           steps.check.outputs.ran == 'false' &&
           steps.existing.outputs.count == '0' &&
           steps.todo.outputs.task == 'NO_TASK'
         run: |
-          echo "No suitable task in TODO.md. Opus agent will populate tasks next quota reset."
+          echo "No suitable task in TODO.md. Opus agent will populate tasks on next run."

@@ -53,6 +53,10 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install dependencies
+        if: steps.guard.outputs.skip == 'false'
+        run: npm ci
+
       - name: Install Claude Code CLI
         if: steps.guard.outputs.skip == 'false'
         run: npm install -g @anthropic-ai/claude-code

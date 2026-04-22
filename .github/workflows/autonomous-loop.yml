@@ -301,24 +301,29 @@ jobs:
           TASK: ${{ steps.copilot_todo.outputs.task }}
           TODAY: ${{ steps.quota_guard.outputs.today }}
         run: |
+          python3 - << 'PYEOF'
+          import os
+          task = os.environ['TASK']
+          today = os.environ['TODAY']
+          lines = [
+              '## Task', '',
+              task, '',
+              'Quota exhausted during autonomous loop. GitHub Copilot Pro+ picking up.', '',
+              '---', '',
+              '**Stack:** Next.js 16.2 App Router, TypeScript strict, Supabase, Stripe, Vercel',
+              'Read AGENTS.md before touching any file.', '',
+              'Open PR titled `[Copilot] type(scope): description`. Do NOT merge.', '',
+              f'*Autonomous Loop — quota exhausted on {today}*',
+          ]
+          with open('/tmp/issue_body.txt', 'w') as fh:
+              fh.write('\n'.join(lines))
+          PYEOF
+
           gh issue create \
             --title "[Copilot Fallback] ${TODAY} — ${TASK}" \
             --assignee "copilot" \
             --label "copilot-fallback" \
-            --body "## Task
-
-${TASK}
-
-Quota exhausted during autonomous loop. GitHub Copilot Pro+ picking up.
-
----
-
-**Stack:** Next.js 16.2 App Router, TypeScript strict, Supabase, Stripe, Vercel
-Read AGENTS.md before touching any file.
-
-Open PR titled \`[Copilot] type(scope): description\`. Do NOT merge.
-
-*Autonomous Loop — quota exhausted on ${TODAY}*"
+            --body-file /tmp/issue_body.txt
 
       # ── Re-dispatch next iteration ────────────────────────────────────────
       - name: Queue next iteration
