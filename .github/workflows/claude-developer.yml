@@ -86,7 +86,6 @@ jobs:
         run: |
           set +e
           claude \
-            --bare \
             --dangerously-skip-permissions \
             --model claude-sonnet-4-6 \
             --allowedTools "Bash,Read,Write,Edit,Glob,Grep" \

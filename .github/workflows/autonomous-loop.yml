@@ -160,7 +160,6 @@ jobs:
         run: |
           set +e
           claude \
-            --bare \
             --dangerously-skip-permissions \
             --model claude-opus-4-7 \
             --allowedTools "Bash,Read,Write,Edit,Glob,Grep" \
@@ -211,7 +210,6 @@ jobs:
         run: |
           set +e
           claude \
-            --bare \
             --dangerously-skip-permissions \
             --model claude-sonnet-4-6 \
             --allowedTools "Bash,Read,Write,Edit,Glob,Grep" \
