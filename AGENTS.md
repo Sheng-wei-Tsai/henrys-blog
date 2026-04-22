@@ -135,6 +135,19 @@ Any `NEXT_PUBLIC_` env var is shipped to the browser and visible to all users. C
 
 **Never** prefix a secret key (service role, private API key, webhook secret) with `NEXT_PUBLIC_`.
 
+### 5.7 CI agent secrets — `CLAUDE_CODE_OAUTH_TOKEN`
+
+The daily analyst and developer GitHub Actions workflows authenticate using the **Claude Code Pro subscription**, not a pay-as-you-go API key.
+
+| Secret | Purpose | How to generate |
+|--------|---------|-----------------|
+| `CLAUDE_CODE_OAUTH_TOKEN` | Lets the `claude` CLI in GitHub Actions bill against your Pro subscription quota instead of API credits | Run `claude setup-token` in your local terminal (must be signed into Claude Code Pro), then paste the output into GitHub → repo Settings → Secrets → `CLAUDE_CODE_OAUTH_TOKEN` |
+| `ANTHROPIC_API_KEY` | Used only by `daily-posts.yml` and the content scripts (`fetch-ai-news`, `fetch-visa-news`, `run-githot`) which call the Anthropic SDK directly and cannot use the OAuth token | Anthropic Console → API Keys |
+
+When the Pro subscription quota is exhausted, the developer workflow automatically creates a GitHub Issue assigned to `@copilot` so the GitHub Copilot Pro+ coding agent picks up the task instead. No manual intervention needed.
+
+If `CLAUDE_CODE_OAUTH_TOKEN` ever stops working (token expiry), re-run `claude setup-token` locally and update the secret.
+
 ---
 
 ## 6. Performance Rules
