@@ -50,7 +50,8 @@ export async function GET(req: NextRequest) {
   let query = sb
     .from('video_progress')
     .select('video_id, quiz_score, quiz_taken, completed')
-    .eq('user_id', user.id);
+    .eq('user_id', user.id)
+    .limit(500);  // Cap unbounded query
   if (channel) query = query.eq('channel_name', channel);
   const { data } = await query;
 

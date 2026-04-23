@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { formatDistanceToNow } from 'date-fns';
+import Image from 'next/image';
 import { useAuth } from '@/components/AuthProvider';
 
 interface CommentRow {
@@ -17,7 +18,7 @@ interface CommentRow {
 
 function Avatar({ name, url, size = 32 }: { name: string | null; url: string | null; size?: number }) {
   if (url) {
-    return <img src={url} alt={name ?? 'User'} width={size} height={size} style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />;
+    return <Image src={url} alt={name ?? 'User'} width={size} height={size} style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />;
   }
   const initial = (name ?? '?')[0].toUpperCase();
   return (
@@ -222,8 +223,8 @@ export default function Comments({ slug }: { slug: string }) {
     setPosting(true); setPostErr('');
     try {
       await post(null, text.trim(), () => setText(''));
-    } catch (err: any) {
-      setPostErr(err.message ?? 'Failed to post comment');
+    } catch (err) {
+      setPostErr(err instanceof Error ? err.message : 'Failed to post comment');
     } finally {
       setPosting(false);
     }

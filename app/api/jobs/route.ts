@@ -256,7 +256,9 @@ export async function GET(req: NextRequest) {
   if (adzuna1Result.status  === 'rejected') console.warn('[jobs] Adzuna p1 rejected:', adzuna1Result.reason);
   if (adzuna2Result.status  === 'rejected') console.warn('[jobs] Adzuna p2 rejected:', adzuna2Result.reason);
 
-  console.log(`[jobs] sources: jsearch=${jsearchJobs.length} scraped=${scrapedJobs.length} adzuna=${adzunaJobs.length} (pages ${adzunaPage1}+${adzunaPage2})`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[jobs] sources: jsearch=${jsearchJobs.length} scraped=${scrapedJobs.length} adzuna=${adzunaJobs.length} (pages ${adzunaPage1}+${adzunaPage2})`);
+  }
 
   // Merge priority: scraped Seek/Jora (most AU-specific) → JSearch → Adzuna
   const seen = new Set<string>();

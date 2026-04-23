@@ -22,7 +22,18 @@ export async function POST(req: Request) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const summary = await req.json();
+  // Cap payload size to prevent oversized prompts
+  const text = await req.text();
+  if (text.length > 50000) {
+    return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
+  }
+
+  let summary;
+  try {
+    summary = JSON.parse(text);
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
 
   const prompt = `You are a growth strategist for a personal tech blog called "Henry's Digital Life" by Henry Tsai — a full-stack developer in Brisbane, Australia targeting international new graduates looking for IT jobs in Australia.
 
