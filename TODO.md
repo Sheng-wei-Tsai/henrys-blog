@@ -1,13 +1,17 @@
-# TODO — Henry Blog Feature Backlog
+# TODO — TechPath AU Feature Backlog
 
-Last updated: 2026-04-14
-Product vision: The definitive career platform for international IT graduates entering the Australian job market.
+**Last updated:** 2026-04-22
+**Product vision:** The definitive career platform for international IT graduates entering the Australian job market.
+**Single source of truth for:** what is done, what is next, and why.
+
+> **How to use this file:** See `DOCS.md` for the full documentation management guide.
+> Before building anything, add it here first (AGENTS.md §16). After shipping, mark ✅ Done and date it.
 
 ---
 
 ## ✅ Done — Full Feature Inventory
 
-### Core Infrastructure
+### Infrastructure & CI/CD
 - **Auth** — GitHub OAuth + Supabase SSR, RLS everywhere
 - **Stripe** — checkout, portal, webhook, subscription gate
 - **Pre-push quality gate** — `npm run check` (audit + build), GitHub Actions CI
@@ -15,6 +19,15 @@ Product vision: The definitive career platform for international IT graduates en
 - **RSS feed** — `/feed.xml` — blog + digests + githot, auto-discovered
 - **OG images** — site-wide + per blog post (`next/og`, 1200×630)
 - **Analytics** — `/admin/analytics` — page views, countries, devices, AI growth suggestions
+- **Test suite** — Vitest + 41 tests (8 files): API route auth, component behaviour, localStorage isolation ✅ *2026-04-20*
+- **CI pipeline fix** — Node 22, missing icon files committed, TS errors in test files resolved, Vercel deploy unblocked ✅ *2026-04-21*
+
+### Design System
+- **Company Logo System** — `lib/companies.ts` (70 companies + aliases), `components/CompanyLogo.tsx` (4-tier fallback: Simple Icons → Logo.dev → Google favicons → initials), click-to-website on bare variant ✅ *2026-04-20*
+- **CitySelector** — animated city dropdown with landmark subtitle fade, city-specific border/tint on hover, custom dropdown with CityIcon per option ✅ *2026-04-21*
+- **EIcon / CityIcon** — `components/icons/EIcon.tsx` (34 ink-brush icons), `components/icons/CityIcon.tsx` (8 city mascot SVGs) ✅ *2026-04-21*
+- **Yin-Yang Dark Mode Toggle** — smooth 180° spin, cross-fade fill colours, comic panel shadow ✅
+- **Reading Progress Bar** — pure CSS `animation-timeline: scroll()` on blog posts ✅
 
 ### Blog & Content
 - **Blog** — MDX posts, reading time, tag chips, AI badge on auto-generated posts
@@ -24,271 +37,177 @@ Product vision: The definitive career platform for international IT graduates en
 - **Comments** — auth-gated, per-post, admin moderation
 
 ### Career Tools
-- **Resume Analyser** — PDF upload, Claude AU recruiter prompt, score ring, action items
-- **Cover Letter Generator** — GPT-4.1, 4-paragraph AU structure, streaming, inline edit
-- **Job Search** — JSearch API, working rights filter, freshness colours, save/apply
-- **Interview Prep** — streaming Alex mentor, question sidebar, score debrief, company career links
-- **Interview questions cache** — 24h localStorage cache, "New Questions" clears cache
-- **Interview company pages** — AU careers URLs for 25 companies
-- **Page state persistence** — jobs results 10min cache, interview questions 24h cache
-- **Interview Prep v2** — Universal Questions (8 AU-specific hardcoded Qs), Reality Check stage (6-stage flow: scene→why→guide→reality→practice→debrief), follow-up question streamed in debrief, Company Intel for 10 companies (expandable on role cards + injected into mentor prompts), Post-Interview Toolkit (Summary/Email/Rejection/Negotiation tabs), Networking Hub at `/interview-prep/networking`
-- **YouTube learn** — 20 channels (added WebDevSimplified, Boot.dev), pagination fix (POST body cache bug), transcript smart sampling (6-language fallback, 30/50/20% windowed sampling)
-- **Jobs page** — stale closure fix, category filter in useCallback deps, `<Link>` for internal nav, quick-start pill fix
-- **Performance & quality** — dark mode contrast fixed (#a09080 both blocks), YouTube thumbnails via `next/image`, video study page SSR split (instant load for cached guides)
+- **Resume Analyser** — PDF upload, Claude AU recruiter prompt, score ring, radar chart, action items
+- **Cover Letter Generator** — GPT-4o, 4-paragraph AU structure, streaming, inline edit
+- **Job Search** — JSearch + Adzuna + Jora scraper, working rights filter, freshness colours, save/apply, animated CitySelector
+- **Job Scraper** — `scripts/scrape-au-jobs.ts` — Jora HTML scraping, 9 keywords × 5 cities, daily GitHub Actions cron 6am AEST
+- **Interview Prep v2** — Universal Questions, Reality Check (6-stage), Company Intel (10 companies), Post-Interview Toolkit (Summary/Email/Rejection/Negotiation tabs), Networking Hub at `/interview-prep/networking`
+- **Gap Engine** — pgvector skill extraction from JDs, match % ring per job card, cached 7d in Supabase + localStorage, rate-limited 5/day ✅ *2026-04*
+- **YouTube Learning** — 20 channels, Gemini study guide, quiz, transcript smart sampling
 
-### AU Insights (10 tabs)
-- **Company Tiers** — 8 tiers, Framer scroll entrance, hover lift, favicon chips, ghost logo
-- **IT Ecosystem** — 4-layer AU IT map
-- **Career Guide** — full guide, palette-themed
-- **Visa Sponsors** — top 20 companies by 482 volume
-- **Job Market Charts** — ABS/ACS/QILT data
-- **Salary Checker** — AI verdict vs ACS benchmarks + negotiation script
-- **Grad Programs** — live status, deadlines, favicons, direct application links
-- **Skill Map** — OR-group matching, animated bars, company chips
-- **Visa Guide** — 6-step 482/SID stepper, "Track my journey →" CTA
-- **Company Compare** — multi-select, 8-row table, SVG radar chart
-- **Company detail pages** — `/au-insights/companies/[slug]` — tier, culture, interview questions
+### AU Insights (all 10 tabs)
+- **Company Tiers** — 8 tiers, scroll entrance, hover lift, CompanyLogo chips, ghost logo watermark ✅ *updated 2026-04-20*
+- **IT Ecosystem** — Framer Motion redesign: scroll entrance, expandable analysis cards, animated money-flow arrows, 🇦🇺/🌏 company split ✅ *2026-04-21*
+- **Visa Sponsors** — top 20 companies by 482 volume, CompanyLogo in rankings table ✅ *2026-04-20*
+- **Company Compare** — multi-select, 8-row table, SVG radar chart, CompanyLogo in selector + table headers + legend ✅ *2026-04-20*
+- **Grad Programs** — live status, deadlines, CompanyLogo, direct application links ✅ *2026-04-20*
+- **Career Guide**, **Job Market Charts**, **Salary Checker**, **Skill Map**, **Visa Guide** — all live
 
 ### Dashboard & Tracking
-- **Dashboard** — saved jobs, applications pipeline, job alerts, career tools cards
-- **Visa Journey Tracker** — `/dashboard/visa-tracker` — 6-step personal 482 tracker, doc checklists, auto-save
-- **Career Tools cards** — Resume Analyser, Interview Prep, AU Insights, Visa Tracker
+- **Personalised Dashboard** — `PersonalisedHero`, readiness score widget, "Your next action" priority logic ✅
+- **Visa Journey Tracker** — `/dashboard/visa-tracker` — 6-step 482 tracker, doc checklists, auto-save ✅
+- **Readiness Score** — 0–100 ring (resume 25% + skills 25% + quiz 25% + interviews 25%), daily Supabase snapshot ✅
 
 ### Learning
 - **5 skill paths** — Frontend, Fullstack, Backend, Data Engineer, DevOps/Cloud
-- **Spaced repetition** — review intervals, browser notifications
-- **Supabase progress sync** — skill_progress table, cross-device
-- **YouTube Learning** — `/learn/youtube` — channel browse, Gemini study guide, quiz, NotebookLM panel
+- **Spaced repetition** — review intervals, browser notifications, Supabase cross-device sync
 - **IBM Learning** — `/learn/ibm` curated content
 
 ### Admin
 - **Admin panel** — `/admin` — users, comments, job applications stats
 - **Admin analytics** — 30-day trends, top pages, countries, devices, AI growth suggestions
 
+### Security (completed)
+- Cookie-based session auth on all protected routes (replaced Bearer tokens) ✅ *2026-04-15*
+- Fail-closed owner email (no hardcoded fallback) ✅ *2026-04-15*
+- Input truncation on all AI routes: `roleTitle` (100 chars), `question` (500), `userAnswer` (800) ✅ *2026-04-21*
+- `tsconfig.json` excludes `__tests__` — test type errors cannot block production builds ✅ *2026-04-21*
+
 ---
 
-## 🔴 Priority 0 — In Progress
+## 🔴 Priority 0 — Blocking Launch
 
-### ✅ Security Hardening Sprint
-**What:** Fix all Critical/High security issues before public launch.
-- [ ] Fix `o4-mini` → `gpt-4o-mini` and `gpt-4.1` → `gpt-4o` (5 files — `o4-mini` is not a stable model ID)
-- [ ] Replace Bearer token auth with cookie-based sessions (3 routes: onboarding, dashboard/summary, readiness-score)
-- [ ] Remove hardcoded owner email fallback from `lib/auth-server.ts` + `proxy.ts` — fail-closed
-- [ ] Truncate all user inputs before AI calls — `roleTitle.slice(0,100)`, `question.slice(0,500)` in interview routes
-- [ ] Add `.limit()` to unbounded queries in `comments/route.ts` + `alerts/route.ts`
+### Stripe Production Launch + ABN Registration
+**Blocked on:** external manual steps only. Code is 100% done.
+
+**ABN (do first):**
+- [ ] Check visa eligibility — 485/PR/Citizen = OK; 482/Student = check first
+- [ ] Gather TFN + passport → apply at abr.gov.au (free, ~15 min)
+- [ ] Open separate AU bank account (CommBank / Up / Wise) for business income
+
+**Stripe activation (after ABN):**
+- [ ] Activate live mode at dashboard.stripe.com — paste ABN, upload passport, add bank BSB
+- [ ] Wait for "Charges enabled" + "Payouts enabled" (1–2 days)
+- [ ] Create live product: `TechPath AU Pro` — `$14.99 AUD / month` → copy `price_…` ID
+- [ ] Create live webhook → 5 events (checkout.session.completed, customer.subscription.updated, customer.subscription.deleted, invoice.payment_succeeded, invoice.payment_failed)
+- [ ] Swap 4 Vercel env vars to live keys (Production scope only, keep test for Preview)
+- [ ] Smoke test: real card → verify `subscription_tier = 'pro'` in Supabase → refund yourself
+
+**Files already done:** `app/api/stripe/webhook/route.ts`, `lib/subscription.ts`, `app/pricing/page.tsx`
+
+### Remaining Security Items
+- [ ] Add `.limit()` to unbounded queries in `app/api/comments/route.ts` + `app/api/alerts/route.ts`
 - [ ] Fix async `cookies()` in `alerts/route.ts` (Next.js 16 breaking change)
-- [ ] Stripe webhook tests — signature validation, checkout/renewal/cancellation event handling
-
-**Files:** `app/api/learn/{analyse,quiz}/route.ts`, `app/api/{cover-letter,resume-match,analytics/ai-insights}/route.ts`, `app/api/{onboarding,dashboard/summary,readiness-score}/route.ts`, `lib/auth-server.ts`, `proxy.ts`, `app/api/interview/evaluate/route.ts`, `app/api/{comments,alerts}/route.ts`, `app/api/stripe/webhook/route.test.ts`
+- [ ] Stripe webhook signature validation tests — `app/api/stripe/webhook/route.test.ts`
 
 ---
 
-### ✅ Production Quality Sprint (6.2 → 8.0)
-**What:** Harden codebase for MVP launch — security, performance, correctness.
-- [x] `proxy.ts` — server-side auth guard for `/dashboard` and `/admin` already in place (Next.js 16 pattern)
-- [x] `error.tsx` in `app/dashboard/`, `app/interview-prep/`, `app/learn/`, `app/jobs/` (4 files)
-- [x] Add `.limit()` to 7 unbounded Supabase queries (`analytics/summary`, `readiness-score`)
-- [x] Remove unused Tailwind deps (`tailwindcss`, `@tailwindcss/postcss`, `postcss.config.mjs`)
-- [x] Replace 8 `<a href="/">` with `<Link>` (full-page reloads on internal nav)
-- [x] Replace `<img>` with `<Image>` in `app/learn/ibm/page.tsx`
+## 🔴 Priority 1 — Retention Engine
 
-**Files:** `middleware.ts`, `app/*/error.tsx` ×4, `app/api/analytics/summary/route.ts`, `app/api/readiness-score/route.ts`, `package.json`, `postcss.config.mjs`, 8 component files, `app/learn/ibm/page.tsx`
+### Readiness Score on Profile Page
+- [ ] Show the 0–100 score ring + breakdown on `/profile` or `/dashboard/profile`
+- Small effort (S) — widget already exists as `ReadinessScore` component
 
----
-
-### ✅ 0.2 Yin-Yang Dark Mode Toggle
-**What:** Circular yin-yang SVG toggle button. CSS `transition: transform` on accumulated rotation state — smooth 180° spin on click, no snap-back. Fill colours cross-fade at spin midpoint. Comic panel shadow adapts to theme.
-**Files:** `components/ThemeToggle.tsx`, `app/globals.css`
-
----
-
-### ✅ 0.1 Comic Book Card Animation — Interview Prep Tool Cards
-**What:** 4 full-width stacked comic cards (Resume Analyser, Cover Letter, Interview Prep, Networking Hub). Hard ink border, offset box-shadow, hover tilt `rotate(-1.5deg) translateY(-9px)` + vermilion shadow. Dot halftone panel. Framer `whileTap` for mobile.
-**Files:** `app/interview-prep/InterviewPrepClient.tsx`, `app/globals.css`
-
----
-
-### ✅ 0. Interview Prep Landing Page Redesign + Progress Tracking
-**Why now:** The `/interview-prep` page is static cards with no user context. Users have no idea how far they've come. Layout should match the polished `/learn` page pattern with Framer Motion animations.
-
-**What gets built:**
-- Split `app/interview-prep/page.tsx` into server component (metadata) + `app/interview-prep/InterviewPrepClient.tsx` (interactive)
-- **Tool cards** — same dark-gradient style as `/learn` (YouTube/GitHub/Claude Code cards): Resume Analyser, Cover Letter, Interview Prep, Networking Hub. Each card shows live progress (resume count, cover letter count, XP/level, networking %).
-- **Hover + touch animations** — Framer Motion `whileHover` + `whileTap` + `whileFocus` on every card. Works on mobile (touch = same animation as hover).
-- **"How it works" accordion** — Framer `AnimatePresence` expand/collapse. Each step has a `CartoonArrow` component: animated dashed SVG line + bouncing arrowhead in the Eastern Ink comic style.
-- **"Practice by Role" section** — Collapsed by default (compact pill list). Click/tap to reveal full role cards with stagger entrance animation. `AnimatePresence` for smooth expand. Feels like an interactive game level-select.
-- **Progress data sources:** `profiles.interview_xp` + `profiles.interview_level` (Supabase), `resume_analyses` count (Supabase), `usage_records` for cover-letter (Supabase), networking % from `localStorage` key `networking-30day-checklist`.
-
-**Files:**
-- `app/interview-prep/page.tsx` — slim down to server metadata wrapper
-- `app/interview-prep/InterviewPrepClient.tsx` — NEW client component (main UI)
-- `app/api/dashboard/summary/route.ts` — may need new fields for interview/resume counts
-
-**Acceptance criteria:**
-- [x] Tool cards match `/learn` visual style (dark gradient, glow, progress pill)
-- [x] `whileHover` scale + glow runs on desktop; same scale on mobile tap (`whileTap`)
-- [x] `CartoonArrow` animates on mount: dashed line draws in, arrowhead bounces
-- [x] "Practice by Role" expands/collapses with stagger animation
-- [x] Progress numbers load from Supabase (skeleton while loading, graceful if unauthenticated)
-- [x] `npm run check` passes clean
-
----
-
-## 🔴 Priority 1 — The Connective Tissue (Retention Engine)
-
-These features tie everything together into a coherent product. Without them, every tool is an island.
-
-### ✅ 1. Smart Onboarding Flow — `features/onboarding-flow.md`
-- [x] Onboarding modal on first login (target role, visa status, job search stage) — `components/OnboardingModal.tsx`
-- [x] Persist `onboarding_profile` to `profiles` table — `app/api/onboarding/route.ts`
-- [x] Triggered from `AuthProvider` on first login; never shown again after completion
-- [x] `supabase/012_onboarding.sql` migration
-
-### ✅ 2. Personalised Dashboard Homepage — `features/personalised-dashboard.md`
-- [x] Logged-in `/`: `HomepageHero` → `PersonalisedHero` — greeting, next action card, today strip
-- [x] Logged-out `/`: `PublicHero` — targeted hero with emotional copy + CTAs
-- [x] Readiness Score widget in dashboard page + `ReadinessScoreMini` in Header
-- [x] "Your next action" priority logic (visa step → review due → stale resume → jobs)
-
-### 3. Job-to-Gap Engine — `features/gap-engine.md`
-**Why now:** The single feature that makes every other feature more valuable.
-- [x] `supabase/019_gap_analysis.sql` — pgvector extension (enabled), job_gap_analyses cache table
-- [x] `POST /api/gap-analysis` — GPT-4o-mini skill extraction from JD, cross-ref user skill_progress + SKILL_PATHS
-- [x] Gap results: ✅ matched skills (jade), ❌ missing skills with "Learn →" link to skill path
-- [x] Match % ring displayed per job + expandable inline gap panel in job cards
-- [x] Results cached in Supabase (7-day TTL) + localStorage
-- [x] `components/GapAnalysisPanel.tsx` — animated expandable panel, match ring, skill chips
-- [x] Rate limited: 5 gap analyses per user per day
-
-### ✅ 4. Readiness Score — `features/readiness-score.md`
-**Why now:** Creates a measurable goal users chase daily. Drives retention.
-- [x] Score 0–100 composed of: resume quality (25%) + skill completion (25%) + quiz scores (25%) + interview sessions (25%)
-- [x] Shown on dashboard as a ring/gauge
-- [x] Breakdown with detail labels per component (`ReadinessScore` widget)
-- [x] Score persisted + historicised in Supabase (`readiness_snapshots` table, daily upsert)
-- [x] `ReadinessScoreMini` ring around avatar in Header for logged-in users
-- [ ] Displayed on profile page
+### B2B Recruiter / Company Job Posting — `features/recruiter-portal.md`
+**Why:** First B2B revenue lever. AU companies pay thousands to reach qualified international IT grads.
+- [ ] `/post-a-role` landing page
+- [ ] Stripe checkout: $99 AUD per 30-day listing
+- [ ] `job_listings` Supabase table — company, role, description, url, expires_at
+- [ ] Featured listings at top of `/jobs` page with "Featured" badge
+- [ ] Admin approval queue + auto-expiry via Resend email
+- **Effort:** M (3–5 days)
 
 ---
 
 ## 🔴 Priority 2 — AI Quality & Infrastructure
 
-### 5. Gemini Multimodal for YouTube — `features/gemini-multimodal.md`
-**Why now:** Current YouTube study guides use transcript-scraping + OpenAI. Fails on videos without captions. Misses diagrams, code on screen. Gemini watches the video directly.
+### Gemini Multimodal for YouTube — `features/gemini-multimodal.md`
+**Why:** Current YouTube study guides fail on videos without captions. Gemini watches the video directly.
 - [ ] Replace `youtube-transcript` + OpenAI with Gemini 1.5 Flash direct video URL input
-- [ ] Remove `youtube-transcript` package
-- [ ] Study guides gain: visual content (slides, code), architecture diagrams, on-screen demos
+- [ ] Gains: visual content (slides, code on screen), architecture diagrams, no caption dependency
 - [ ] Error handling for long videos (>2h) and music-only content
+- **Effort:** S (1–2 days)
 
-### 6. Vercel KV Caching Layer — `features/vercel-kv-cache.md`
-**Why now:** Expensive AI calls (study guides, cover letters, quiz generation) hit Supabase for cache checks. Redis is 50× faster for cache lookups.
-- [ ] Vercel KV set up (free tier: 256MB)
-- [ ] Video study guide cache: KV → Supabase fallback
-- [ ] Interview questions shared cache: same role = same questions pool (not per-user)
-- [ ] Cover letter template fragments cached by company+role key
-- [ ] Cache TTL management: study guides (7d), questions (24h), cover letter fragments (1h)
+### Vercel KV / Redis Caching — `features/vercel-kv-cache.md`
+**Why:** AI calls hit Supabase for cache checks. Redis is 50× faster for hot-path lookups.
+- [ ] Vercel KV set up via Marketplace (free tier: 256MB)
+- [ ] Study guide cache: KV → Supabase fallback
+- [ ] Interview questions shared pool cache (same role = same questions, not per-user)
+- [ ] Cover letter fragment cache by company+role key
+- **Effort:** S (1–2 days)
 
-### 7. Integration Test Suite — `features/test-suite.md`
-**Why now:** 89 source files, zero tests. One silent failure in `/api/track` already swallows errors. Critical for employer credibility.
-- [ ] Vitest + @testing-library/react installed
-- [ ] 8 critical API route tests: track, gap-analysis, cover-letter, interview/questions, resume-match, visa-tracker, analytics/summary
-- [ ] 3 critical component tests: AuthProvider, Analytics beacon, PathTracker
-- [ ] CI: test step added before build in GitHub Actions
+### Expand Test Coverage
+**Current:** 41 tests. Target: critical paths covered.
+- [ ] `track` API route (currently swallows errors silently)
+- [ ] `gap-analysis` route (pgvector path)
+- [ ] `cover-letter` route (streaming)
+- [ ] Stripe webhook events (checkout, renewal, cancellation)
+- [ ] `AuthProvider` component
+- **Effort:** M (3–5 days)
+
+### Phone Remote Control (GitHub mobile + Telegram)
+**Why:** Owner needs to dispatch tasks, trigger pipelines, and review status from their phone even when the Mac is off.
+- **Files created:** `.github/workflows/phone-task.yml` — free-text task → Claude → PR (implement) or GitHub Issue (investigate); dispatched from GitHub mobile app Actions tab ✅ *2026-04-24*
+- **Telegram:** existing plugin (`~/.claude/channels/telegram/`) verified live for interactive control when Mac is on ✅ *2026-04-24*
+- **Bookmark targets (phone):** GitHub iOS → henrys-blog → Actions → "Phone Task (Claude on demand)", "Claude Daily Developer", "Daily Posts", "Scrape AU IT Jobs"
 
 ---
 
-## 🟡 Priority 3 — Growth & Monetisation
+## 🟡 Priority 3 — Growth
 
-### 8. B2B Recruiter / Company Job Posting — `features/recruiter-portal.md`
-**Why now:** First B2B revenue lever. AU companies spend thousands to reach qualified international IT grads. You have exactly that audience.
-- [ ] `/post-a-role` public landing page explaining the offering
-- [ ] Stripe checkout: $99 AUD per job post, 30-day listing
-- [ ] `job_listings` table (Supabase) — company, role, description, url, expires_at
-- [ ] Listed roles appear at top of `/jobs` page with "Featured" badge
-- [ ] Admin approval queue before going live
-- [ ] Auto-expiry and renewal email via Resend
-
-### 9. Navigation Restructure — `features/navigation-redesign.md`
-**Why now:** 10 AU Insights tabs + top nav + dashboard = users are lost. PM insight: group by verb.
-- [ ] Three zones: **Prepare** (Resume → Skills → Interview → Cover Letter) · **Search** (Jobs → Companies → AU Insights) · **Track** (Dashboard → Visa → Applications)
-- [ ] New top nav with zone groupings + mega-dropdown on desktop
-- [ ] Mobile bottom nav: 4 icons (Home, Search, Prepare, Dashboard)
+### Navigation Restructure — `features/navigation-redesign.md`
+- [ ] Three zones: **Prepare** · **Search** · **Track** (group by user intent, not feature name)
+- [ ] Mega-dropdown on desktop, mobile bottom nav (4 icons)
 - [ ] Breadcrumbs on all nested pages
+- **Effort:** M
 
-### 10. Mobile-First Job Search Redesign — `features/mobile-jobs.md`
-**Why now:** International grads browse jobs on mobile (commute, campus). Current job cards are desktop-optimised.
+### Mobile-First Job Search Redesign — `features/mobile-jobs.md`
 - [ ] Swipe-to-save gesture on job cards
-- [ ] Sticky search bar with filter sheet (bottom drawer on mobile)
+- [ ] Sticky search bar with filter bottom-drawer on mobile
 - [ ] Minimum 44px touch targets on all action buttons
-- [ ] Job detail full-screen modal on mobile (not new page)
-- [ ] "Apply later" vs "Apply now" quick action strip
+- [ ] Job detail full-screen modal on mobile
+- **Effort:** M
 
 ---
 
-## 🟡 Priority 4 — Community & Network
+## 🟡 Priority 4 — Community & Moat
 
-### 11. Anonymous Job Seeker Network — `features/community-network.md`
-**Why now:** International grads are isolated. LinkedIn doesn't surface "who else is looking in Brisbane right now?" The referral network is your moat.
-- [ ] Opt-in anonymous profiles: role seeking, visa type, skills, city
-- [ ] `/network` — map/list of active job seekers in AU (city + role, no names)
+### Anonymous Job Seeker Network — `features/community-network.md`
+**Why:** The feature that makes the platform defensible against AI aggregators.
+- [ ] Opt-in anonymous profiles: role, visa type, skills, city
+- [ ] `/network` — map/list of active seekers (city + role, no names)
 - [ ] Referral matching: "3 people from your background were hired at Atlassian via referral"
-- [ ] Direct message (auth-gated, anti-spam) — connect with people in similar situations
-- [ ] This is the feature that makes the platform defensible against AI aggregators
+- [ ] Direct message (auth-gated, anti-spam)
+- **Effort:** XL (2–4 weeks)
 
-### 12. Employer / Company Research AI — `features/company-research-ai.md`
-**Why now:** Users prep for interviews but don't have a way to deep-dive a company before applying.
-- [ ] `/companies/[slug]/research` — AI-generated company brief (culture, recent news, tech stack, interview style)
-- [ ] Pulls from: company blog RSS, LinkedIn (scraped carefully), Glassdoor deeplinks, earnings calls
+### Company Research AI — `features/company-research-ai.md`
+- [ ] `/companies/[slug]/research` — AI company brief (culture, news, tech stack, interview style)
 - [ ] "Interview battle card" — printable 1-pager per company
-- [ ] Connects to interview prep: "Prepare for your Atlassian interview →"
+- **Effort:** L (1–2 weeks)
 
 ---
 
-## 🟢 Priority 5 — Polish & Completeness
+## 🟢 Priority 5 — Polish
 
-### ✅ 13. Framer Motion — remaining AU Insights tabs
-- [x] Skill Map — animate match bars with `whileInView`
-- [x] Company Compare — SVG radar `motion.polygon` scale-in on load
-- [x] Grad Programs — card entrance stagger on tab reveal
+### Traditional Chinese (zh-TW) — `features/i18n-zh-tw.md`
+- [ ] `next-intl` installed, ~80 strings: nav, CTAs, onboarding, AU Insights key labels
+- [ ] Language toggle in Header (persists to localStorage)
+- **Effort:** S (2–3 days)
 
-### ✅ 14. Interview Session Share Card
-- [x] PNG share card at `GET /api/interview/share-card` (ImageResponse, 1200×630)
-- [x] Download button + LinkedIn share in summary tab
-
-### ✅ 15. Reading Progress Bar
-- [x] Thin scroll-progress bar at top of all blog post pages
-- [x] Pure CSS `animation-timeline: scroll()` — no JS needed
-
-### ✅ Visual Intelligence — AI Diagram Features
-- [x] E — Resume Radar Chart (5-axis SVG, Framer Motion scale-in) in resume analyser
-- [x] B — Concept Diagram Generator (GPT-4o-mini → Mermaid.js SVG, localStorage cache) in skill cards
-- [x] D — Personalised Roadmap Diagram (GPT-4o-mini → Mermaid.js SVG, localStorage cache) in dashboard hero
-- [x] C — Interview Score Card PNG (Next.js ImageResponse / Satori)
-
-### ✅ Job Scraper — Expanded AU IT Job Coverage
-- [x] `scraped_jobs` Supabase table — `supabase/017_scraped_jobs.sql`, 30-day TTL
-- [x] `scripts/scrape-au-jobs.ts` — Jora (au.jora.com) HTML scraping, ACS RSS, Indeed best-effort
-- [x] 9 IT keywords × 5 AU cities = up to 675 Jora results per run, deduplicated
-- [x] Integrated into `/api/jobs` — merge priority: JSearch → scraped → Adzuna
-- [x] Source badges in `/jobs` page: Jora, ACS, Indeed
-- [x] Daily cron via `.github/workflows/scrape-jobs.yml` (6am AEST)
-- [x] `npm run scrape:jobs` script
-
-### ✅ Database Migrations — All Schemas Applied
-- [x] `018_fix_missing_schema.sql` — applied `skill_progress` (blocked by invalid SQL in 003), `page_views` (blocked by non-IMMUTABLE index in 010)
-- [x] All 18 tables verified present via Supabase CLI (`supabase db query --linked`)
-- [x] Supabase CLI workflow established: `supabase db query --linked -f supabase/XXX.sql`
-
-### 16. Traditional Chinese (zh-TW) — `features/i18n-zh-tw.md`
-- [ ] `next-intl` installed
-- [ ] ~80 strings translated: nav, CTAs, onboarding, AU Insights key labels
-- [ ] Language toggle in header — persists to localStorage
-
-### 17. Claude Lab — Interactive Terminal — `features/learn-anthropic-claude.md`
-- [ ] `@xterm/xterm` terminal embedded in `/learn/claude-lab`
+### Claude Lab — Interactive Terminal — `features/learn-anthropic-claude.md`
+- [ ] `@xterm/xterm` terminal at `/learn/claude-lab`
 - [ ] 15 missions: Claude Code CLI, API, hooks, tool use
 - [ ] XP + badge system
-- [ ] The flagship "impress a recruiter" demo feature
+- **Effort:** L (1–2 weeks)
+
+### Known Tech Debt
+| Issue | Location | Impact |
+|-------|----------|--------|
+| `@import` Google Fonts | `app/globals.css:1` | Render-blocking — replace with `next/font` |
+| `--text-muted` dark mode contrast | `globals.css:75` | 3.5:1 (fails WCAG) — target `#a09080` |
+| No CSP `nonce` | `next.config.ts` | Static CSP — upgrade to dynamic nonce-based |
+| Accessible components (ARIA) | Multiple | Keyboard nav, focus rings, `aria-expanded` |
+| Core Web Vitals budget | `/jobs`, `/learn` | LCP and CLS not measured yet |
 
 ---
 
@@ -365,18 +284,14 @@ These features tie everything together into a coherent product. Without them, ev
 
 | # | Feature | Retention | Revenue | Differentiation | Effort |
 |---|---------|-----------|---------|-----------------|--------|
-| 1 | Onboarding flow | ★★★★★ | — | ★★★ | S |
-| 2 | Personalised dashboard | ★★★★★ | — | ★★★★ | M |
-| 3 | Gap Engine | ★★★★★ | ★★★ | ★★★★★ | L |
-| 4 | Readiness Score | ★★★★ | — | ★★★★ | S |
-| 5 | Gemini multimodal | ★★★ | — | ★★★★ | S |
-| 6 | Vercel KV cache | ★★★ | ★★ | — | S |
-| 7 | Test suite | — | — | ★★★★★ | M |
-| 8 | B2B job posting | — | ★★★★★ | ★★★ | M |
-| 9 | Nav restructure | ★★★ | — | ★★ | M |
-| 10 | Mobile jobs UX | ★★★★ | — | ★★ | M |
-| 11 | Community network | ★★★★★ | ★★★★ | ★★★★★ | XL |
-| 12 | Company research AI | ★★★★ | ★★★ | ★★★★ | L |
+| 0 | Stripe live launch | — | ★★★★★ | — | External only |
+| 1 | B2B job posting | — | ★★★★★ | ★★★ | M |
+| 2 | Gemini multimodal | ★★★ | — | ★★★★ | S |
+| 3 | Redis caching | ★★★ | ★★ | — | S |
+| 4 | Nav restructure | ★★★ | — | ★★ | M |
+| 5 | Mobile jobs UX | ★★★★ | — | ★★ | M |
+| 6 | Community network | ★★★★★ | ★★★★ | ★★★★★ | XL |
+| 7 | Company research AI | ★★★★ | ★★★ | ★★★★ | L |
 
 S = 1–2 days · M = 3–5 days · L = 1–2 weeks · XL = 2–4 weeks
 
@@ -384,17 +299,16 @@ S = 1–2 days · M = 3–5 days · L = 1–2 weeks · XL = 2–4 weeks
 
 ## Employer-Impressiveness Checklist
 
-Things a senior engineer or hiring manager will look at:
-
 - [x] SSR with streaming AI responses
 - [x] Row-Level Security on all user data
-- [x] Pre-push CI gate (audit + build)
-- [x] Proper auth pattern (no client-side secrets)
+- [x] CI gate (audit + tests + build) before every deploy
+- [x] Proper cookie-based auth (no client-side secrets)
 - [x] Analytics without third-party trackers
-- [ ] Test coverage on critical paths
-- [ ] Vector embeddings (pgvector)
-- [ ] Edge caching strategy
+- [x] pgvector (gap engine)
+- [x] Test suite (41 tests, 8 files)
+- [ ] Test coverage on all critical paths (Stripe, streaming, auth)
+- [ ] Edge caching strategy (Vercel KV)
 - [ ] Accessible components (ARIA, keyboard nav)
-- [ ] Performance budget (Core Web Vitals green)
-- [ ] TypeScript strict mode throughout
+- [ ] Core Web Vitals green (Lighthouse ≥ 90)
+- [ ] TypeScript strict mode — no `any` without justification
 - [ ] Error boundary on every page

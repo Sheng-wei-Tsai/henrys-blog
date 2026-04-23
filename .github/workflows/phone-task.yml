@@ -1,0 +1,331 @@
+name: Phone Task (Claude on demand)
+
+# Dispatch from the GitHub mobile app to run any free-text task in the cloud.
+# Mac does not need to be on — Claude runs inside GitHub Actions.
+#
+# implement   → new phone/ branch → Claude makes code changes → PR opened for review
+# investigate → Claude reads the codebase → posts findings as a GitHub Issue
+#
+# Usage:
+#   GitHub iOS → Sheng-wei-Tsai/henrys-blog → Actions → Phone Task → Run workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'What should Claude do? (free-text instruction)'
+        required: true
+        type: string
+      mode:
+        description: 'Execution mode'
+        default: 'implement'
+        type: choice
+        options:
+          - implement
+          - investigate
+      base_branch:
+        description: 'Branch to base changes on'
+        default: 'main'
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  phone-task:
+    name: "Phone Task (${{ inputs.mode }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base_branch }}
+          fetch-depth: 0
+
+      - name: Configure git and gh auth
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "TechPath Phone Bot"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      # Strip CRLF from OAuth token — Pro subscription token includes newlines (commit ae47883)
+      - name: Prepare token
+        id: tok
+        env:
+          RAW: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          CLEAN=$(printf '%s' "$RAW" | tr -d '\r\n')
+          echo "::add-mask::$CLEAN"
+          echo "token=$CLEAN" >> "$GITHUB_OUTPUT"
+
+      # ── Create working branch (implement mode only) ──────────────────────
+      - name: Create working branch
+        id: branch
+        if: inputs.mode == 'implement'
+        run: |
+          BRANCH="phone/$(date -u +%Y%m%d-%H%M%S)"
+          git checkout -b "$BRANCH"
+          echo "name=${BRANCH}" >> "$GITHUB_OUTPUT"
+
+      # ── Implement mode: Claude makes code changes ────────────────────────
+      - name: Run Claude — implement
+        id: claude_impl
+        if: inputs.mode == 'implement'
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ steps.tok.outputs.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TASK: ${{ inputs.task }}
+          # Dummy values so npm run check (next build) can run without real secrets
+          OPENAI_API_KEY: sk-dummy-ci-build
+          STRIPE_SECRET_KEY: sk_test_dummy_ci
+          STRIPE_PRICE_ID: price_dummy_ci
+          STRIPE_WEBHOOK_SECRET: whsec_dummy_ci
+          NEXT_PUBLIC_SUPABASE_URL: https://dummy.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key-ci
+          SUPABASE_SERVICE_ROLE_KEY: dummy-service-role-ci
+          NEXT_PUBLIC_APP_URL: https://henrysdigitallife.com
+        run: |
+          set +e
+          cat .github/prompts/phone-implement.md > /tmp/full_prompt.txt
+          printf '\nTASK: %s\n' "${TASK}" >> /tmp/full_prompt.txt
+          claude \
+            --dangerously-skip-permissions \
+            --model claude-sonnet-4-6 \
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep" \
+            -p "$(cat /tmp/full_prompt.txt)" 2>&1 | tee claude.log
+          CLAUDE_EXIT=${PIPESTATUS[0]}
+          echo "exit_code=${CLAUDE_EXIT}" >> "$GITHUB_OUTPUT"
+          QUOTA_PAT="credit balance is too low|insufficient credits|quota.*exceeded|billing.*hard limit"
+          QUOTA_PAT="${QUOTA_PAT}|usage limit reached|rate limit|5-hour limit|claude ai usage limit"
+          QUOTA_PAT="${QUOTA_PAT}|try again.*(hour|later)|oauth.*expired|unauthorized|invalid.*api.*key"
+          if grep -qiE "${QUOTA_PAT}" claude.log; then
+            echo "claude_unavailable=true"  >> "$GITHUB_OUTPUT"
+            echo "succeeded=false"          >> "$GITHUB_OUTPUT"
+            echo "::warning::Anthropic unavailable (quota or auth). Creating Copilot fallback."
+          elif [ "$CLAUDE_EXIT" -eq 0 ]; then
+            echo "claude_unavailable=false" >> "$GITHUB_OUTPUT"
+            echo "succeeded=true"           >> "$GITHUB_OUTPUT"
+          else
+            echo "claude_unavailable=false" >> "$GITHUB_OUTPUT"
+            echo "succeeded=false"          >> "$GITHUB_OUTPUT"
+            echo "::error::Claude failed with exit ${CLAUDE_EXIT} (not quota-related)."
+          fi
+          exit 0
+
+      # ── Investigate mode: Claude reads codebase, posts findings ─────────
+      - name: Run Claude — investigate
+        id: claude_inv
+        if: inputs.mode == 'investigate'
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ steps.tok.outputs.token }}
+          TASK: ${{ inputs.task }}
+        run: |
+          set +e
+          cat .github/prompts/phone-investigate.md > /tmp/full_prompt.txt
+          printf '\nQUESTION: %s\n' "${TASK}" >> /tmp/full_prompt.txt
+          claude \
+            --dangerously-skip-permissions \
+            --print \
+            --model claude-sonnet-4-6 \
+            --allowedTools "Read,Glob,Grep,Bash" \
+            -p "$(cat /tmp/full_prompt.txt)" > claude_response.txt 2>claude_err.log
+          CLAUDE_EXIT=$?
+          echo "exit_code=${CLAUDE_EXIT}" >> "$GITHUB_OUTPUT"
+          QUOTA_PAT="credit balance is too low|insufficient credits|quota.*exceeded|billing.*hard limit"
+          QUOTA_PAT="${QUOTA_PAT}|usage limit reached|rate limit|5-hour limit|claude ai usage limit"
+          QUOTA_PAT="${QUOTA_PAT}|try again.*(hour|later)|oauth.*expired|unauthorized|invalid.*api.*key"
+          if grep -qiE "${QUOTA_PAT}" claude_err.log; then
+            echo "claude_unavailable=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "claude_unavailable=false" >> "$GITHUB_OUTPUT"
+          fi
+          exit 0
+
+      # ── Implement mode: commit + open PR ────────────────────────────────
+      - name: Commit changes
+        id: commit
+        if: inputs.mode == 'implement' && steps.claude_impl.outputs.succeeded == 'true'
+        env:
+          TASK: ${{ inputs.task }}
+          BRANCH: ${{ steps.branch.outputs.name }}
+        run: |
+          git add -A
+          if git diff --staged --quiet; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "Claude made no file changes."
+          else
+            git commit -m "feat: $(printf '%s' "${TASK}" | cut -c1-60)" \
+              --author="TechPath Phone Bot <github-actions[bot]@users.noreply.github.com>"
+            git push origin "${BRANCH}"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open pull request
+        if: inputs.mode == 'implement' && steps.commit.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TASK: ${{ inputs.task }}
+          BRANCH: ${{ steps.branch.outputs.name }}
+          BASE: ${{ inputs.base_branch }}
+        run: |
+          python3 - << 'PYEOF'
+          import os, subprocess
+          task   = os.environ['TASK']
+          branch = os.environ['BRANCH']
+          base   = os.environ['BASE']
+          slug   = task[:60]
+          b3     = '`' * 3
+          lines  = [
+              '## Phone-dispatched task', '',
+              f'**Task:** {task}', '',
+              f'**Dispatched via:** `phone-task.yml` (workflow_dispatch from GitHub mobile)',
+              f'**Branch:** `{branch}` → `{base}`', '',
+              '---', '',
+              'Review the changes, then merge when satisfied.',
+              'The `check` CI job runs automatically on this PR.',
+          ]
+          with open('/tmp/pr_body.txt', 'w') as f:
+              f.write('\n'.join(lines))
+          subprocess.run([
+              'gh', 'pr', 'create',
+              '--title', f'[Phone] {slug}',
+              '--body-file', '/tmp/pr_body.txt',
+              '--base', base,
+              '--head', branch,
+          ], check=True)
+          PYEOF
+
+      - name: Log no-changes result
+        if: inputs.mode == 'implement' && steps.claude_impl.outputs.succeeded == 'true' && steps.commit.outputs.has_changes == 'false'
+        run: echo "::notice::Claude completed the task but made no file changes. Check logs for output."
+
+      # ── Investigate mode: post findings as GitHub Issue ─────────────────
+      - name: Create investigation issue
+        if: inputs.mode == 'investigate' && steps.claude_inv.outputs.claude_unavailable != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TASK: ${{ inputs.task }}
+        run: |
+          python3 - << 'PYEOF'
+          import os, subprocess
+          task = os.environ['TASK']
+          slug = task[:70]
+          response = open('claude_response.txt').read()
+          lines = [
+              f'## Phone Investigation: {task}', '',
+              '*Dispatched from phone via `phone-task.yml` (investigate mode)*', '',
+              '---', '',
+              response,
+          ]
+          with open('/tmp/issue_body.txt', 'w') as f:
+              f.write('\n'.join(lines))
+          subprocess.run([
+              'gh', 'issue', 'create',
+              '--title', f'[Phone Investigation] {slug}',
+              '--body-file', '/tmp/issue_body.txt',
+          ], check=True)
+          PYEOF
+
+      # ── Quota exhaustion → Copilot fallback ─────────────────────────────
+      - name: Create quota-exhausted sentinel branch
+        if: |
+          steps.claude_impl.outputs.claude_unavailable == 'true' ||
+          steps.claude_inv.outputs.claude_unavailable == 'true'
+        env:
+          BASE: ${{ inputs.base_branch }}
+        run: |
+          TODAY=$(date -u +%Y-%m-%d)
+          git checkout "${BASE}" 2>/dev/null || git checkout main
+          git checkout -b "quota-exhausted/${TODAY}" 2>/dev/null || true
+          git push origin "quota-exhausted/${TODAY}" 2>/dev/null || true
+
+      - name: Create Copilot fallback issue
+        if: |
+          steps.claude_impl.outputs.claude_unavailable == 'true' ||
+          steps.claude_inv.outputs.claude_unavailable == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TASK: ${{ inputs.task }}
+          MODE: ${{ inputs.mode }}
+        run: |
+          python3 - << 'PYEOF'
+          import os, subprocess
+          task  = os.environ['TASK']
+          mode  = os.environ['MODE']
+          from datetime import datetime, timezone
+          today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+          result = subprocess.run(
+              ['gh', 'issue', 'list',
+               '--search', f'Copilot Fallback {today} in:title',
+               '--state', 'all', '--json', 'number', '--jq', 'length'],
+              capture_output=True, text=True)
+          if result.stdout.strip() != '0':
+              print('Copilot fallback issue already exists for today.')
+              raise SystemExit(0)
+          b3 = '`' * 3
+          lines = [
+              '## Phone Task — Anthropic Quota Exhausted', '',
+              f'**Original task:** {task}',
+              f'**Mode:** {mode}', '',
+              'Anthropic Claude quota is exhausted. GitHub Copilot Pro+ please pick this up.', '',
+              '---', '',
+              '**Stack:** Next.js 16.2 App Router, TypeScript strict, Supabase, Stripe, Vercel', '',
+              '**Rules (read AGENTS.md before touching any file):**',
+              '- `cookies()`, `headers()`, `params` are async in Next.js 16 — always `await` them',
+              '- Colours: `var(--token-name)` only — never hardcoded hex',
+              '- Images: `next/image` only — never raw `<img>`',
+              '- Internal links: `<Link>` only — never `<a href>` for same-domain routes', '',
+              '**Quality gate before opening PR:**', '',
+              f'{b3}bash',
+              'export OPENAI_API_KEY=sk-dummy-ci-build STRIPE_SECRET_KEY=sk_test_dummy_ci',
+              'export STRIPE_PRICE_ID=price_dummy_ci STRIPE_WEBHOOK_SECRET=whsec_dummy_ci',
+              'export NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co',
+              'export NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key-ci',
+              'export SUPABASE_SERVICE_ROLE_KEY=dummy-service-role-ci',
+              'export NEXT_PUBLIC_APP_URL=https://henrysdigitallife.com',
+              'npm run check',
+              f'{b3}', '',
+              'Open PR titled `[Copilot] feat(scope): description`. Do NOT merge — owner reviews.',
+          ]
+          with open('/tmp/copilot_body.txt', 'w') as f:
+              f.write('\n'.join(lines))
+          result = subprocess.run([
+              'gh', 'issue', 'create',
+              '--title', f'[Copilot Fallback] {today} — {task}',
+              '--label', 'copilot-fallback',
+              '--body-file', '/tmp/copilot_body.txt',
+          ], capture_output=True, text=True)
+          issue_url = result.stdout.strip()
+          print(f'Created issue: {issue_url}')
+          subprocess.run(
+              ['gh', 'issue', 'edit', issue_url, '--add-assignee', 'Copilot'],
+              capture_output=True)
+          PYEOF
+
+      # ── Propagate unexpected non-quota failures ──────────────────────────
+      - name: Fail on unexpected Claude error
+        if: |
+          inputs.mode == 'implement' &&
+          steps.claude_impl.outputs.succeeded == 'false' &&
+          steps.claude_impl.outputs.claude_unavailable != 'true'
+        env:
+          EXIT_CODE: ${{ steps.claude_impl.outputs.exit_code }}
+        run: |
+          echo "::error::Claude failed (exit ${EXIT_CODE}) — not quota related. Check logs above."
+          exit 1
