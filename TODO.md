@@ -361,6 +361,37 @@ These features tie everything together into a coherent product. Without them, ev
 
 ---
 
+## 🛡 Daily Analyst Findings — 2026-04-23
+
+> Today's Opus scan: `npm audit` = 0 vulns; `tsc --noEmit` = clean. Stale rows: TODO §72 lines 78–79 ("add `.limit()` to comments/alerts" and "fix async `cookies()` in alerts") are already done in code (see `app/api/comments/route.ts:31` `.limit(500)` and `app/api/alerts/route.ts:5` `await cookies()`); leaving the unchecked Sprint rows untouched per scan rules but flagging for owner cleanup. Today's gaps cluster on YouTube-source API endpoints (no rate limit / no input regex), hardcoded ring/resume palette leaking into dark mode, and `.single()` cache lookups that should be `.maybeSingle()`.
+
+### Security
+- [ ] Validate videoId with `/^[A-Za-z0-9_-]{11}$/` and add `checkEndpointRateLimit(user.id, 'learn/transcript')` (auth via `createSupabaseServer()`) in app/api/learn/transcript/route.ts:33-35 — any string is currently forwarded to `YoutubeTranscript.fetchTranscript` 6× with no per-user cap [security]
+- [ ] Validate channelId with `/^UC[A-Za-z0-9_-]{22}$/` and rate-limit via `checkEndpointRateLimit(user.id, 'learn/channel-videos')` in app/api/learn/channel-videos/route.ts:22-29 — burns YouTube Data API quota and is unauthenticated [security]
+- [ ] Truncate each `messages[i].content` to 1000 chars before passing to OpenAI in app/api/interview/chat/route.ts:45 — only `roleTitle` is sliced; one fat message can blow token + cost budget [security]
+- [ ] Truncate `body.videoTitle.slice(0, 200)` and `body.studyGuide.summary.slice(0, 1000)` before interpolation in app/api/learn/quiz/route.ts:24,54 — interview/quiz prompt accepts arbitrary client strings [security]
+
+### Performance
+- [ ] Add `export const revalidate = 3600` to app/api/visa-news/route.ts:4 — rereads `content/visa-news/*.md` from disk on every public hit [perf]
+
+### Style (dark-mode breakage)
+- [ ] Replace hardcoded band hex (`#10b981`/`#22c55e`/`#f59e0b`/`#f97316`/`#ef4444`) with token strings (var(--jade)/var(--gold)/var(--vermilion)) in app/api/readiness-score/route.ts:9-13 — `bandColor` is returned to client and rendered in the ReadinessScore ring; breaks dark mode [style]
+- [ ] Replace hardcoded resume palette in app/resume/page.tsx:54,108,111,120,123,132,188,241,254,275,281,283,288,308,311,314,316 (`#10b981`/`#ef4444`/`#f59e0b`/`#ecfdf5`/`#fef2f2`/`#fecaca`/`#a7f3d0`/`#374151`/`#4b5563`/`#6b7280`/`#9ca3af`/`#111827`) with var(--jade)/var(--vermilion)/var(--gold)/var(--text-primary)/var(--text-secondary)/var(--text-muted) — page is unreadable in dark mode [style]
+- [ ] Replace agency colour map `#0369a1`/`#0c4a6e`/`#065f46` with token (`var(--jade)`/`var(--gold)`/`var(--text-secondary)`) in app/visa-news/[slug]/page.tsx:22-24 — visa-news source pills break dark mode [style]
+
+### Code Quality
+- [ ] Replace `.single()` with `.maybeSingle()` on cache lookups in app/api/learn/quiz/route.ts:41 + app/api/learn/analyse/route.ts:165 — `.single()` throws when no row exists (AGENTS §10.3) and pollutes Supabase logs [quality]
+- [ ] Drop `as any` cast on the Anthropic `document` content block in app/api/resume-analyse/route.ts:87 — Anthropic SDK exposes `Anthropic.DocumentBlockParam`; use the typed import [quality]
+- [ ] Replace `Object.keys(steps).find(...)` + `parseInt(inProgressKey)` with a typed Step iteration in app/api/dashboard/summary/route.ts:60-65 — `parseInt` on enumerated step keys is brittle and `as Record<string, …>` hides any malformed data [quality]
+- [ ] Tighten `Record<string, unknown>` in app/api/learn/progress/route.ts:22 to a named `VideoProgressUpsert` interface so future fields are caught at compile time [quality]
+
+### Tests
+- [ ] Add Vitest test for /api/comments (POST) — 401 without session, 400 on content > 2000 chars, 400 on slug failing `^[a-z0-9-]+$` [tests]
+- [ ] Add Vitest test for /api/learn/transcript — 400 on missing videoId, 404 when all 6 language attempts fail (mock YoutubeTranscript) [tests]
+- [ ] Add Vitest test for /api/interview/chat — 401 unauth, 400 on empty messages array, slices messages to last 10 before OpenAI call [tests]
+
+---
+
 ## 📊 Priority Rationale
 
 | # | Feature | Retention | Revenue | Differentiation | Effort |
