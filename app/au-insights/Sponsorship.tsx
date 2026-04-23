@@ -28,18 +28,18 @@ export default function Sponsorship() {
 
       {/* Data integrity disclaimer */}
       <div style={{
-        background: '#fffbeb', border: '1px solid #fcd34d',
+        background: 'var(--warm-white)', border: '1px solid var(--gold)',
         borderRadius: '10px', padding: '1rem 1.2rem', marginBottom: '1.5rem',
-        fontSize: '0.84rem', color: '#92400e', lineHeight: 1.65,
+        fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.65,
       }}>
         <strong>⚠ Data transparency note:</strong> The Australian government's{' '}
-        <a href="https://www.data.gov.au/data/dataset/visa-temporary-work-skilled" target="_blank" rel="noopener noreferrer" style={{ color: '#b45309' }}>
+        <a href="https://www.data.gov.au/data/dataset/visa-temporary-work-skilled" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--terracotta)' }}>
           Temporary Work (Skilled) Visa dataset (data.gov.au)
         </a>{' '}
         provides industry-level statistics only — not employer-level counts. This ranking is compiled from:
         (1) Department of Home Affairs FOI document FA-230900293 listing active accredited sponsors (Sep 2023),
         (2) community-verified{' '}
-        <a href="https://github.com/geshan/au-companies-providing-work-visa-sponsorship" target="_blank" rel="noopener noreferrer" style={{ color: '#b45309' }}>
+        <a href="https://github.com/geshan/au-companies-providing-work-visa-sponsorship" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--terracotta)' }}>
           github.com/geshan/au-companies-providing-work-visa-sponsorship
         </a>,
         and (3) published migration agent data. Volume estimates are directional — treat as a guide, not an official count.
@@ -199,7 +199,7 @@ export default function Sponsorship() {
 
       {/* Sources */}
       <div style={{
-        marginTop: '2rem', background: '#f9fafb', border: '1px solid var(--parchment)',
+        marginTop: '2rem', background: 'var(--warm-white)', border: '1px solid var(--parchment)',
         borderRadius: '8px', padding: '0.8rem 1rem',
         fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.6,
       }}>

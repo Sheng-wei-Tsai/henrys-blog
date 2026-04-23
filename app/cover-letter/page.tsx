@@ -15,6 +15,14 @@ const BACKGROUND_PLACEHOLDER = `Example:
 - Based in Brisbane, Australia, open to hybrid/remote roles
 - Looking for graduate developer or junior fullstack roles`;
 
+interface CoverLetterHistoryItem {
+  id: string;
+  job_title: string;
+  company: string;
+  cover_letter: string;
+  created_at: string;
+}
+
 function CoverLetterContent() {
   const { user }       = useAuth();
   const searchParams   = useSearchParams();
@@ -27,7 +35,7 @@ function CoverLetterContent() {
   const [generating,      setGenerating]      = useState(false);
   const [saved,           setSaved]           = useState(false);
   const [copied,          setCopied]          = useState(false);
-  const [history,         setHistory]         = useState<any[]>([]);
+  const [history,         setHistory]         = useState<CoverLetterHistoryItem[]>([]);
   const [showHistory,     setShowHistory]     = useState(false);
   const outputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -125,7 +133,7 @@ function CoverLetterContent() {
     URL.revokeObjectURL(url);
   };
 
-  const loadFromHistory = (item: any) => {
+  const loadFromHistory = (item: CoverLetterHistoryItem) => {
     setJobTitle(item.job_title);
     setCompany(item.company);
     setOutput(item.cover_letter);
