@@ -216,11 +216,13 @@ jobs:
               fh.write('\n'.join(lines))
           PYEOF
 
-          gh issue create \
+          ISSUE_URL=$(gh issue create \
             --title "[Copilot Fallback] ${TODAY} — ${TASK}" \
-            --assignee "copilot" \
             --label "copilot-fallback" \
-            --body-file /tmp/issue_body.txt
+            --body-file /tmp/issue_body.txt)
+          echo "Created issue: ${ISSUE_URL}"
+          gh issue edit "${ISSUE_URL}" --add-assignee "Copilot" 2>/dev/null \
+            || echo "::warning::Could not assign @Copilot. Enable Copilot coding agent in repo settings."
 
       # ── Step 7: No task available ────────────────────────────────────────
       - name: Log no-task result

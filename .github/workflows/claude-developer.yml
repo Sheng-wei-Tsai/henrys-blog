@@ -93,16 +93,16 @@ jobs:
           CLAUDE_EXIT=${PIPESTATUS[0]}
           echo "exit_code=${CLAUDE_EXIT}" >> "$GITHUB_OUTPUT"
 
-          if grep -qiE "credit balance is too low|insufficient credits?|quota.*exceeded|billing.*hard limit|usage limit reached|rate limit(ed)?|5-hour limit|claude ai usage limit|try again.{0,30}(hour|later)" claude.log; then
-            echo "quota_exhausted=true"   >> "$GITHUB_OUTPUT"
-            echo "succeeded=false"        >> "$GITHUB_OUTPUT"
-            echo "::warning::Anthropic quota exhausted. Handing off to Copilot fallback."
+          if grep -qiE "credit balance is too low|insufficient credits?|quota.*exceeded|billing.*hard limit|usage limit reached|rate limit(ed)?|5-hour limit|claude ai usage limit|try again.{0,30}(hour|later)|api error: header .* has invalid value|oauth.*expired|unauthorized|invalid.*api.*key" claude.log; then
+            echo "claude_unavailable=true"  >> "$GITHUB_OUTPUT"
+            echo "succeeded=false"          >> "$GITHUB_OUTPUT"
+            echo "::warning::Anthropic unavailable (quota or auth error). Handing off to Copilot fallback."
           elif [ "$CLAUDE_EXIT" -eq 0 ]; then
-            echo "quota_exhausted=false"  >> "$GITHUB_OUTPUT"
-            echo "succeeded=true"         >> "$GITHUB_OUTPUT"
+            echo "claude_unavailable=false" >> "$GITHUB_OUTPUT"
+            echo "succeeded=true"           >> "$GITHUB_OUTPUT"
           else
-            echo "quota_exhausted=false"  >> "$GITHUB_OUTPUT"
-            echo "succeeded=false"        >> "$GITHUB_OUTPUT"
+            echo "claude_unavailable=false" >> "$GITHUB_OUTPUT"
+            echo "succeeded=false"          >> "$GITHUB_OUTPUT"
             echo "::error::Claude failed with exit code ${CLAUDE_EXIT} (not quota-related)."
           fi
 
@@ -110,7 +110,7 @@ jobs:
           exit 0
 
       - name: Create quota-exhausted sentinel branch
-        if: steps.guard.outputs.skip == 'false' && steps.claude.outputs.quota_exhausted == 'true'
+        if: steps.guard.outputs.skip == 'false' && steps.claude.outputs.claude_unavailable == 'true'
         env:
           TODAY: ${{ steps.guard.outputs.today }}
         run: |
@@ -121,7 +121,7 @@ jobs:
 
       - name: Check for existing Copilot fallback issue
         id: existing_issue
-        if: steps.guard.outputs.skip == 'false' && steps.claude.outputs.quota_exhausted == 'true'
+        if: steps.guard.outputs.skip == 'false' && steps.claude.outputs.claude_unavailable == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TODAY: ${{ steps.guard.outputs.today }}
@@ -137,7 +137,7 @@ jobs:
         id: todo
         if: |
           steps.guard.outputs.skip == 'false' &&
-          steps.claude.outputs.quota_exhausted == 'true' &&
+          steps.claude.outputs.claude_unavailable == 'true' &&
           steps.existing_issue.outputs.count == '0'
         run: |
           python3 - << 'PYEOF'
@@ -182,7 +182,7 @@ jobs:
         id: analysis
         if: |
           steps.guard.outputs.skip == 'false' &&
-          steps.claude.outputs.quota_exhausted == 'true' &&
+          steps.claude.outputs.claude_unavailable == 'true' &&
           steps.existing_issue.outputs.count == '0'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -198,7 +198,7 @@ jobs:
       - name: Create Copilot fallback issue
         if: |
           steps.guard.outputs.skip == 'false' &&
-          steps.claude.outputs.quota_exhausted == 'true' &&
+          steps.claude.outputs.claude_unavailable == 'true' &&
           steps.existing_issue.outputs.count == '0' &&
           steps.todo.outputs.task != 'NO_TASK'
         env:
@@ -262,17 +262,19 @@ jobs:
               fh.write('\n'.join(lines))
           PYEOF
 
-          gh issue create \
+          ISSUE_URL=$(gh issue create \
             --title "[Copilot Fallback] ${TODAY} — ${TASK}" \
-            --assignee "copilot" \
             --label "copilot-fallback" \
-            --body-file /tmp/issue_body.txt
+            --body-file /tmp/issue_body.txt)
+          echo "Created issue: ${ISSUE_URL}"
+          gh issue edit "${ISSUE_URL}" --add-assignee "Copilot" 2>/dev/null \
+            || echo "::warning::Could not assign @Copilot. Enable Copilot coding agent in repo settings."
 
       - name: Propagate non-credit Claude failure
         if: |
           steps.guard.outputs.skip == 'false' &&
           steps.claude.outputs.succeeded == 'false' &&
-          steps.claude.outputs.quota_exhausted != 'true'
+          steps.claude.outputs.claude_unavailable != 'true'
         run: |
           echo "::error::Claude developer failed with exit code ${{ steps.claude.outputs.exit_code }} (not credit-related). Failing the workflow."
           exit 1
