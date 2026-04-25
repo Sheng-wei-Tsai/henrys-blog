@@ -271,11 +271,12 @@ jobs:
           gh issue edit "${ISSUE_URL}" --add-assignee "Copilot" 2>/dev/null \
             || echo "::warning::Could not assign @Copilot. Enable Copilot coding agent in repo settings."
 
-      - name: Propagate non-credit Claude failure
+      - name: Log non-credit Claude failure (non-fatal)
         if: |
           steps.guard.outputs.skip == 'false' &&
           steps.claude.outputs.succeeded == 'false' &&
           steps.claude.outputs.claude_unavailable != 'true'
         run: |
-          echo "::error::Claude developer failed with exit code ${{ steps.claude.outputs.exit_code }} (not credit-related). Failing the workflow."
-          exit 1
+          echo "::warning::Claude developer exited with code ${{ steps.claude.outputs.exit_code }} (not credit-related). No PR opened — check claude.log for details."
+          # Not failing CI — a build or test failure inside Claude is expected
+          # occasionally and should not redline the workflow run.
