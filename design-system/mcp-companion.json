@@ -1,0 +1,444 @@
+{
+  "colors": {
+    "all": [
+      {
+        "hex": "#140a05",
+        "rgb": {
+          "r": 20,
+          "g": 10,
+          "b": 5,
+          "a": 1
+        },
+        "hsl": {
+          "h": 20,
+          "s": 60,
+          "l": 5
+        },
+        "count": 1052,
+        "contexts": [
+          "text",
+          "border"
+        ]
+      },
+      {
+        "hex": "#3d1c0e",
+        "rgb": {
+          "r": 61,
+          "g": 28,
+          "b": 14,
+          "a": 1
+        },
+        "hsl": {
+          "h": 18,
+          "s": 63,
+          "l": 15
+        },
+        "count": 209,
+        "contexts": [
+          "text",
+          "border"
+        ]
+      },
+      {
+        "hex": "#000000",
+        "rgb": {
+          "r": 0,
+          "g": 0,
+          "b": 0,
+          "a": 1
+        },
+        "hsl": {
+          "h": 0,
+          "s": 0,
+          "l": 0
+        },
+        "count": 184,
+        "contexts": [
+          "text",
+          "border"
+        ]
+      },
+      {
+        "hex": "#c0281c",
+        "rgb": {
+          "r": 192,
+          "g": 40,
+          "b": 28,
+          "a": 1
+        },
+        "hsl": {
+          "h": 4,
+          "s": 75,
+          "l": 43
+        },
+        "count": 161,
+        "contexts": [
+          "background",
+          "text",
+          "border"
+        ]
+      },
+      {
+        "hex": "#7a5030",
+        "rgb": {
+          "r": 122,
+          "g": 80,
+          "b": 48,
+          "a": 1
+        },
+        "hsl": {
+          "h": 26,
+          "s": 44,
+          "l": 33
+        },
+        "count": 92,
+        "contexts": [
+          "text",
+          "border"
+        ]
+      },
+      {
+        "hex": "#0000ee",
+        "rgb": {
+          "r": 0,
+          "g": 0,
+          "b": 238,
+          "a": 1
+        },
+        "hsl": {
+          "h": 240,
+          "s": 100,
+          "l": 47
+        },
+        "count": 73,
+        "contexts": [
+          "text",
+          "border"
+        ]
+      },
+      {
+        "hex": "#e8d5a8",
+        "rgb": {
+          "r": 232,
+          "g": 213,
+          "b": 168,
+          "a": 1
+        },
+        "hsl": {
+          "h": 42,
+          "s": 58,
+          "l": 78
+        },
+        "count": 35,
+        "contexts": [
+          "border",
+          "background"
+        ]
+      },
+      {
+        "hex": "#ffffff",
+        "rgb": {
+          "r": 255,
+          "g": 255,
+          "b": 255,
+          "a": 1
+        },
+        "hsl": {
+          "h": 0,
+          "s": 0,
+          "l": 100
+        },
+        "count": 31,
+        "contexts": [
+          "text",
+          "border",
+          "background"
+        ]
+      },
+      {
+        "hex": "#1e7a52",
+        "rgb": {
+          "r": 30,
+          "g": 122,
+          "b": 82,
+          "a": 1
+        },
+        "hsl": {
+          "h": 154,
+          "s": 61,
+          "l": 30
+        },
+        "count": 10,
+        "contexts": [
+          "background",
+          "text",
+          "border"
+        ]
+      },
+      {
+        "hex": "#fdf5e4",
+        "rgb": {
+          "r": 253,
+          "g": 245,
+          "b": 228,
+          "a": 1
+        },
+        "hsl": {
+          "h": 41,
+          "s": 86,
+          "l": 94
+        },
+        "count": 2,
+        "contexts": [
+          "background"
+        ]
+      }
+    ]
+  },
+  "regions": [
+    {
+      "role": "nav",
+      "tag": "header",
+      "bounds": {
+        "x": 8,
+        "y": 8,
+        "w": 1264,
+        "h": 64
+      },
+      "heading": null,
+      "buttonCount": 4,
+      "cardCount": 11,
+      "className": null
+    },
+    {
+      "role": "nav",
+      "tag": "nav",
+      "bounds": {
+        "x": 304,
+        "y": 20.53125,
+        "w": 528.125,
+        "h": 38.921875
+      },
+      "heading": null,
+      "buttonCount": 3,
+      "cardCount": 11,
+      "className": "desktop-nav"
+    },
+    {
+      "role": "nav",
+      "tag": "nav",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 3,
+      "cardCount": 0,
+      "className": "mobile-bottom-nav"
+    },
+    {
+      "role": "pricing",
+      "tag": "main",
+      "bounds": {
+        "x": 8,
+        "y": 72,
+        "w": 1264,
+        "h": 2448.578125
+      },
+      "heading": "Getting your first IT job\nin Australia is harder\nthan it should be.",
+      "buttonCount": 0,
+      "cardCount": 3,
+      "className": null
+    },
+    {
+      "role": "hero",
+      "tag": "section",
+      "bounds": {
+        "x": 304,
+        "y": 72,
+        "w": 672,
+        "h": 585.71875
+      },
+      "heading": "Getting your first IT job\nin Australia is harder\nthan it should be.",
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "public-hero-section"
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 304,
+        "y": 671.796875,
+        "w": 672,
+        "h": 195.734375
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": null
+    },
+    {
+      "role": "pricing",
+      "tag": "section",
+      "bounds": {
+        "x": 304,
+        "y": 867.53125,
+        "w": 672,
+        "h": 627.765625
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "social-proof-section"
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 304,
+        "y": 1780.3125,
+        "w": 672,
+        "h": 740.265625
+      },
+      "heading": "Recent writing",
+      "buttonCount": 0,
+      "cardCount": 3,
+      "className": null
+    },
+    {
+      "role": "footer",
+      "tag": "footer",
+      "bounds": {
+        "x": 8,
+        "y": 2616.578125,
+        "w": 1264,
+        "h": 552.9375
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 12,
+      "className": null
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 8,
+        "y": 3169.515625,
+        "w": 1264,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": null
+    }
+  ],
+  "componentClusters": [
+    {
+      "kind": "button",
+      "structuralHash": "button>svg",
+      "instanceCount": 3,
+      "variants": [
+        {
+          "css": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(61, 28, 14)",
+            "padding": "4.224px 12.672px 4.224px 12.672px",
+            "borderRadius": "4px",
+            "border": "0px none rgb(61, 28, 14)",
+            "fontSize": "14.08px",
+            "fontWeight": "600"
+          },
+          "instanceCount": 3
+        }
+      ]
+    },
+    {
+      "kind": "button",
+      "structuralHash": "button>div",
+      "instanceCount": 1,
+      "variants": [
+        {
+          "css": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(0, 0, 0)",
+            "padding": "0px 0px 0px 0px",
+            "borderRadius": "50%",
+            "border": "2px solid rgba(20, 10, 5, 0.2)",
+            "fontSize": "13.3333px",
+            "fontWeight": "400"
+          },
+          "instanceCount": 1
+        }
+      ]
+    },
+    {
+      "kind": "card",
+      "structuralHash": "article>div>div>div",
+      "instanceCount": 3,
+      "variants": [
+        {
+          "css": {
+            "background": "rgb(255, 254, 246)",
+            "color": "rgb(0, 0, 238)",
+            "padding": "20.8px 24px 20.8px 24px",
+            "borderRadius": "8px",
+            "border": "3px solid rgb(20, 10, 5)",
+            "fontSize": "17px",
+            "fontWeight": "400"
+          },
+          "instanceCount": 3
+        }
+      ]
+    }
+  ],
+  "accessibility": {
+    "remediation": []
+  },
+  "cssHealth": {
+    "sheets": [
+      {
+        "url": "http://localhost:3000/_next/static/chunks/0fj~yaz.wf6j2.css",
+        "totalBytes": 68054,
+        "usedBytes": 5054,
+        "unusedBytes": 63000,
+        "unusedPercent": 93
+      }
+    ],
+    "totalBytes": 68054,
+    "usedBytes": 5054,
+    "unusedBytes": 63000,
+    "unusedPercent": 93,
+    "importantCount": 34,
+    "duplicates": 895,
+    "vendorPrefixes": {
+      "webkit": 4,
+      "moz": 0,
+      "ms": 1,
+      "o": 0
+    },
+    "keyframes": [],
+    "specificity": {
+      "max": [
+        0,
+        4,
+        2
+      ],
+      "average": [
+        0,
+        1.38,
+        0.22
+      ],
+      "count": 311
+    },
+    "issues": [
+      "34 !important rules",
+      "895 duplicate declarations",
+      "93% unused CSS"
+    ]
+  }
+}
