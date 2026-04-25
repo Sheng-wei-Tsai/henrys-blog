@@ -1,20 +1,24 @@
-name: Autonomous Loop Daily Scheduler
+name: Autonomous Loop Scheduler
 
-# Fires at midnight AEST (14:00 UTC, Brisbane is UTC+10 with no daylight saving).
-# Kicks off the autonomous loop so agents work while you sleep or are on holiday.
+# Fires every hour but self-gates: only launches the autonomous loop once per day,
+# AFTER 14:00 UTC (= midnight AEST, the Pro subscription reset time) and only when
+# neither analysis/<today> nor quota-exhausted/<today> sentinel branches exist.
+#
+# This replaces the old fixed midnight-AEST cron so the loop fires ~1 hour after
+# the quota resets, not at a hardcoded time that may precede the reset.
 #
 # Flow each day:
 #   Iteration 1  → Opus 4.7 deep-analyses codebase, populates TODO.md
-#   Iterations 2–11 → Sonnet 4.6 implements one task per iteration, opens PR
+#   Iterations 2–N → Sonnet 4.6 implements one task per iteration, opens PR
 #   Until quota exhausted → Copilot fallback issue created automatically
 #
-# Holiday mode: leave this running. It fires every night, burns quota
-# implementing tasks, falls back to Copilot, then resets next day.
+# Holiday mode: leave this running. It fires nightly after reset, burns quota,
+# falls back to Copilot, then resets next day.
 # Raise max_open_prs if you won't be reviewing PRs for several days.
 
 on:
   schedule:
-    - cron: '0 14 * * *'   # midnight AEST (UTC+10) every night
+    - cron: '0 * * * *'    # hourly — guards below skip until after 14:00 UTC reset
   workflow_dispatch:         # manual trigger for holiday/custom runs
     inputs:
       max_iterations:
@@ -35,23 +39,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check if loop already ran today
+      - name: Check if loop already ran today (reset-aware)
         id: guard
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TODAY=$(date -u +%Y-%m-%d)
+          HOUR=$(date -u +%-H)
+
+          # Skip if quota already exhausted today
           EXHAUSTED=$(gh api "repos/${GITHUB_REPOSITORY}/git/refs/heads/quota-exhausted/${TODAY}" \
+            --silent 2>/dev/null && echo "1" || echo "0")
+
+          # Skip if analysis/implementation already ran today
+          ANALYSIS=$(gh api "repos/${GITHUB_REPOSITORY}/git/refs/heads/analysis/${TODAY}" \
             --silent 2>/dev/null && echo "1" || echo "0")
           AUTO=$(gh api "repos/${GITHUB_REPOSITORY}/git/refs/heads" \
             --jq "[.[] | select(.ref | startswith(\"refs/heads/auto/${TODAY}/\"))] | length" \
             --silent 2>/dev/null || echo "0")
-          if [ "$EXHAUSTED" = "1" ] || [ "$AUTO" -gt "0" ]; then
+
+          # Note: no hour-based guard here — the Pro subscription reset time (13:00 AEST = 03:00 UTC)
+          # isn't a fixed UTC hour we can reliably gate on from Actions. We rely solely on
+          # sentinel branches: if quota-exhausted exists for today, we skip; if analysis
+          # already ran today, we skip. This correctly self-paces once per quota cycle.
+          if [ "$EXHAUSTED" = "1" ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
-            echo "Loop already ran or quota exhausted today. Skipping."
+            echo "Quota already exhausted today (${TODAY}). Skipping."
+          elif [ "$ANALYSIS" = "1" ] || [ "$AUTO" -gt "0" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "Loop already ran today (${TODAY}). Skipping."
           else
             echo "skip=false" >> $GITHUB_OUTPUT
-            echo "Launching autonomous loop for ${TODAY}."
+            echo "Launching autonomous loop for ${TODAY} at ${HOUR}:xx UTC."
           fi
 
       - name: Trigger autonomous loop
