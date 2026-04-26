@@ -1,0 +1,68 @@
+name: Idle-Triggered Daily Post
+
+# Dispatched automatically by scripts/claude-idle-trigger.sh after
+# 90 minutes of idle Claude Code usage (60 min idle + 30 min buffer).
+# Uses Claude Code Pro quota — no ANTHROPIC_API_KEY needed.
+
+on:
+  repository_dispatch:
+    types: [idle-posts]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Quick guard — skip if already posted today
+        id: guard
+        run: |
+          TODAY=$(date -u +%Y-%m-%d)
+          echo "today=${TODAY}" >> $GITHUB_OUTPUT
+          if ls content/posts/${TODAY}-*.md 2>/dev/null | grep -q .; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "Post for ${TODAY} already exists — skipping."
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Node.js
+        if: steps.guard.outputs.skip == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Claude Code CLI
+        if: steps.guard.outputs.skip == 'false'
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Configure git
+        if: steps.guard.outputs.skip == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "henry-blog-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+      - name: Generate and publish post
+        if: steps.guard.outputs.skip == 'false'
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          claude \
+            --dangerously-skip-permissions \
+            --model claude-sonnet-4-6 \
+            --allowedTools "Bash,Read,Write,Edit" \
+            -p "$(cat .github/prompts/daily-post.md)"

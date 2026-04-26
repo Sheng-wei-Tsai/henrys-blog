@@ -2,14 +2,24 @@
   "hooks": {
     "Stop": [
       {
-        "type": "command",
-        "command": "nohup bash /Users/tsaishengwei/workspace/github.com/Sheng-wei-Tsai/claude-code/henry-blog/scripts/claude-idle-trigger.sh &>/dev/null & disown"
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "nohup bash /Users/tsaishengwei/workspace/github.com/Sheng-wei-Tsai/claude-code/henry-blog/scripts/claude-idle-trigger.sh &>/dev/null & disown"
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
       {
-        "type": "command",
-        "command": "bash /Users/tsaishengwei/workspace/github.com/Sheng-wei-Tsai/claude-code/henry-blog/scripts/claude-cancel-trigger.sh"
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /Users/tsaishengwei/workspace/github.com/Sheng-wei-Tsai/claude-code/henry-blog/scripts/claude-cancel-trigger.sh"
+          }
+        ]
       }
     ]
   }
