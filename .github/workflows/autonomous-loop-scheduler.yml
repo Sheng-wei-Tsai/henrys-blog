@@ -1,20 +1,13 @@
 name: Autonomous Loop Scheduler
 
-# Fires every hour but self-gates: only launches the autonomous loop once per day,
-# AFTER 14:00 UTC (= midnight AEST, the Pro subscription reset time) and only when
-# neither analysis/<today> nor quota-exhausted/<today> sentinel branches exist.
+# Fires every hour. Allows up to 4 autonomous-loop runs per UTC day (one per
+# 5-hour quota window). Enforces a 4.5-hour spacing guard so two runs never
+# land inside the same window. Falls back gracefully: quota-exhausted sentinel
+# stops all further runs; each window tracks a dev-done/<DATE>-w<N> sentinel.
 #
-# This replaces the old fixed midnight-AEST cron so the loop fires ~1 hour after
-# the quota resets, not at a hardcoded time that may precede the reset.
-#
-# Flow each day:
-#   Iteration 1  → Opus 4.7 deep-analyses codebase, populates TODO.md
-#   Iterations 2–N → Sonnet 4.6 implements one task per iteration, opens PR
-#   Until quota exhausted → Copilot fallback issue created automatically
-#
-# Holiday mode: leave this running. It fires nightly after reset, burns quota,
-# falls back to Copilot, then resets next day.
-# Raise max_open_prs if you won't be reviewing PRs for several days.
+# Complements the local claude-window-watcher.sh daemon:
+#   Mac on  → watcher fires immediately after each window opens
+#   Mac off → this cron picks up within the hour as a cloud fallback
 
 on:
   schedule:
@@ -39,39 +32,61 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check if loop already ran today (reset-aware)
+      - name: Check quota windows (allow up to 4/day, spaced 4.5h apart)
         id: guard
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TODAY=$(date -u +%Y-%m-%d)
-          HOUR=$(date -u +%-H)
+          NOW_EPOCH=$(date +%s)
 
           # Skip if quota already exhausted today
           EXHAUSTED=$(gh api "repos/${GITHUB_REPOSITORY}/git/refs/heads/quota-exhausted/${TODAY}" \
             --silent 2>/dev/null && echo "1" || echo "0")
-
-          # Skip if analysis/implementation already ran today
-          ANALYSIS=$(gh api "repos/${GITHUB_REPOSITORY}/git/refs/heads/analysis/${TODAY}" \
-            --silent 2>/dev/null && echo "1" || echo "0")
-          AUTO=$(gh api "repos/${GITHUB_REPOSITORY}/git/refs/heads" \
-            --jq "[.[] | select(.ref | startswith(\"refs/heads/auto/${TODAY}/\"))] | length" \
-            --silent 2>/dev/null || echo "0")
-
-          # Note: no hour-based guard here — the Pro subscription reset time (13:00 AEST = 03:00 UTC)
-          # isn't a fixed UTC hour we can reliably gate on from Actions. We rely solely on
-          # sentinel branches: if quota-exhausted exists for today, we skip; if analysis
-          # already ran today, we skip. This correctly self-paces once per quota cycle.
           if [ "$EXHAUSTED" = "1" ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
-            echo "Quota already exhausted today (${TODAY}). Skipping."
-          elif [ "$ANALYSIS" = "1" ] || [ "$AUTO" -gt "0" ]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-            echo "Loop already ran today (${TODAY}). Skipping."
-          else
-            echo "skip=false" >> $GITHUB_OUTPUT
-            echo "Launching autonomous loop for ${TODAY} at ${HOUR}:xx UTC."
+            echo "Quota already exhausted today. Skipping."
+            exit 0
           fi
+
+          # Count how many windows have already run today
+          WIN_COUNT=$(gh api "repos/${GITHUB_REPOSITORY}/git/refs/heads" \
+            --jq "[.[] | select(.ref | startswith("refs/heads/dev-done/${TODAY}-w"))] | length" \
+            --silent 2>/dev/null || echo "0")
+
+          if [ "$WIN_COUNT" -ge "4" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "All 4 quota windows used today. Skipping."
+            exit 0
+          fi
+
+          # Spacing guard: skip if most recent dev-done window was < 4.5 hours ago
+          # Prevents firing twice inside the same 5-hour quota window
+          MIN_GAP_SECS=16200   # 4.5 hours
+          if [ "$WIN_COUNT" -gt "0" ]; then
+            LAST_WIN=$(gh api "repos/${GITHUB_REPOSITORY}/git/refs/heads" \
+              --jq "[.[] | select(.ref | startswith("refs/heads/dev-done/${TODAY}-w"))] | sort_by(.object.sha) | last | .ref" \
+              --silent 2>/dev/null || echo "")
+            if [ -n "$LAST_WIN" ]; then
+              LAST_TS=$(gh api "repos/${GITHUB_REPOSITORY}/git/commits/$(gh api repos/${GITHUB_REPOSITORY}/git/ref/${LAST_WIN#refs/} --jq .object.sha --silent 2>/dev/null)" \
+                --jq ".committer.date" --silent 2>/dev/null || echo "")
+              if [ -n "$LAST_TS" ]; then
+                LAST_EPOCH=$(date -d "$LAST_TS" +%s 2>/dev/null || date -jf "%Y-%m-%dT%H:%M:%SZ" "$LAST_TS" +%s 2>/dev/null || echo "0")
+                GAP=$(( NOW_EPOCH - LAST_EPOCH ))
+                if [ "$GAP" -lt "$MIN_GAP_SECS" ]; then
+                  WAIT_MINS=$(( (MIN_GAP_SECS - GAP) / 60 ))
+                  echo "skip=true" >> $GITHUB_OUTPUT
+                  echo "Last window was ${GAP}s ago — need ${MIN_GAP_SECS}s gap. Wait ~${WAIT_MINS} min."
+                  exit 0
+                fi
+              fi
+            fi
+          fi
+
+          WINDOW=$((WIN_COUNT + 1))
+          echo "skip=false" >> $GITHUB_OUTPUT
+          echo "window=${WINDOW}" >> $GITHUB_OUTPUT
+          echo "Launching window ${WINDOW}/4 for ${TODAY}."
 
       - name: Trigger autonomous loop
         if: steps.guard.outputs.skip == 'false'
@@ -80,12 +95,14 @@ jobs:
           MAX_ITER: ${{ inputs.max_iterations || '10' }}
           MAX_PRS: ${{ inputs.max_open_prs || '5' }}
         run: |
-          SESSION_ID="sched-$(date -u +%Y%m%d)"
+          WINDOW="${{ steps.guard.outputs.window }}"
+          SESSION_ID="sched-$(date -u +%Y%m%dT%H%M)-w${WINDOW}"
           gh workflow run autonomous-loop.yml \
             --repo "$GITHUB_REPOSITORY" \
             --ref main \
             --field iteration="1" \
             --field session_id="${SESSION_ID}" \
             --field max_iterations="${MAX_ITER}" \
-            --field max_open_prs="${MAX_PRS}"
-          echo "Launched: session=${SESSION_ID}, max_iter=${MAX_ITER}, max_prs=${MAX_PRS}"
+            --field max_open_prs="${MAX_PRS}" \
+            --field window="${WINDOW}"
+          echo "Launched: session=${SESSION_ID}, window=${WINDOW}, max_iter=${MAX_ITER}"

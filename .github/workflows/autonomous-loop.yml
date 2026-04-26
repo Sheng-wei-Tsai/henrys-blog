@@ -28,6 +28,10 @@ on:
         description: 'Stop if this many unreviewed auto PRs are open'
         default: '5'
         type: string
+      window:
+        description: 'Quota window index (1-4) — sentinel naming and task priority'
+        default: '1'
+        type: string
 
 permissions:
   contents: write
@@ -207,6 +211,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key-ci
           SUPABASE_SERVICE_ROLE_KEY: dummy-service-role-ci
           NEXT_PUBLIC_APP_URL: https://henrysdigitallife.com
+          WINDOW: ${{ inputs.window || '1' }}
         run: |
           set +e
           claude \

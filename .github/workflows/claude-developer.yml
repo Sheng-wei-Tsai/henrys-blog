@@ -32,17 +32,21 @@ jobs:
         run: |
           TODAY=$(date -u +%Y-%m-%d)
           echo "today=${TODAY}" >> $GITHUB_OUTPUT
-          DONE=$(git ls-remote --heads origin "dev-done/${TODAY}" 2>/dev/null | wc -l | tr -d ' ')
+
           EXHAUSTED=$(git ls-remote --heads origin "quota-exhausted/${TODAY}" 2>/dev/null | wc -l | tr -d ' ')
-          if [ "$DONE" -gt "0" ]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-            echo "Already pushed to main today (dev-done sentinel). Exiting."
-          elif [ "$EXHAUSTED" -gt "0" ]; then
+          WIN_COUNT=$(git ls-remote --heads origin | grep "dev-done/${TODAY}-w" | wc -l | tr -d ' ')
+          WINDOW=$((WIN_COUNT + 1))
+          echo "window=${WINDOW}" >> $GITHUB_OUTPUT
+
+          if [ "$EXHAUSTED" -gt "0" ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
             echo "Credits already exhausted today. Exiting."
+          elif [ "$WIN_COUNT" -ge "4" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "All 4 quota windows used today. Exiting."
           else
             echo "skip=false" >> $GITHUB_OUTPUT
-            echo "Starting Sonnet implementation — will push directly to main."
+            echo "Starting Sonnet window ${WINDOW}/4 — will push directly to main."
           fi
 
       - name: Configure git and gh auth
@@ -83,6 +87,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key-ci
           SUPABASE_SERVICE_ROLE_KEY: dummy-service-role-ci
           NEXT_PUBLIC_APP_URL: https://henrysdigitallife.com
+          WINDOW: ${{ steps.guard.outputs.window }}
         run: |
           export CLAUDE_CODE_OAUTH_TOKEN=$(printf '%s' "${CLAUDE_CODE_OAUTH_TOKEN}" | tr -d '\r\n')
           set +e

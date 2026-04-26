@@ -24,12 +24,17 @@ Read TODO.md. Select a task that meets ALL criteria:
 - No DB migrations, no new npm packages, no new API keys
 - NOT in "Stripe Production Launch" (those are manual)
 
-Priority order to pick from:
-1. `[security]` tagged items — auth gaps, missing .limit(), unvalidated inputs
-2. `[quality]` tagged items — console.log removal, error handling
-3. `[tests]` tagged items — add one Vitest test for an untested route
-4. `[a11y]` tagged items — aria labels, focus rings
-5. `[style]` tagged items — hardcoded hex → var(--token)
+**Window-based priority** — check `$WINDOW` env var (set by the dispatcher, default 1).
+Each window covers a different task type so multiple daily runs don't pile up the same category:
+
+| WINDOW | Pick from first |
+|--------|----------------|
+| 1 | `[security]` → `[quality]` → `[tests]` → `[a11y]` → `[style]` |
+| 2 | `[quality]` → `[tests]` → `[a11y]` → `[style]` → `[security]` |
+| 3 | `[tests]` → `[a11y]` → `[style]` → `[security]` → `[quality]` |
+| 4 | `[a11y]` → `[style]` → `[security]` → `[quality]` → `[tests]` |
+
+If `$WINDOW` is unset, treat as window 1.
 
 Do NOT attempt: i18n, community network, B2B portal, Claude Lab, navigation redesign, Gemini multimodal, or anything marked L or XL effort.
 
@@ -109,10 +114,11 @@ Types: feat | fix | security | perf | refactor | style | chore | tests
 
 ```bash
 TODAY=$(date -u +%Y-%m-%d)
+WIN=${WINDOW:-1}
 
-# Sentinel branch — prevents the hourly cron from re-running today
-git checkout -b "dev-done/${TODAY}"
-git push origin "dev-done/${TODAY}"
+# Sentinel branch — window-indexed so up to 4 runs/day are allowed
+git checkout -b "dev-done/${TODAY}-w${WIN}"
+git push origin "dev-done/${TODAY}-w${WIN}"
 git checkout main
 
 # Open a GitHub Issue for visibility (audit trail)

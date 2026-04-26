@@ -146,8 +146,13 @@ if command -v gh &>/dev/null; then
     --silent 2>/dev/null && echo "yes" || echo "no")
   ANALYSIS=$(gh api "repos/${REPO}/git/refs/heads/analysis/${TODAY_UTC}" \
     --silent 2>/dev/null && echo "yes" || echo "no")
+  # Count quota windows used today
+  WIN_COUNT=$(gh api "repos/${REPO}/git/refs/heads" \
+    --jq "[.[] | select(.ref | startswith(\"refs/heads/dev-done/${TODAY_UTC}-w\"))] | length" \
+    --silent 2>/dev/null || echo "?")
   echo "  quota-exhausted/${TODAY_UTC}: ${EXHAUSTED}"
   echo "  analysis/${TODAY_UTC}:        ${ANALYSIS}"
+  echo "  dev-done windows today:      ${WIN_COUNT}/4"
   IDLE_PID_FILE="$HOME/.claude/idle-trigger-henrys-blog.pid"
   if [ -f "$IDLE_PID_FILE" ]; then
     IDLE_PID=$(cat "$IDLE_PID_FILE")
@@ -158,6 +163,13 @@ if command -v gh &>/dev/null; then
     fi
   else
     echo "  idle-trigger: not running"
+  fi
+  WATCHER_LOG="$HOME/.claude/window-watcher.log"
+  if [ -f "$WATCHER_LOG" ]; then
+    LAST_LINE=$(tail -1 "$WATCHER_LOG")
+    echo "  window-watcher: ${LAST_LINE}"
+  else
+    echo "  window-watcher: not installed (run: bash scripts/install-window-watcher.sh)"
   fi
 else
   echo "  gh CLI not found — cannot check sentinel branches"
