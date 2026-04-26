@@ -1,6 +1,6 @@
 # TODO — TechPath AU Feature Backlog
 
-**Last updated:** 2026-04-22
+**Last updated:** 2026-04-26
 **Product vision:** The definitive career platform for international IT graduates entering the Australian job market.
 **Single source of truth for:** what is done, what is next, and why.
 
@@ -245,9 +245,42 @@
 
 ---
 
-## 🛡 Daily Analyst Findings — 2026-04-22
+## 🛡 Daily Analyst Findings — 2026-04-26
 
 > Fresh items from today's Opus scan — items already in TODO.md are not duplicated here.
+> `npm audit` = 0 vulns; `tsc --noEmit` = clean; build green. Major surface areas this run: unvalidated YouTube IDs across `/api/learn/*`, three in-process rate-limit Maps that grow unbounded (memory leak in long-lived serverless instances), and a wave of stale entries in §0 / AGENTS.md §15 that no longer match the code.
+
+### Stale entries to remove (cleanup)
+- [ ] Remove stale Priority 0 lines TODO.md:99-101 — `.limit()` on alerts is present (alerts/route.ts:14 has `.limit(100)`), `.limit()` on comments is present (comments/route.ts:31 has `.limit(500)`), async `cookies()` in alerts is correct (uses `createSupabaseServer()`), Stripe webhook signature tests already written (route.test.ts:60-69) [quality]
+- [ ] Update AGENTS.md §15 Known Tech Debt — these rows are stale: `@import` Google Fonts (globals.css:1 is now a comment confirming next/font), `images: { unoptimized: true }` (no longer in next.config.ts — `remotePatterns` configured), `force-dynamic` on app/page.tsx (removed — no `dynamic` export found), `<img>` tags in PersonalisedHero/Header/Comments (all migrated to `next/image`), `--text-muted: #786858` in dark mode (already updated to `#a09080` at globals.css:113) [quality]
+
+### Security
+- [ ] Validate `videoId` with `/^[A-Za-z0-9_-]{11}$/` in app/api/learn/transcript/route.ts:34 before passing to `YoutubeTranscript.fetchTranscript()` — currently any string is accepted [security]
+- [ ] Validate `channelId` with `/^UC[A-Za-z0-9_-]{22}$/` in app/api/learn/channel-videos/route.ts:22 before interpolating into the YouTube API URL — defense against parameter pollution / accidental quota abuse [security]
+- [ ] Validate `videoId` with `/^[A-Za-z0-9_-]{11}$/` in app/api/learn/quiz/route.ts:24 before `.eq('video_id', videoId)` — defense in depth (existing TODO covers `video-meta` only) [security]
+- [ ] Truncate `jobTitle` (`.slice(0,100)`) and `company` (`.slice(0,100)`) in app/api/cover-letter/route.ts:47-48 before interpolating into the GPT-4o prompt — prompt-injection surface (jobDescription/background already truncated at 3000/1500) [security]
+- [ ] Gate app/api/learn/channel-videos/route.ts and app/api/learn/videos/route.ts behind `requireSubscription()` + `checkEndpointRateLimit()` — anonymous callers can drain YouTube Data API daily quota (10K units shared across all routes) [security]
+
+### Performance
+- [ ] Cap `playlistIdCache` Map at ~100 entries with LRU eviction in app/api/learn/channel-videos/route.ts:5 — currently unbounded; long-lived serverless instances accumulate every distinct channelId forever [perf]
+- [ ] Prune expired entries from `ipLog` Map in app/api/log-error/route.ts:5 — entries are added on first request per IP and never deleted; sweep on size > 5000 or run a 5-min interval cleanup [perf]
+- [ ] Prune expired entries from `ipCounts` Map in app/api/track/route.ts:11 — same memory-leak pattern (entry only refreshed if same IP returns within window) [perf]
+- [ ] Replace `fs.readFileSync` with module-load `const data = JSON.parse(fs.readFileSync(...))` cache (or lazy `fs.promises.readFile`) in app/api/ai-usage/route.ts:7 — sync IO blocks the event loop on every request [perf]
+
+### Code Quality
+- [ ] Replace `} as any` cast at app/api/resume-analyse/route.ts:87 with a typed Anthropic content-block interface [quality]
+- [ ] Refresh existing TODO line 271 to cover all `(r: any)` instances in app/api/jobs/route.ts:116, 200, 202, 236, 374, 408 — one shared `RawJobRow` interface or per-provider hit types (Adzuna/JSearch/Jora/Remotive/Jobicy/GoogleJobs) [quality]
+- [ ] Update existing TODO line 237 — actual `console.log` lines in app/api/jobs/route.ts are 516, 555, 602 (not 259); gate all three behind `NODE_ENV !== 'production'` in one pass [quality]
+
+### Tests
+- [ ] Add Vitest test for /api/comments — GET 400 on invalid slug regex, POST rejects content >2000 chars, PATCH/DELETE 403 for non-owner non-admin, DELETE 200 for admin on another user's comment [tests]
+- [ ] Add Vitest test for /api/learn/transcript — GET 400 on missing videoId, GET 404 when all 6 language attempts throw, returns 200 with sampled transcript on first successful language [tests]
+
+---
+
+## 🛡 Daily Analyst Findings — 2026-04-22
+
+> Fresh items from earlier Opus scan — items already in TODO.md are not duplicated here.
 > `npm run audit` = 0 vulns; `tsc --noEmit` = clean. Major surface areas now: dark-mode hex leakage in `/dashboard` + `/jobs`, untyped `any` drift in API routes, and several route handlers still wiring their own Supabase client (AGENTS §5.2 violation).
 
 ### Security
