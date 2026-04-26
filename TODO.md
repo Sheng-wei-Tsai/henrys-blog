@@ -96,8 +96,8 @@
 **Files already done:** `app/api/stripe/webhook/route.ts`, `lib/subscription.ts`, `app/pricing/page.tsx`
 
 ### Remaining Security Items
-- [ ] Add `.limit()` to unbounded queries in `app/api/comments/route.ts` + `app/api/alerts/route.ts`
-- [ ] Fix async `cookies()` in `alerts/route.ts` (Next.js 16 breaking change)
+- [x] Add `.limit()` to unbounded queries in `app/api/comments/route.ts` + `app/api/alerts/route.ts` ✅ 2026-04-26 (already present)
+- [x] Fix async `cookies()` in `alerts/route.ts` (Next.js 16 breaking change) ✅ 2026-04-26 (already using createSupabaseServer())
 - [ ] Stripe webhook signature validation tests — `app/api/stripe/webhook/route.test.ts`
 
 ---
@@ -219,8 +219,8 @@
 ### Security
 - [x] Truncate visa-tracker inputs — add `.slice(0,100)` to employer/occupation and ISO-date check on started_at in app/api/visa-tracker/route.ts:45-48 [security] ✅ *2026-04-26*
 - [x] Add `.limit(500)` to video_progress select in app/api/learn/progress/route.ts:55 — grows unbounded per user [security] ✅ *2026-04-26*
-- [ ] Cap `req.json()` payload at 50KB before interpolating into GPT-4o prompt in app/api/analytics/ai-insights/route.ts:24 [security]
-- [ ] Add `checkEndpointRateLimit(admin.id, 'analytics/ai-insights')` to app/api/analytics/ai-insights/route.ts — GPT-4o call is unmetered [security]
+- [x] Cap `req.json()` payload at 50KB before interpolating into GPT-4o prompt in app/api/analytics/ai-insights/route.ts:24 [security] ✅ 2026-04-26
+- [x] Add `checkEndpointRateLimit(admin.id, 'analytics/ai-insights')` to app/api/analytics/ai-insights/route.ts — GPT-4o call is unmetered [security] ✅ 2026-04-26
 
 ### Performance / A11y
 - [ ] Replace raw `<img>` with `next/image` in components/Comments.tsx:20 — user avatar CLS + bandwidth [perf]

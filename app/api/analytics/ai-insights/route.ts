@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import OpenAI from 'openai';
+import { checkEndpointRateLimit, rateLimitResponse, recordUsage } from '@/lib/subscription';
 
 async function requireAdmin() {
   const cookieStore = await cookies();
@@ -16,13 +17,31 @@ async function requireAdmin() {
   return profile?.role === 'admin' ? user : null;
 }
 
+interface AnalyticsSummary {
+  overview: { totalViews: number; uniqueSessions: number; topDay?: { date: string; views: number } };
+  topPages?: Array<{ path: string; count: number }>;
+  referrers?: Array<{ source: string; count: number }>;
+  countries?: Array<{ country: string; count: number }>;
+  devices?: { desktop: number; mobile: number; tablet: number };
+}
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const MAX_PAYLOAD = 50_000; // 50KB — prevents enormous analytics blobs from reaching the GPT-4o prompt
 
 export async function POST(req: Request) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const summary = await req.json();
+  const ok = await checkEndpointRateLimit(admin.id, 'analytics/ai-insights');
+  if (!ok) return rateLimitResponse();
+
+  const raw = await req.text();
+  if (raw.length > MAX_PAYLOAD) {
+    return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
+  }
+  let summary: AnalyticsSummary;
+  try { summary = JSON.parse(raw) as AnalyticsSummary; }
+  catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
 
   const prompt = `You are a growth strategist for a personal tech blog called "Henry's Digital Life" by Henry Tsai — a full-stack developer in Brisbane, Australia targeting international new graduates looking for IT jobs in Australia.
 
@@ -74,5 +93,6 @@ Return ONLY the JSON array, no markdown fences.`;
     suggestions = [{ title: 'Parse error', insight: text.slice(0, 200), action: 'Check API response' }];
   }
 
+  void recordUsage(admin.id, 'analytics/ai-insights');
   return NextResponse.json({ suggestions });
 }
