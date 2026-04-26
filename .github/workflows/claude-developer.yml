@@ -1,10 +1,10 @@
 name: Claude Daily Developer (Sonnet)
 
 # Runs every hour. Exits in seconds if already ran today.
-# First run after Anthropic quota resets → picks next TODO task,
-# implements it, passes quality gate, opens [Auto] PR for owner review.
-# On credit exhaustion → pushes quota-exhausted/DATE sentinel branch,
-# creates Copilot fallback issue inline, exits green.
+# Picks ONE task from TODO.md, implements it, passes quality gate,
+# pushes directly to main, creates dev-done/DATE sentinel.
+# No PRs — fixes land in main immediately so TODO.md stays up to date.
+# On credit exhaustion → pushes quota-exhausted/DATE sentinel, creates Copilot issue.
 
 on:
   schedule:
@@ -32,17 +32,17 @@ jobs:
         run: |
           TODAY=$(date -u +%Y-%m-%d)
           echo "today=${TODAY}" >> $GITHUB_OUTPUT
-          AUTO=$(git ls-remote --heads origin "auto/${TODAY}/" 2>/dev/null | wc -l | tr -d ' ')
+          DONE=$(git ls-remote --heads origin "dev-done/${TODAY}" 2>/dev/null | wc -l | tr -d ' ')
           EXHAUSTED=$(git ls-remote --heads origin "quota-exhausted/${TODAY}" 2>/dev/null | wc -l | tr -d ' ')
-          if [ "$AUTO" -gt "0" ]; then
+          if [ "$DONE" -gt "0" ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
-            echo "Already implemented today. Exiting."
+            echo "Already pushed to main today (dev-done sentinel). Exiting."
           elif [ "$EXHAUSTED" -gt "0" ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
             echo "Credits already exhausted today. Exiting."
           else
             echo "skip=false" >> $GITHUB_OUTPUT
-            echo "Starting Sonnet implementation."
+            echo "Starting Sonnet implementation — will push directly to main."
           fi
 
       - name: Configure git and gh auth

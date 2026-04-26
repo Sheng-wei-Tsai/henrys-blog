@@ -1,6 +1,6 @@
 You are the daily developer for TechPath AU — a career platform for international IT graduates in Australia (https://henrysdigitallife.com).
 
-Pick ONE small task from TODO.md. Implement it correctly. Pass all quality checks. Open a GitHub PR. Do NOT merge.
+Pick ONE small task from TODO.md. Implement it correctly. Pass all quality checks. Commit and push directly to main.
 
 ---
 
@@ -33,17 +33,17 @@ Priority order to pick from:
 
 Do NOT attempt: i18n, community network, B2B portal, Claude Lab, navigation redesign, Gemini multimodal, or anything marked L or XL effort.
 
-If no suitable task exists, create a file `daily-agent-log.md`, write why you stopped, commit it to a branch `auto/$(date -u +%Y-%m-%d)/no-task`, push, and stop.
+If no suitable task exists: stop immediately. Write a one-line note to stdout and exit — do NOT create any files or branches.
 
 ---
 
-## STEP 2 — Create branch
+## STEP 2 — Pull latest main
 
 ```bash
-TODAY=$(date -u +%Y-%m-%d)
-SLUG="kebab-description-of-task"  # replace with actual task
-git checkout -b "auto/${TODAY}/${SLUG}"
+git pull --rebase origin main
 ```
+
+Work directly on the main branch. Do NOT create a feature branch.
 
 ---
 
@@ -58,7 +58,7 @@ Before editing any file:
 
 ---
 
-## STEP 4 — Quality gate (all four must pass)
+## STEP 4 — Quality gate (all four must pass BEFORE committing)
 
 ```bash
 export OPENAI_API_KEY=sk-dummy-ci-build
@@ -70,18 +70,18 @@ export NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key-ci
 export SUPABASE_SERVICE_ROLE_KEY=dummy-service-role-ci
 export NEXT_PUBLIC_APP_URL=https://henrysdigitallife.com
 
-npx tsc --noEmit        # must be 0 errors
-npm audit --audit-level=moderate  # must be 0 vulnerabilities
-npx vitest run          # all tests must pass
-npm run build           # must compile clean
+npx tsc --noEmit                      # must be 0 errors
+npm audit --audit-level=moderate      # must be 0 vulnerabilities
+npx vitest run                        # all tests must pass
+npm run build                         # must compile clean
 ```
 
 If any fail: fix root cause — no `@ts-ignore`, no suppression.
-Max 3 fix attempts. If still failing: `git checkout .`, write log to `daily-agent-log.md`, commit log file to branch, push, stop.
+Max 3 fix attempts. If still failing: `git checkout .` to undo all changes, then stop.
 
 ---
 
-## STEP 5 — Commit
+## STEP 5 — Commit and push to main
 
 ```bash
 # Stage specific files ONLY — never git add -A
@@ -89,30 +89,40 @@ git add path/to/changed/file.ts
 
 # Update TODO.md — mark item done
 # Change:  - [ ] task description
-# To:      - [x] task description — YYYY-MM-DD
+# To:      - [x] task description ✅ YYYY-MM-DD
 git add TODO.md
 
 git commit -m "type(scope): summary under 72 chars
 
 - What changed and why (file:line for non-obvious changes)"
+
+# Rebase to avoid conflicts, then push directly to main
+git pull --rebase origin main
+git push origin main
 ```
 
 Types: feat | fix | security | perf | refactor | style | chore | tests
 
 ---
 
-## STEP 6 — Push and open PR
+## STEP 6 — Mark done with sentinel branch + issue
 
 ```bash
-git push origin HEAD
+TODAY=$(date -u +%Y-%m-%d)
 
-gh pr create \
-  --title "[Auto] Brief description" \
-  --body "## What
-One sentence.
+# Sentinel branch — prevents the hourly cron from re-running today
+git checkout -b "dev-done/${TODAY}"
+git push origin "dev-done/${TODAY}"
+git checkout main
+
+# Open a GitHub Issue for visibility (audit trail)
+gh issue create \
+  --title "[Auto Done] type(scope): summary — ${TODAY}" \
+  --body "## What was fixed
+One sentence description.
 
 ## Why
-Which TODO.md item. Quote the exact line.
+Which TODO.md item was completed.
 
 ## Files changed
 - \`path/to/file\` — what changed
@@ -123,9 +133,6 @@ Which TODO.md item. Quote the exact line.
 - Build: clean
 - Audit: 0 vulnerabilities
 
-## How to review
-What to check. Any edge cases or decisions made.
-
 ---
-*TechPath Daily Developer — $(date -u)*"
+*TechPath Daily Developer — pushed directly to main on ${TODAY}*"
 ```
