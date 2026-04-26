@@ -1,0 +1,217 @@
+name: Copilot Daily Tasks
+
+# Runs every day at 23:30 UTC (9:30am AEST) — after the Claude analyst has run.
+# Picks up to 3 mechanical tasks from TODO.md ([tests], [a11y], [style]) and
+# assigns each to GitHub Copilot as individual issues. Uses Copilot Pro+ quota
+# (50 requests/day with Claude Sonnet/Opus) — completely independent of Claude
+# Code Pro quota so the two agents never compete.
+#
+# Task routing:
+#   Claude Code Pro → [security], [quality]   (needs judgment)
+#   GitHub Copilot  → [tests], [a11y], [style] (mechanical, deterministic)
+
+on:
+  schedule:
+    - cron: '30 23 * * *'   # 09:30 AEST — after analyst, before heavy loop work
+  workflow_dispatch:
+    inputs:
+      max_tasks:
+        description: 'Max Copilot issues to open (default 3)'
+        default: '3'
+        type: string
+
+permissions:
+  issues: write
+
+jobs:
+  assign:
+    name: Assign tasks to Copilot
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Guard — skip if already ran today
+        id: guard
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TODAY=$(date -u +%Y-%m-%d)
+          echo "today=${TODAY}" >> $GITHUB_OUTPUT
+          COUNT=$(gh issue list \
+            --search "[Copilot Daily] ${TODAY} in:title" \
+            --state all --json number --jq 'length' 2>/dev/null || echo "0")
+          if [ "$COUNT" -gt "0" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "Already opened Copilot issues today. Skipping."
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Parse mechanical tasks from TODO.md
+        id: tasks
+        if: steps.guard.outputs.skip == 'false'
+        env:
+          MAX_TASKS: ${{ inputs.max_tasks || '3' }}
+        run: |
+          python3 - << 'PYEOF'
+          import re, os, json
+
+          max_tasks = int(os.environ.get('MAX_TASKS', '3'))
+
+          with open('TODO.md', 'r') as f:
+              content = f.read()
+
+          # Only pick [tests], [a11y], [style] — mechanical tasks suited to Copilot
+          copilot_tags = ['[tests]', '[a11y]', '[style]']
+
+          skip_sections = ['Stripe Production Launch']
+          skip_keywords = [
+              'community network', 'b2b', 'claude lab', 'i18n', 'zh-tw',
+              'navigation restructure', 'gemini multimodal', 'vercel kv',
+          ]
+
+          lines = content.split('\n')
+          in_skip = False
+          tasks = []
+
+          for line in lines:
+              for s in skip_sections:
+                  if s in line:
+                      in_skip = True
+              if in_skip and re.match(r'^## ', line) and not any(s in line for s in skip_sections):
+                  in_skip = False
+              if in_skip:
+                  continue
+              if re.match(r'^- \[ \] .+', line):
+                  clean = line.replace('- [ ] ', '').strip()
+                  if any(k in clean.lower() for k in skip_keywords):
+                      continue
+                  if any(tag in clean for tag in copilot_tags):
+                      tasks.append(clean)
+
+          selected = tasks[:max_tasks]
+          print(f"Found {len(tasks)} mechanical tasks, selecting {len(selected)}")
+          for i, t in enumerate(selected):
+              print(f"  {i+1}. {t[:80]}...")
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"tasks={json.dumps(selected)}\n")
+              f.write(f"count={len(selected)}\n")
+          PYEOF
+
+      - name: Open Copilot issues
+        if: steps.guard.outputs.skip == 'false' && steps.tasks.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TODAY: ${{ steps.guard.outputs.today }}
+          TASKS_JSON: ${{ steps.tasks.outputs.tasks }}
+        run: |
+          python3 - << 'PYEOF'
+          import os, json, subprocess
+
+          today = os.environ['TODAY']
+          tasks = json.loads(os.environ['TASKS_JSON'])
+
+          b3 = '`' * 3
+
+          for i, task in enumerate(tasks, 1):
+              # Determine task type for title
+              if '[tests]' in task:
+                  task_type = 'tests'
+                  type_label = 'Vitest'
+              elif '[a11y]' in task:
+                  task_type = 'a11y'
+                  type_label = 'Accessibility'
+              else:
+                  task_type = 'style'
+                  type_label = 'Style tokens'
+
+              # Strip the tag suffix from display
+              display = task.replace('[tests]', '').replace('[a11y]', '').replace('[style]', '').strip().rstrip('.')
+              title = f'[Copilot Daily] {today} #{i} — {display[:60]}'
+
+              lines = [
+                  f'## Task ({type_label})', '',
+                  task, '',
+                  '---', '',
+                  '## Project context', '',
+                  '**TechPath AU** — Next.js 16.2 App Router, TypeScript strict, Supabase, Vercel',
+                  'Live: https://henrysdigitallife.com', '',
+                  '**Rules — read AGENTS.md before touching any file:**',
+                  '- `cookies()`, `headers()`, `params` are **async** in Next.js 16 — always `await`',
+                  '- Colours: `var(--token-name)` only — never hardcoded hex',
+                  '- Styling: CSS custom properties + inline styles — no Tailwind',
+                  '- Images: `next/image` — never `<img>`',
+                  '- Internal links: `<Link>` — never `<a href>`', '',
+              ]
+
+              if task_type == 'tests':
+                  lines += [
+                      '## Writing the test', '',
+                      'Test file lives in `__tests__/` or alongside the route.',
+                      'Use existing test patterns — see `__tests__/` for examples.',
+                      'Mock Supabase with `vi.mock` as shown in existing tests.',
+                      '', b3 + 'ts',
+                      '// Example skeleton',
+                      "import { describe, it, expect, vi, beforeEach } from 'vitest'",
+                      "import { GET, POST } from '@/app/api/your-route/route'",
+                      '', b3, '',
+                  ]
+              elif task_type == 'style':
+                  lines += [
+                      '## Design tokens reference', '',
+                      '| Hardcoded | Replace with token |',
+                      '|-----------|-------------------|',
+                      '| `#c0281c` / `#e84040` | `var(--vermilion)` |',
+                      '| `#c88a14` / `#f0b830` | `var(--gold)` |',
+                      '| `#1e7a52` / `#3ec880` | `var(--jade)` |',
+                      '| `#140a05` / `#f0e6d0` | `var(--ink)` |',
+                      '| `#fffef6` / `#0f0b1a` | `var(--warm-white)` |',
+                      '| `#e8d5a8` / `#1a1430` | `var(--parchment)` |',
+                      '',
+                  ]
+
+              lines += [
+                  '## Quality gate — run before opening PR', '',
+                  b3 + 'bash',
+                  'export OPENAI_API_KEY=sk-dummy-ci-build STRIPE_SECRET_KEY=sk_test_dummy_ci',
+                  'export STRIPE_PRICE_ID=price_dummy_ci STRIPE_WEBHOOK_SECRET=whsec_dummy_ci',
+                  'export NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co',
+                  'export NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy-anon-key-ci',
+                  'export SUPABASE_SERVICE_ROLE_KEY=dummy-service-role-ci',
+                  'export NEXT_PUBLIC_APP_URL=https://henrysdigitallife.com',
+                  '',
+                  'npx tsc --noEmit && npm audit --audit-level=moderate && npx vitest run && npm run build',
+                  b3, '',
+                  '## When done', '',
+                  '- Open PR titled `[Copilot] type(scope): description`',
+                  f'- Mark done in TODO.md: `- [ ]` → `- [x] ✅ {today}`',
+                  '- Do NOT merge — owner reviews and merges', '',
+                  '---',
+                  f'*Copilot Daily Tasks — {today} task {i}/{len(tasks)}*',
+              ]
+
+              body = '\n'.join(lines)
+              with open('/tmp/issue_body.txt', 'w') as fh:
+                  fh.write(body)
+
+              result = subprocess.run([
+                  'gh', 'issue', 'create',
+                  '--title', title,
+                  '--label', 'copilot-task',
+                  '--body-file', '/tmp/issue_body.txt',
+              ], capture_output=True, text=True)
+
+              if result.returncode == 0:
+                  issue_url = result.stdout.strip()
+                  print(f'Created issue {i}: {issue_url}')
+                  # Assign to Copilot
+                  subprocess.run([
+                      'gh', 'issue', 'edit', issue_url,
+                      '--add-assignee', 'Copilot',
+                  ], capture_output=True)
+              else:
+                  print(f'Failed to create issue {i}: {result.stderr}')
+          PYEOF
