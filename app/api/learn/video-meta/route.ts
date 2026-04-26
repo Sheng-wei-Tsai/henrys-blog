@@ -6,6 +6,7 @@ const HOST = 'youtube138.p.rapidapi.com';
 export async function GET(req: NextRequest) {
   const videoId = req.nextUrl.searchParams.get('videoId');
   if (!videoId) return NextResponse.json({ error: 'Missing videoId' }, { status: 400 });
+  if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) return NextResponse.json({ error: 'Invalid videoId' }, { status: 400 });
 
   // ── Check Supabase cache first — avoids RapidAPI call on repeat visits ────
   const sb = createClient(

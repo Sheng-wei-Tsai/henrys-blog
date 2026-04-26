@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
     .select('video_id, quiz_score, quiz_taken, completed')
     .eq('user_id', user.id);
   if (channel) query = query.eq('channel_name', channel);
-  const { data } = await query;
+  const { data } = await query.limit(500);
 
   return NextResponse.json({ progress: data ?? [] });
 }

@@ -39,12 +39,17 @@ export async function POST(req: NextRequest) {
   try { body = await req.json(); }
   catch { return NextResponse.json({ error: 'Bad request' }, { status: 400 }); }
 
+  const startedAt = body.started_at ?? null;
+  if (startedAt !== null && !/^\d{4}-\d{2}-\d{2}$/.test(startedAt)) {
+    return NextResponse.json({ error: 'Invalid started_at format' }, { status: 400 });
+  }
+
   const { error } = await sb.from('visa_tracker').upsert(
     {
       user_id:    user.id,
-      employer:   body.employer   ?? null,
-      occupation: body.occupation ?? null,
-      started_at: body.started_at ?? null,
+      employer:   body.employer   ? body.employer.trim().slice(0, 100)   : null,
+      occupation: body.occupation ? body.occupation.trim().slice(0, 100) : null,
+      started_at: startedAt,
       steps:      body.steps      ?? {},
       updated_at: new Date().toISOString(),
     },
