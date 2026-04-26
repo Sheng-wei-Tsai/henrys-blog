@@ -13,6 +13,9 @@
 
 REPO="Sheng-wei-Tsai/henrys-blog"
 RESET_STATE="$HOME/.claude/.reset_notifier_state"
+
+# launchd has a minimal PATH — use explicit paths for Homebrew tools
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 IDLE_PID_FILE="$HOME/.claude/idle-trigger-henrys-blog.pid"
 LAST_DISPATCH_FILE="$HOME/.claude/window-watcher-last-dispatch"
 LOG="$HOME/.claude/window-watcher.log"
