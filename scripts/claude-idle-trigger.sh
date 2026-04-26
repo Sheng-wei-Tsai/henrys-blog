@@ -2,10 +2,11 @@
 # Runs in background when a Claude Code session ends in this project.
 # Two-phase dispatch using Claude Code Pro quota (no ANTHROPIC_API_KEY):
 #
-#   60 min idle → dispatch autonomous-loop.yml (Opus analyse → Sonnet implement)
-#   90 min idle → dispatch idle-posts.yml (generate today's blog post)
+#   60 min idle → dispatch idle-posts.yml FIRST (quick, light quota use)
+#   90 min idle → dispatch autonomous-loop.yml (heavier Opus+Sonnet work)
 #
-# Both cancelled by scripts/claude-cancel-trigger.sh when user returns.
+# Post fires first so it always gets quota before the loop can exhaust it.
+# Both phases cancelled by scripts/claude-cancel-trigger.sh when user returns.
 #
 # Guards before dispatching:
 #   1. Quota not already exhausted today (quota-exhausted/<date> sentinel branch)
@@ -47,41 +48,38 @@ if [ -f "$PID_FILE" ] && [ "$(cat "$PID_FILE")" = "$$" ]; then
     exit 0
   fi
 
-  # Guard 3: skip autonomous loop if already ran today (posts still fire in phase 2)
-  ANALYSIS=$(gh api "repos/${REPO}/git/refs/heads/analysis/${TODAY}" \
-    --silent 2>/dev/null && echo "1" || echo "0")
-  if [ "$ANALYSIS" = "1" ]; then
-    echo "[idle-trigger $(date -u)] Loop already ran today — skipping loop dispatch, still waiting for post phase" >> "$LOG"
+  # Phase 1: dispatch daily post FIRST — light quota use, must run before loop
+  POST_COUNT=$(gh api "repos/${REPO}/git/trees/main" --jq '.tree[] | select(.path == "content/posts") | .sha' --silent 2>/dev/null | \
+    xargs -I{} gh api "repos/${REPO}/git/trees/{}" --jq "[.tree[].path | select(startswith(\"${TODAY}\"))] | length" --silent 2>/dev/null || echo "0")
+  if [ "${POST_COUNT:-0}" -gt "0" ]; then
+    echo "[idle-trigger $(date -u)] Post for ${TODAY} already exists — skipping idle-posts" >> "$LOG"
   else
-    # All clear — dispatch autonomous loop
-    SESSION_ID="idle-$(date -u +%Y%m%dT%H%M)"
-    echo "[idle-trigger $(date -u)] Dispatching autonomous loop session=${SESSION_ID}" >> "$LOG"
-    gh workflow run autonomous-loop.yml \
+    echo "[idle-trigger $(date -u)] Dispatching idle-posts for ${TODAY}" >> "$LOG"
+    gh workflow run idle-posts.yml \
       --repo "$REPO" \
-      --field iteration=1 \
-      --field session_id="$SESSION_ID" \
       >> "$LOG" 2>&1
   fi
 
-  # Phase 2: wait 30 more minutes then dispatch daily post (uses Pro quota)
+  # Phase 2: wait 30 more minutes then dispatch autonomous loop (heavier)
   sleep 1800
 
   if [ -f "$PID_FILE" ] && [ "$(cat "$PID_FILE")" = "$$" ]; then
     TODAY2=$(date -u +%Y-%m-%d)
 
-    # Guard: skip if today's post already exists (autonomous loop may have created it)
-    POST_COUNT=$(gh api "repos/${REPO}/git/trees/main" --jq '.tree[] | select(.path == "content/posts") | .sha' --silent 2>/dev/null | \
-      xargs -I{} gh api "repos/${REPO}/git/trees/{}" --jq "[.tree[].path | select(startswith(\"${TODAY2}\"))] | length" --silent 2>/dev/null || echo "0")
-    if [ "${POST_COUNT:-0}" -gt "0" ]; then
-      echo "[idle-trigger $(date -u)] Post for ${TODAY2} already exists — skipping idle-posts dispatch" >> "$LOG"
-      rm -f "$PID_FILE"
-      exit 0
+    # Guard: skip autonomous loop if already ran today
+    ANALYSIS=$(gh api "repos/${REPO}/git/refs/heads/analysis/${TODAY2}" \
+      --silent 2>/dev/null && echo "1" || echo "0")
+    if [ "$ANALYSIS" = "1" ]; then
+      echo "[idle-trigger $(date -u)] Loop already ran today — skipping autonomous loop dispatch" >> "$LOG"
+    else
+      SESSION_ID="idle-$(date -u +%Y%m%dT%H%M)"
+      echo "[idle-trigger $(date -u)] Dispatching autonomous loop session=${SESSION_ID}" >> "$LOG"
+      gh workflow run autonomous-loop.yml \
+        --repo "$REPO" \
+        --field iteration=1 \
+        --field session_id="$SESSION_ID" \
+        >> "$LOG" 2>&1
     fi
-
-    echo "[idle-trigger $(date -u)] Dispatching idle-posts for ${TODAY2}" >> "$LOG"
-    gh workflow run idle-posts.yml \
-      --repo "$REPO" \
-      >> "$LOG" 2>&1
     rm -f "$PID_FILE"
   fi
 fi
