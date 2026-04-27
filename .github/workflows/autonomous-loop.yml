@@ -168,7 +168,7 @@ jobs:
             --model claude-opus-4-7 \
             --allowedTools "Bash,Read,Write,Edit,Glob,Grep" \
             -p "$(cat .github/prompts/analyst.md)" 2>&1 | tee opus.log
-          if grep -qiE "credit balance is too low|insufficient credits?|quota.*exceeded|billing.*hard limit|usage limit reached|rate limit(ed)?|5-hour limit|claude ai usage limit" opus.log; then
+          if grep -qiE "credit balance is too low|insufficient credits?|quota.*exceeded|billing.*hard limit|usage limit reached|rate limit(ed)?|5-hour limit|claude ai usage limit|hit your limit|try again.{0,30}(hour|later)" opus.log; then
             echo "quota_exhausted=true" >> "$GITHUB_OUTPUT"
             echo "::warning::Opus quota exhausted during analysis."
           else
@@ -222,7 +222,7 @@ jobs:
           SONNET_EXIT=${PIPESTATUS[0]}
           echo "exit_code=${SONNET_EXIT}" >> "$GITHUB_OUTPUT"
 
-          if grep -qiE "credit balance is too low|insufficient credits?|quota.*exceeded|billing.*hard limit|usage limit reached|rate limit(ed)?|5-hour limit|claude ai usage limit|try again.{0,30}(hour|later)" sonnet.log; then
+          if grep -qiE "credit balance is too low|insufficient credits?|quota.*exceeded|billing.*hard limit|usage limit reached|rate limit(ed)?|5-hour limit|claude ai usage limit|hit your limit|try again.{0,30}(hour|later)" sonnet.log; then
             echo "quota_exhausted=true"  >> "$GITHUB_OUTPUT"
             echo "succeeded=false"       >> "$GITHUB_OUTPUT"
             echo "::warning::Sonnet quota exhausted."
@@ -299,6 +299,7 @@ jobs:
           (steps.opus.outputs.quota_exhausted == 'true' || steps.sonnet.outputs.quota_exhausted == 'true') &&
           steps.existing_issue.outputs.count == '0' &&
           steps.copilot_todo.outputs.task != 'NO_TASK'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TASK: ${{ steps.copilot_todo.outputs.task }}
@@ -322,11 +323,13 @@ jobs:
               fh.write('\n'.join(lines))
           PYEOF
 
-          gh issue create \
+          ISSUE_URL=$(gh issue create \
             --title "[Copilot Fallback] ${TODAY} — ${TASK}" \
-            --assignee "copilot" \
             --label "copilot-fallback" \
-            --body-file /tmp/issue_body.txt
+            --body-file /tmp/issue_body.txt)
+          echo "Created: ${ISSUE_URL}"
+          gh issue edit "${ISSUE_URL}" --add-assignee "Copilot" 2>/dev/null \
+            || echo "::warning::Could not assign @Copilot — enable Copilot coding agent in repo settings."
 
       # ── Re-dispatch next iteration ────────────────────────────────────────
       - name: Queue next iteration
