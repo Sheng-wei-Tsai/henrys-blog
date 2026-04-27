@@ -1,11 +1,11 @@
 import 'dotenv/config';
-import Anthropic from '@anthropic-ai/sdk';
+import { claudeMessage } from './llm-claude';
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 
-const claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
 
 // ── Types ─────────────────────────────────────────────────────────
 interface TrendingItem {
@@ -91,12 +91,9 @@ async function pickTopic(items: TrendingItem[]): Promise<TrendingItem & { angle:
     .map((item, i) => `${i}. [${item.source}] ${item.title}\n   ${item.signal}\n   ${item.description}`)
     .join('\n\n');
 
-  const msg = await claude.messages.create({
-    model:      'claude-sonnet-4-6',
-    max_tokens: 512,
-    messages: [{
-      role:    'user',
-      content: `You are picking the best topic for a deep-dive developer blog post for Henry's blog.
+  const raw = await claudeMessage({
+    model:  'claude-sonnet-4-6',
+    prompt: `You are picking the best topic for a deep-dive developer blog post for Henry's blog.
 
 Henry is an Australian developer building AI-powered web apps (Next.js, TypeScript, Supabase).
 His readers are developers who want to learn something actionable and immediately useful today.
@@ -113,10 +110,8 @@ Return JSON only:
   "index": 0,
   "angle": "the specific hook — what makes this worth a deep-dive right now, one sentence"
 }`,
-    }],
   });
 
-  const raw    = msg.content[0].type === 'text' ? msg.content[0].text : '{}';
   const match  = raw.match(/\{[\s\S]*\}/);
   const parsed = match ? JSON.parse(match[0]) : { index: 0, angle: '' };
 
@@ -130,9 +125,8 @@ async function generatePost(topic: TrendingItem & { angle: string }) {
     ? `\nAdditional context (README / excerpt):\n${topic.extra}`
     : '';
 
-  const msg = await claude.messages.create({
-    model:      'claude-sonnet-4-6',
-    max_tokens: 2500,
+  const raw = await claudeMessage({
+    model: 'claude-sonnet-4-6',
     system: `You are writing a blog post for Henry, an Australian developer.
 
 Henry's voice: direct, practical, no fluff. He writes like a senior developer talking to peers.
@@ -148,9 +142,7 @@ Post structure:
 4. A short closing paragraph with Henry's personal take
 
 Target length: 600-900 words. Substantive but never padded.`,
-    messages: [{
-      role:    'user',
-      content: `Write a deep-dive blog post about this trending topic.
+    prompt: `Write a deep-dive blog post about this trending topic.
 
 Topic: ${topic.title}
 Source: ${topic.source}
@@ -168,10 +160,8 @@ Return JSON only:
   "coverEmoji": "single emoji",
   "body": "full markdown post body — no frontmatter, starts with the first paragraph"
 }`,
-    }],
   });
 
-  const raw   = msg.content[0].type === 'text' ? msg.content[0].text : '{}';
   const match = raw.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('Claude returned unparseable JSON');
 

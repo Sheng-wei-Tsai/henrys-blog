@@ -1,7 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { claudeMessage } from './llm-claude';
 import type { FeedItem } from './fetch-digest';
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export interface DigestEntry {
   source:       string;
@@ -45,14 +43,11 @@ Return JSON in this exact shape:
 `;
 
 export async function summarizeItem(item: FeedItem): Promise<DigestEntry> {
-  const message = await client.messages.create({
-    model:      'claude-sonnet-4-6',
-    max_tokens: 1200,
-    system:     SYSTEM_PROMPT,
-    messages:   [{ role: 'user', content: userPrompt(item) }],
+  const raw = await claudeMessage({
+    model:  'claude-sonnet-4-6',
+    system: SYSTEM_PROMPT,
+    prompt: userPrompt(item),
   });
-
-  const raw = message.content[0].type === 'text' ? message.content[0].text : '{}';
 
   let parsed: {
     summary: string;

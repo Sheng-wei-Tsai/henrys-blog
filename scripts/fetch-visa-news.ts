@@ -3,12 +3,12 @@ import { existsSync } from 'fs';
 if (existsSync('.env.local')) dotenv.config({ path: '.env.local' });
 else dotenv.config();
 import Parser from 'rss-parser';
-import Anthropic from '@anthropic-ai/sdk';
+import { claudeMessage, ClaudeQuotaError } from './llm-claude';
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 
-const claude  = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
 const parser  = new Parser({ timeout: 20000 });
 
 // ── Config ────────────────────────────────────────────────────────
@@ -161,24 +161,18 @@ Return JSON:
 }`;
 
   try {
-    const msg = await claude.messages.create({
-      model:      'claude-haiku-4-5-20251001',
-      max_tokens: 700,
-      system:     SYSTEM_PROMPT,
-      messages:   [{ role: 'user', content: prompt }],
+    const raw = await claudeMessage({
+      model:  'claude-haiku-4-5-20251001',
+      system: SYSTEM_PROMPT,
+      prompt,
     });
-    const raw   = msg.content[0].type === 'text' ? msg.content[0].text : '{}';
     const match = raw.match(/\{[\s\S]*\}/);
     if (!match) return null;
     const parsed = JSON.parse(match[0]);
     if (!parsed.whatChanged || !parsed.whatItMeansForYou) return null;
     return parsed as Enrichment;
   } catch (err: unknown) {
-    const status = (err as { status?: number }).status;
-    if ((status === 529 || status === 500) && attempt <= 2) {
-      await sleep(attempt * 6000);
-      return enrich(item, attempt + 1);
-    }
+    if (err instanceof ClaudeQuotaError) throw err;
     console.warn(`  WARNING: Claude failed for "${item.title}": ${(err as Error).message}`);
     return null;
   }

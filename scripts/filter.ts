@@ -1,7 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { claudeMessage } from './llm-claude';
 import type { FeedItem } from './fetch-digest';
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // ── Rule-based pre-filter ────────────────────────────────────────
 const NOISE_PATTERNS = [
@@ -90,13 +88,10 @@ export async function claudeQualityGate(items: FeedItem[]): Promise<FeedItem[]> 
     .map((item, i) => `${i}. [${item.source}] ${item.title}\n   ${item.summary.slice(0, 300)}`)
     .join('\n\n');
 
-  const message = await client.messages.create({
-    model:      'claude-sonnet-4-6',
-    max_tokens: 512,
-    messages:   [{ role: 'user', content: QUALITY_GATE_PROMPT + itemList }],
+  const raw = await claudeMessage({
+    model:  'claude-sonnet-4-6',
+    prompt: QUALITY_GATE_PROMPT + itemList,
   });
-
-  const raw = message.content[0].type === 'text' ? message.content[0].text : '{}';
 
   let indices: number[] = [];
   try {

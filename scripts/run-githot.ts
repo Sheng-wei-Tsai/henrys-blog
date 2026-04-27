@@ -1,11 +1,11 @@
 import 'dotenv/config';
 import axios from 'axios';
-import Anthropic from '@anthropic-ai/sdk';
+import { claudeMessage } from './llm-claude';
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 
-const claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
 
 // ── Types ────────────────────────────────────────────────────────
 interface GithubRepo {
@@ -116,26 +116,23 @@ Return JSON:
   ]
 }`;
 
-  let msg;
+  let raw: string;
   try {
-    msg = await claude.messages.create({
-      model:      'claude-sonnet-4-6',
-      max_tokens: 900,
-      system:     SYSTEM,
-      messages:   [{ role: 'user', content: prompt }],
+    raw = await claudeMessage({
+      model:  'claude-sonnet-4-6',
+      system: SYSTEM,
+      prompt,
     });
   } catch (err: unknown) {
-    const status = (err as { status?: number }).status;
-    if ((status === 529 || status === 529) && attempt <= 3) {
+    if (attempt <= 3) {
       const wait = attempt * 8000;
-      process.stdout.write(` (overloaded, retrying in ${wait / 1000}s)... `);
+      process.stdout.write(` (error, retrying in ${wait / 1000}s)... `);
       await sleep(wait);
       return analyseRepo(repo, attempt + 1);
     }
     throw err;
   }
 
-  const raw  = msg.content[0].type === 'text' ? msg.content[0].text : '{}';
   const match = raw.match(/\{[\s\S]*\}/);
 
   let parsed: { tldr: string; useCase: string; whyTrending: string; howToUse: string; brainstorm: string[] };
