@@ -37,6 +37,7 @@ export const ENDPOINT_LIMITS: Record<string, number> = {
   'learn/diagram':        3, // Mermaid diagram via GPT-4o-mini — 3/day
   'learn/roadmap-image':  2, // Mermaid roadmap via GPT-4o-mini — 2/day
   'gap-analysis':         5, // Job-to-gap skill extraction — 5/day
+  'analytics/ai-insights': 10, // GPT-4o admin analytics — 10/day
 };
 
 // ── Subscription status ───────────────────────────────────────────────

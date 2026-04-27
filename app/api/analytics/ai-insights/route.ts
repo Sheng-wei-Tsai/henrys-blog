@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import OpenAI from 'openai';
+import { checkEndpointRateLimit, recordUsage, rateLimitResponse } from '@/lib/subscription';
 
 async function requireAdmin() {
   const cookieStore = await cookies();
@@ -18,11 +19,37 @@ async function requireAdmin() {
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+interface AnalyticsSummary {
+  overview: {
+    totalViews: number;
+    uniqueSessions: number;
+    topDay?: { date: string; views: number };
+  };
+  topPages?: Array<{ path: string; count: number }>;
+  referrers?: Array<{ source: string; count: number }>;
+  countries?: Array<{ country: string; count: number }>;
+  devices?: { desktop: number; mobile: number; tablet: number };
+}
+
+const MAX_PAYLOAD_BYTES = 50 * 1024; // 50KB
+
 export async function POST(req: Request) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const summary = await req.json();
+  const withinLimit = await checkEndpointRateLimit(admin.id, 'analytics/ai-insights');
+  if (!withinLimit) return rateLimitResponse();
+
+  const rawText = await req.text();
+  if (rawText.length > MAX_PAYLOAD_BYTES) {
+    return NextResponse.json({ error: 'Payload too large' }, { status: 413 });
+  }
+  let summary: AnalyticsSummary;
+  try {
+    summary = JSON.parse(rawText) as AnalyticsSummary;
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
 
   const prompt = `You are a growth strategist for a personal tech blog called "Henry's Digital Life" by Henry Tsai — a full-stack developer in Brisbane, Australia targeting international new graduates looking for IT jobs in Australia.
 
@@ -74,5 +101,6 @@ Return ONLY the JSON array, no markdown fences.`;
     suggestions = [{ title: 'Parse error', insight: text.slice(0, 200), action: 'Check API response' }];
   }
 
+  await recordUsage(admin.id, 'analytics/ai-insights');
   return NextResponse.json({ suggestions });
 }
