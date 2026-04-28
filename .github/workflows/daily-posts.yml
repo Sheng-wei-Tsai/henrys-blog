@@ -18,6 +18,10 @@ name: Daily Posts
 # Each pair is ≥5h apart so no two heavy jobs share a quota window.
 # Previously all four ran 23:00–23:30 UTC sharing one window → 7 days of
 # silent failures (quota exhausted by the 3rd job).
+#
+# Fallback: if Claude Pro quota is exhausted mid-run, scripts/llm-claude.ts
+# automatically falls back to the GitHub Models API (Copilot Pro+ rate
+# limit) using GH_MODELS_TOKEN. Requires `permissions: models: read`.
 
 on:
   schedule:
@@ -28,6 +32,7 @@ on:
 
 permissions:
   contents: write
+  models: read
 
 jobs:
   ai-news:
@@ -56,6 +61,7 @@ jobs:
       - name: Run AI News
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GH_MODELS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export CLAUDE_CODE_OAUTH_TOKEN=$(printf '%s' "${CLAUDE_CODE_OAUTH_TOKEN}" | tr -d '\r\n')
           set +e
@@ -93,6 +99,7 @@ jobs:
       - name: Run Visa News
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GH_MODELS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export CLAUDE_CODE_OAUTH_TOKEN=$(printf '%s' "${CLAUDE_CODE_OAUTH_TOKEN}" | tr -d '\r\n')
           set +e
@@ -130,6 +137,7 @@ jobs:
       - name: Run GitHub Hot
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GH_MODELS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export CLAUDE_CODE_OAUTH_TOKEN=$(printf '%s' "${CLAUDE_CODE_OAUTH_TOKEN}" | tr -d '\r\n')
@@ -168,6 +176,7 @@ jobs:
       - name: Run AI Digest
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GH_MODELS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export CLAUDE_CODE_OAUTH_TOKEN=$(printf '%s' "${CLAUDE_CODE_OAUTH_TOKEN}" | tr -d '\r\n')
           set +e

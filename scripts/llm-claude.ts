@@ -110,7 +110,12 @@ export async function claudeMessage(opts: ClaudeMessageOpts): Promise<string> {
       return await runOnce(opts);
     } catch (err) {
       lastErr = err;
-      if (err instanceof ClaudeQuotaError) throw err; // do not retry quota hits
+      if (err instanceof ClaudeQuotaError) {
+        // Try GitHub Models (Copilot Pro+) as a fallback before giving up.
+        const fallback = await tryGithubModelsFallback(opts, err);
+        if (fallback !== null) return fallback;
+        throw err;
+      }
       const msg = (err as Error).message ?? '';
       if (!TRANSIENT_PATTERN.test(msg) || attempt === retries) throw err;
       const wait = (attempt + 1) * 6000;
@@ -119,6 +124,33 @@ export async function claudeMessage(opts: ClaudeMessageOpts): Promise<string> {
     }
   }
   throw lastErr;
+}
+
+async function tryGithubModelsFallback(
+  opts: ClaudeMessageOpts,
+  quotaErr: ClaudeQuotaError,
+): Promise<string | null> {
+  // Lazy-import so callers without GH_MODELS_TOKEN never load the module.
+  const { hasGithubModelsToken, githubModelsMessage, GithubModelsQuotaError } =
+    await import('./llm-github');
+
+  if (!hasGithubModelsToken()) return null;
+
+  console.warn(
+    `  WARNING: Claude quota hit (${quotaErr.message.slice(0, 100)}) — falling back to GitHub Models (Copilot Pro+).`,
+  );
+  try {
+    const result = await githubModelsMessage(opts);
+    console.warn(`  ✓ GitHub Models fallback succeeded`);
+    return result;
+  } catch (fallbackErr) {
+    if (fallbackErr instanceof GithubModelsQuotaError) {
+      console.warn(`  WARNING: GitHub Models quota also exhausted — giving up`);
+    } else {
+      console.warn(`  WARNING: GitHub Models fallback failed — ${(fallbackErr as Error).message?.slice(0, 200)}`);
+    }
+    return null;
+  }
 }
 
 /**
