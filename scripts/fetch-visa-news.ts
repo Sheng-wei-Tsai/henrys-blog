@@ -272,15 +272,30 @@ async function main() {
   console.log(`Enriching ${toProcess.length} item${toProcess.length !== 1 ? 's' : ''} with Claude...\n`);
 
   const written: string[] = [];
+  let quotaExhausted = false;
   for (const item of toProcess) {
     process.stdout.write(`  -> [${item.feedId}] ${item.title.slice(0, 60)}... `);
-    const enrichment = await enrich(item);
+    let enrichment: Enrichment | null = null;
+    if (!quotaExhausted) {
+      try {
+        enrichment = await enrich(item);
+      } catch (err) {
+        if (err instanceof ClaudeQuotaError) {
+          quotaExhausted = true;
+          console.log('quota hit — writing remaining as plain');
+        } else {
+          throw err;
+        }
+      }
+    }
     const md = writeMarkdown(item, enrichment);
     const filePath = path.join(OUT_DIR, `${item.slug}.md`);
     fs.writeFileSync(filePath, md, 'utf8');
     written.push(filePath);
-    console.log(enrichment ? 'enriched' : 'plain');
-    await sleep(1000);
+    if (!quotaExhausted || enrichment) {
+      console.log(enrichment ? 'enriched' : 'plain');
+    }
+    if (!quotaExhausted) await sleep(1000);
   }
 
   console.log(`\nWrote ${written.length} file${written.length !== 1 ? 's' : ''} to content/visa-news/`);

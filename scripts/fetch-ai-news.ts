@@ -375,20 +375,37 @@ async function main() {
   console.log(`Enriching ${toProcess.length} item${toProcess.length !== 1 ? 's' : ''} with Claude...\n`);
 
   const written: string[] = [];
+  let quotaExhausted = false;
   for (const item of toProcess) {
     process.stdout.write(`  -> [${item.feedId}] ${item.title.slice(0, 55)}... `);
 
-    // Fetch richer article content for better Claude context
-    process.stdout.write('fetching article... ');
-    const articleContent = item.link ? await fetchArticleContent(item.link) : '';
+    let enrichment: Enrichment | null = null;
+    if (!quotaExhausted) {
+      // Fetch richer article content for better Claude context
+      process.stdout.write('fetching article... ');
+      const articleContent = item.link ? await fetchArticleContent(item.link) : '';
+      try {
+        enrichment = await enrich(item, articleContent);
+      } catch (err) {
+        if (err instanceof ClaudeQuotaError) {
+          quotaExhausted = true;
+          console.log('quota hit — writing remaining as plain');
+        } else {
+          throw err;
+        }
+      }
+    }
 
-    const enrichment = await enrich(item, articleContent);
     const md = writeMarkdown(item, enrichment);
     const filePath = path.join(OUT_DIR, `${item.slug}.md`);
     fs.writeFileSync(filePath, md, 'utf8');
     written.push(filePath);
-    console.log(enrichment ? 'enriched ✓' : 'plain');
-    await sleep(1000);
+    if (!quotaExhausted || enrichment) {
+      console.log(enrichment ? 'enriched ✓' : 'plain');
+    } else {
+      console.log(`  ${item.slug} (plain)`);
+    }
+    if (!quotaExhausted) await sleep(1000);
   }
 
   console.log(`\nWrote ${written.length} file${written.length !== 1 ? 's' : ''} to content/ai-news/`);
