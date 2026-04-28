@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import axios from 'axios';
-import { claudeMessage } from './llm-claude';
+import { claudeMessage, ClaudeQuotaError } from './llm-claude';
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
@@ -124,6 +124,7 @@ Return JSON:
       prompt,
     });
   } catch (err: unknown) {
+    if (err instanceof ClaudeQuotaError) throw err; // do not retry quota
     if (attempt <= 3) {
       const wait = attempt * 8000;
       process.stdout.write(` (error, retrying in ${wait / 1000}s)... `);
@@ -226,16 +227,31 @@ async function main() {
 
   console.log(`\n🤖 Analysing top ${repos.length} repos with Claude...\n`);
   const analyses: RepoAnalysis[] = [];
+  let quotaExhausted = false;
   for (const repo of repos) {
     process.stdout.write(`   → ${repo.full_name} (★${repo.stargazers_count.toLocaleString()})... `);
+    if (quotaExhausted) {
+      console.log('skipped (quota exhausted)');
+      continue;
+    }
     try {
       const analysis = await analyseRepo(repo);
       analyses.push(analysis);
       console.log('✓');
     } catch (err) {
-      console.log(`✗ skipped (${(err as Error).message.slice(0, 50)})`);
+      if (err instanceof ClaudeQuotaError) {
+        quotaExhausted = true;
+        console.log('quota hit — stopping further analyses');
+      } else {
+        console.log(`✗ skipped (${(err as Error).message.slice(0, 50)})`);
+      }
     }
     await sleep(1500); // small gap between calls to avoid rate limits
+  }
+
+  if (analyses.length === 0) {
+    console.warn('\n⚠️  No analyses produced (quota exhausted on first call). Skipping post — will retry next window.');
+    process.exit(0);
   }
 
   const dateStr  = formatDate(new Date());

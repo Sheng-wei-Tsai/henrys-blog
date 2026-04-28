@@ -1,4 +1,4 @@
-import { claudeMessage } from './llm-claude';
+import { claudeMessage, ClaudeQuotaError } from './llm-claude';
 import type { FeedItem } from './fetch-digest';
 
 // ── Rule-based pre-filter ────────────────────────────────────────
@@ -88,10 +88,19 @@ export async function claudeQualityGate(items: FeedItem[]): Promise<FeedItem[]> 
     .map((item, i) => `${i}. [${item.source}] ${item.title}\n   ${item.summary.slice(0, 300)}`)
     .join('\n\n');
 
-  const raw = await claudeMessage({
-    model:  'claude-sonnet-4-6',
-    prompt: QUALITY_GATE_PROMPT + itemList,
-  });
+  let raw: string;
+  try {
+    raw = await claudeMessage({
+      model:  'claude-sonnet-4-6',
+      prompt: QUALITY_GATE_PROMPT + itemList,
+    });
+  } catch (err) {
+    if (err instanceof ClaudeQuotaError) {
+      console.warn(`\n⚠️  Claude quota hit on quality gate — falling back to top-${Math.min(6, items.length)} by rule score`);
+      return items.slice(0, 6);
+    }
+    throw err;
+  }
 
   let indices: number[] = [];
   try {

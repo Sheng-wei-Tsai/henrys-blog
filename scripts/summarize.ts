@@ -1,4 +1,4 @@
-import { claudeMessage } from './llm-claude';
+import { claudeMessage, ClaudeQuotaError } from './llm-claude';
 import type { FeedItem } from './fetch-digest';
 
 export interface DigestEntry {
@@ -80,15 +80,43 @@ export async function summarizeItem(item: FeedItem): Promise<DigestEntry> {
   };
 }
 
+function plainEntry(item: FeedItem): DigestEntry {
+  return {
+    source:          item.source,
+    title:           item.title,
+    link:            item.link,
+    summary:         item.summary.slice(0, 400),
+    whyItMatters:    '',
+    whatYouCanBuild: '',
+    keyTakeaways:    [],
+  };
+}
+
 export async function summarizeAll(items: FeedItem[]): Promise<DigestEntry[]> {
   console.log(`\n🤖 Summarizing ${items.length} items with Claude Sonnet...`);
   const results: DigestEntry[] = [];
+  let quotaExhausted = false;
 
   for (const item of items) {
     process.stdout.write(`   → [${item.source}] ${item.title.slice(0, 60)}... `);
-    const entry = await summarizeItem(item);
-    results.push(entry);
-    console.log('✓');
+    if (quotaExhausted) {
+      results.push(plainEntry(item));
+      console.log('plain (quota exhausted)');
+      continue;
+    }
+    try {
+      const entry = await summarizeItem(item);
+      results.push(entry);
+      console.log('✓');
+    } catch (err) {
+      if (err instanceof ClaudeQuotaError) {
+        console.log('quota hit — remaining items as plain');
+        quotaExhausted = true;
+        results.push(plainEntry(item));
+      } else {
+        console.log(`✗ skipped (${(err as Error).message.slice(0, 50)})`);
+      }
+    }
   }
 
   return results;
