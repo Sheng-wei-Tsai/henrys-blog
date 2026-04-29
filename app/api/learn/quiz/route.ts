@@ -20,9 +20,23 @@ export async function POST(req: NextRequest) {
   try { body = await req.json(); }
   catch { return NextResponse.json({ error: 'Bad request' }, { status: 400 }); }
 
-  const { videoId, videoTitle, studyGuide } = body;
-  if (!videoId || !videoTitle || !studyGuide) {
+  const { videoId, videoTitle: rawTitle, studyGuide } = body;
+  if (!videoId || !rawTitle || !studyGuide) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+  }
+
+  // Truncate untrusted client strings before interpolation into OpenAI prompt
+  const videoTitle = rawTitle.slice(0, 200);
+  if (studyGuide.summary) studyGuide.summary = studyGuide.summary.slice(0, 500);
+  if (studyGuide.coreInsights) {
+    studyGuide.coreInsights = studyGuide.coreInsights.slice(0, 20).map(s => s.slice(0, 200));
+  }
+  if (studyGuide.keyConcepts) {
+    studyGuide.keyConcepts = studyGuide.keyConcepts.slice(0, 20).map(c => ({
+      term: c.term.slice(0, 100),
+      definition: c.definition.slice(0, 300),
+      whyMatters: c.whyMatters.slice(0, 200),
+    }));
   }
 
   if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'OpenAI API not configured' }, { status: 503 });
