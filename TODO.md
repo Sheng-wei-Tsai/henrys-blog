@@ -1,6 +1,6 @@
 # TODO — TechPath AU Feature Backlog
 
-**Last updated:** 2026-04-22
+**Last updated:** 2026-04-29
 **Product vision:** The definitive career platform for international IT graduates entering the Australian job market.
 **Single source of truth for:** what is done, what is next, and why.
 
@@ -96,9 +96,9 @@
 **Files already done:** `app/api/stripe/webhook/route.ts`, `lib/subscription.ts`, `app/pricing/page.tsx`
 
 ### Remaining Security Items
-- [ ] Add `.limit()` to unbounded queries in `app/api/comments/route.ts` + `app/api/alerts/route.ts`
-- [ ] Fix async `cookies()` in `alerts/route.ts` (Next.js 16 breaking change)
-- [ ] Stripe webhook signature validation tests — `app/api/stripe/webhook/route.test.ts`
+- [x] Add `.limit()` to unbounded queries in `app/api/comments/route.ts` + `app/api/alerts/route.ts` ✅ *2026-04-29 verified — both at .limit(500) / .limit(100)*
+- [x] Fix async `cookies()` in `alerts/route.ts` (Next.js 16 breaking change) ✅ *2026-04-29 verified — uses `await createSupabaseServer()`*
+- [x] Stripe webhook signature validation tests — `app/api/stripe/webhook/route.test.ts` ✅ *2026-04-29 verified — file exists with 6 tests covering invalid signature, unknown events, checkout, subscription delete*
 
 ---
 
@@ -277,6 +277,35 @@
 - [ ] Add Vitest test for /api/admin/users/[id] — 403 without admin role, PATCH rejects invalid role enum, DELETE blocks self-ban [tests]
 - [ ] Add Vitest test for /api/alerts — DELETE id ownership check rejects another user's alert (PGRST affected-rows = 0) [tests]
 - [ ] Add Vitest test for /api/learn/progress — POST 401 without session, upsert on `(user_id, video_id)` conflict preserves prior quiz_score [tests]
+
+---
+
+## 🛡 Daily Analyst Findings — 2026-04-29
+
+> Fresh items from today's Opus scan. `npm audit` = 0 vulns; `tsc --noEmit` = clean.
+> Priority 0 "Remaining Security Items" all verified done in code (ticked above).
+> Today's surface: untrusted `videoId`/`videoTitle` entering YouTube routes, in-memory rate-limit Maps growing unbounded, and another wave of hardcoded status hexes (visa-tracker page + readiness-score band colours) that break dark mode.
+
+### Security
+- [ ] Validate `videoId` with `/^[A-Za-z0-9_-]{11}$/` before Supabase + OpenAI calls in app/api/learn/progress/route.ts:20, app/api/learn/transcript/route.ts:35, app/api/learn/quiz/route.ts:24 — any string is currently accepted [security]
+- [ ] Bound `quizScore` to an integer 0–100 in app/api/learn/progress/route.ts:28 — column accepts any numeric value posted by the client [security]
+- [ ] Truncate `videoTitle` (`.slice(0,200)`) before Supabase upsert + OpenAI prompt in app/api/learn/progress/route.ts:25 and app/api/learn/quiz/route.ts:23 [security]
+- [ ] Truncate `jobTitle` (`.slice(0,200)`) and `company` (`.slice(0,200)`) before prompt interpolation in app/api/cover-letter/route.ts:47-48 — only `jobDescription`/`background` are sliced today [security]
+- [ ] Evict expired entries from in-memory rate-limit Maps in app/api/log-error/route.ts:5 and app/api/track/route.ts:11 — Maps never delete expired keys, so a long-lived serverless instance accumulates unbounded entries [security]
+
+### Style (dark-mode breakage)
+- [ ] Replace hardcoded BANDS hex array (`#10b981`/`#22c55e`/`#f59e0b`/`#f97316`/`#ef4444`) with token names returned as `bandColor` in app/api/readiness-score/route.ts:9-13 — raw hex leaks to client and breaks the readiness ring in dark mode [style]
+- [ ] Replace 13 hardcoded status hexes (`#3b82f6`/`#8b5cf6`/`#10b981`/`#fef9c3`/`#fde047`/`#854d0e`/`#ecfdf5`/`#6ee7b7`/`#065f46`/`#f0fdf4`/`#166534`/`#fff7ed`/`#9a3412`) with design tokens in app/dashboard/visa-tracker/page.tsx:73-74, 230, 232, 268-270, 281, 353, 388-389, 392, 396-397, 400 [style]
+- [ ] Replace `#c8a800` top-3 rank colour with `var(--gold)` in app/au-insights/Sponsorship.tsx:96 [style]
+- [ ] Replace stat `#10b981` (+53% growth) with `var(--jade)` in app/au-insights/Sponsorship.tsx:53 [style]
+
+### Code Quality
+- [ ] Replace `(r: any)` with typed interfaces (`JSearchHit`, `GoogleJobsHit`, `JobicyHit`, `RemotiveHit`) in app/api/jobs/route.ts:116, 200, 202, 236, 374, 408 — extends the AdzunaHit pattern already targeted in the 2026-04-22 batch [quality]
+- [ ] Remove `as any` cast on Anthropic document content in app/api/resume-analyse/route.ts:87 — `@anthropic-ai/sdk` 0.82.0 types `document` content blocks natively in `MessageParam` [quality]
+
+### Tests
+- [ ] Add Vitest test for /api/diagrams/generate — 401 without auth, 400 when `topic` is missing or <3 chars, 200 returns a `mermaid` string starting with the expected diagram-type keyword [tests]
+- [ ] Add Vitest test for /api/admin/stats — 403 without admin role, 200 returns `counts` + `recentComments` + `recentUsers` for admin [tests]
 
 ---
 
