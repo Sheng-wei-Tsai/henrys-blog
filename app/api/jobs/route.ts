@@ -513,7 +513,7 @@ export async function GET(req: NextRequest) {
     const jsearchJobs  = filterIT(rawJSearch);
     const adzunaJobs   = filterIT(rawAdzuna);
     const gjobsJobs    = filterIT(rawGJobs);
-    console.log(`[jobs] remote: remotive=${rawRemotive.length}→${remotiveJobs.length} jobicy=${rawJobicy.length}→${jobicyJobs.length} jsearch=${rawJSearch.length}→${jsearchJobs.length} gjobs=${rawGJobs.length}→${gjobsJobs.length} adzuna=${rawAdzuna.length}→${adzunaJobs.length}`);
+    if (process.env.NODE_ENV !== 'production') console.log(`[jobs] remote: remotive=${rawRemotive.length}→${remotiveJobs.length} jobicy=${rawJobicy.length}→${jobicyJobs.length} jsearch=${rawJSearch.length}→${jsearchJobs.length} gjobs=${rawGJobs.length}→${gjobsJobs.length} adzuna=${rawAdzuna.length}→${adzunaJobs.length}`);
 
     const merged = sanitizeJobs([
       ...addUnique(remotiveJobs),
@@ -552,7 +552,7 @@ export async function GET(req: NextRequest) {
 
     const jsearchJobs = filterIT(rawJSearch);
     const adzunaJobs  = filterIT(rawAdzuna);
-    console.log(`[jobs] freelance: jsearch=${rawJSearch.length}→${jsearchJobs.length} adzuna=${rawAdzuna.length}→${adzunaJobs.length}`);
+    if (process.env.NODE_ENV !== 'production') console.log(`[jobs] freelance: jsearch=${rawJSearch.length}→${jsearchJobs.length} adzuna=${rawAdzuna.length}→${adzunaJobs.length}`);
 
     const merged = sanitizeJobs([
       ...addUnique(jsearchJobs),
@@ -599,7 +599,7 @@ export async function GET(req: NextRequest) {
   const googleFinal = addUnique(filterIT(rawGJobs));
   const adzunaFinal = addUnique(filterIT(rawAdzuna));
 
-  console.log(`[jobs] au: scraped=${rawScraped.length}→${scrapedJobs.length} google=${rawGJobs.length}→${googleFinal.length} adzuna=${rawAdzuna.length}→${adzunaFinal.length}`);
+  if (process.env.NODE_ENV !== 'production') console.log(`[jobs] au: scraped=${rawScraped.length}→${scrapedJobs.length} google=${rawGJobs.length}→${googleFinal.length} adzuna=${rawAdzuna.length}→${adzunaFinal.length}`);
 
   // Jobs array order: scraped → google_jobs → adzuna
   // scrapedCount and googleCount are boundary indices for UI section rendering.

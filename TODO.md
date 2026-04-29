@@ -234,7 +234,7 @@
 - [ ] Type `loadFromHistory(item: any)` — define CoverLetterHistoryItem interface in app/cover-letter/page.tsx:128 [quality]
 - [ ] Replace `status as any` with `Application['status']` union in app/dashboard/page.tsx:110 [quality]
 - [ ] Replace `catch (e: any)` with `catch (e)` (or `e: unknown` + narrowing) in app/jobs/page.tsx:399 [quality]
-- [ ] Gate `console.log` behind `NODE_ENV !== 'production'` in app/api/jobs/route.ts:259 — leaks job-source counts on every request [quality]
+- [x] Gate `console.log` behind `NODE_ENV !== 'production'` in app/api/jobs/route.ts:259 — leaks job-source counts on every request [quality] ✅ 2026-04-29
 - [ ] Remove duplicated `serverSupabase()` helpers in app/api/comments/route.ts:5 and app/api/comments/[id]/route.ts:5 — use `createSupabaseServer()` from lib/auth-server.ts per AGENTS.md §5.2 [quality]
 - [ ] Remove unused .env.example entries: `GEMINI_API_KEY`, `SCRAPERAPI_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_LOGO_DEV_TOKEN` (logo-dev is referenced but token never read server-side) — cross-check against actual `process.env` usage [quality]
 
