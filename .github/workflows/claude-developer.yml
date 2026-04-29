@@ -4,7 +4,7 @@ name: Claude Daily Developer (Sonnet)
 # Picks ONE task from TODO.md, implements it, passes quality gate,
 # pushes directly to main, creates dev-done/DATE sentinel.
 # No PRs — fixes land in main immediately so TODO.md stays up to date.
-# On credit exhaustion → pushes quota-exhausted/DATE sentinel, creates Copilot issue.
+# On credit exhaustion → pushes quota-reset-at/EPOCH sentinel, creates Copilot issue.
 
 on:
   schedule:
@@ -33,15 +33,28 @@ jobs:
           TODAY=$(date -u +%Y-%m-%d)
           echo "today=${TODAY}" >> $GITHUB_OUTPUT
 
-          EXHAUSTED=$(git ls-remote --heads origin "quota-exhausted/${TODAY}" 2>/dev/null | wc -l | tr -d ' ')
+          # Check epoch-based quota sentinel (self-expiring)
+          NOW=$(date +%s)
+          SENTINEL=$(git ls-remote --heads origin "quota-reset-at/*" 2>/dev/null \
+            | awk '{print $2}' | sort -rn | head -1)
+          if [ -n "$SENTINEL" ]; then
+            EPOCH=$(basename "$SENTINEL")
+            if echo "$EPOCH" | grep -qE '^[0-9]{10}$' && [ "$NOW" -lt "$EPOCH" ]; then
+              WAIT=$(( (EPOCH - NOW) / 60 ))
+              HUMAN=$(date -u -d "@${EPOCH}" '+%H:%M UTC')
+              echo "skip=true" >> $GITHUB_OUTPUT
+              echo "Quota resets at ${HUMAN} (in ${WAIT} min). Exiting."
+              exit 0
+            else
+              git push origin --delete "${SENTINEL#refs/heads/}" 2>/dev/null || true
+            fi
+          fi
+
           WIN_COUNT=$(git ls-remote --heads origin | grep "dev-done/${TODAY}-w" | wc -l | tr -d ' ')
           WINDOW=$((WIN_COUNT + 1))
           echo "window=${WINDOW}" >> $GITHUB_OUTPUT
 
-          if [ "$EXHAUSTED" -gt "0" ]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-            echo "Credits already exhausted today. Exiting."
-          elif [ "$WIN_COUNT" -ge "4" ]; then
+          if [ "$WIN_COUNT" -ge "4" ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
             echo "All 4 quota windows used today. Exiting."
           else
@@ -99,7 +112,8 @@ jobs:
           CLAUDE_EXIT=${PIPESTATUS[0]}
           echo "exit_code=${CLAUDE_EXIT}" >> "$GITHUB_OUTPUT"
 
-          if grep -qiE "credit balance is too low|insufficient credits?|quota.*exceeded|billing.*hard limit|usage limit reached|rate limit(ed)?|5-hour limit|claude ai usage limit|try again.{0,30}(hour|later)|api error: header .* has invalid value|oauth.*expired|unauthorized|invalid.*api.*key" claude.log; then
+          sed -i 's/\x1b\[[0-9;]*[mGKHFJSTsu]//g' claude.log
+          if grep -qiE "hit your limit|resets.*utc|credit balance is too low|insufficient credits?|quota.*exceeded|billing.*hard limit|usage limit reached|rate limit(ed)?|5-hour limit|claude ai usage limit|try again.{0,30}(hour|later)|api error: header .* has invalid value|oauth.*expired|unauthorized|invalid.*api.*key" claude.log; then
             echo "claude_unavailable=true"  >> "$GITHUB_OUTPUT"
             echo "succeeded=false"          >> "$GITHUB_OUTPUT"
             echo "::warning::Anthropic unavailable (quota or auth error). Handing off to Copilot fallback."
@@ -115,15 +129,42 @@ jobs:
           # Always exit 0 here — downstream steps decide actual job outcome
           exit 0
 
-      - name: Create quota-exhausted sentinel branch
+      - name: Parse reset time and push quota sentinel
         if: steps.guard.outputs.skip == 'false' && steps.claude.outputs.claude_unavailable == 'true'
-        env:
-          TODAY: ${{ steps.guard.outputs.today }}
         run: |
-          git checkout -b "quota-exhausted/${TODAY}" 2>/dev/null || git checkout "quota-exhausted/${TODAY}"
-          git push origin "quota-exhausted/${TODAY}" 2>/dev/null || true
+          RAW=$(grep -oiE "resets [0-9]{1,2}:[0-9]{2} ?(am|pm)" claude.log 2>/dev/null | head -1)
+          RESET_EPOCH=""
+          if [ -n "$RAW" ]; then
+            TPART=$(echo "$RAW" | sed 's/resets //')
+            NOW=$(date +%s)
+            CANDIDATE=$(date -u -d "today ${TPART}" +%s 2>/dev/null || echo "")
+            if [ -n "$CANDIDATE" ]; then
+              [ "$CANDIDATE" -le "$NOW" ] && CANDIDATE=$(date -u -d "tomorrow ${TPART}" +%s)
+              RESET_EPOCH="$CANDIDATE"
+            fi
+          fi
+          [ -z "$RESET_EPOCH" ] && RESET_EPOCH=$(date -u -d '+5 hours' +%s)
+
+          RESET_HUMAN=$(date -u -d "@${RESET_EPOCH}" '+%H:%M UTC %Y-%m-%d')
+          NOW=$(date +%s)
+          WAIT_MINS=$(( (RESET_EPOCH - NOW + 59) / 60 ))
+          SENTINEL="quota-reset-at/${RESET_EPOCH}"
+
+          git checkout -b "$SENTINEL" 2>/dev/null || git checkout "$SENTINEL"
+          git push origin "$SENTINEL" 2>/dev/null || true
           git checkout main
-          echo "Sentinel branch pushed. Future runs today will skip immediately."
+          echo "Sentinel: ${SENTINEL} — resets ${RESET_HUMAN}"
+
+          {
+            echo "## ⏳ Claude Developer Quota Exhausted"
+            echo "| | |"
+            echo "|---|---|"
+            echo "| **Resets at** | \`${RESET_HUMAN}\` |"
+            echo "| **Wait** | ~${WAIT_MINS} min |"
+            echo "| **Sentinel** | \`${SENTINEL}\` |"
+            echo ""
+            echo "Hourly developer cron skips until reset epoch passes."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Check for existing Copilot fallback issue
         id: existing_issue
@@ -268,6 +309,7 @@ jobs:
               fh.write('\n'.join(lines))
           PYEOF
 
+          gh label create "copilot-fallback" --color "0075ca" --description "Task picked up by Copilot when Claude quota is exhausted" 2>/dev/null || true
           ISSUE_URL=$(gh issue create \
             --title "[Copilot Fallback] ${TODAY} — ${TASK}" \
             --label "copilot-fallback" \

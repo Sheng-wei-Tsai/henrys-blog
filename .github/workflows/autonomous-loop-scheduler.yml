@@ -46,13 +46,19 @@ jobs:
           TODAY=$(date -u +%Y-%m-%d)
           NOW_EPOCH=$(date +%s)
 
-          # Skip if quota already exhausted today
-          EXHAUSTED=$(gh api "repos/${GITHUB_REPOSITORY}/git/refs/heads/quota-exhausted/${TODAY}" \
-            --silent 2>/dev/null && echo "1" || echo "0")
-          if [ "$EXHAUSTED" = "1" ]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-            echo "Quota already exhausted today. Skipping."
-            exit 0
+          # Skip if quota sentinel is active (epoch-based, self-expiring)
+          SENTINEL=$(gh api "repos/${GITHUB_REPOSITORY}/git/refs/heads" \
+            --jq '[.[] | select(.ref | startswith("refs/heads/quota-reset-at/"))] | sort_by(.ref) | last | .ref' \
+            --silent 2>/dev/null || echo "")
+          if [ -n "$SENTINEL" ] && [ "$SENTINEL" != "null" ]; then
+            EPOCH=$(echo "$SENTINEL" | sed 's|refs/heads/quota-reset-at/||')
+            if echo "$EPOCH" | grep -qE '^[0-9]{10}$' && [ "$NOW_EPOCH" -lt "$EPOCH" ]; then
+              WAIT=$(( (EPOCH - NOW_EPOCH) / 60 ))
+              HUMAN=$(date -u -d "@${EPOCH}" '+%H:%M UTC')
+              echo "skip=true" >> $GITHUB_OUTPUT
+              echo "Quota resets at ${HUMAN} (in ${WAIT} min). Skipping."
+              exit 0
+            fi
           fi
 
           # Count how many windows have already run today

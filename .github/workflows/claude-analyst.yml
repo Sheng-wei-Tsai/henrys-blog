@@ -78,9 +78,30 @@ jobs:
             -p "$(cat .github/prompts/analyst.md)" 2>&1 | tee opus.log
           OPUS_EXIT=${PIPESTATUS[0]}
 
-          if grep -qiE "hit your limit|credit balance is too low|quota.*exceeded|rate limit|5-hour limit|usage limit reached|claude ai usage limit|try again.{0,30}(hour|later)" opus.log; then
-            echo "::warning::Opus quota hit — analysis sentinel will be created to prevent hourly retries"
+          sed -i 's/\x1b\[[0-9;]*[mGKHFJSTsu]//g' opus.log
+          if grep -qiE "hit your limit|resets.*utc|credit balance is too low|quota.*exceeded|rate limit|5-hour limit|usage limit reached|claude ai usage limit|try again.{0,30}(hour|later)" opus.log; then
             echo "quota_hit=true" >> "$GITHUB_OUTPUT"
+            # Parse reset time for step summary
+            RAW=$(grep -oiE "resets [0-9]{1,2}:[0-9]{2} ?(am|pm)" opus.log 2>/dev/null | head -1)
+            RESET_HUMAN="unknown"
+            if [ -n "$RAW" ]; then
+              TPART=$(echo "$RAW" | sed 's/resets //')
+              NOW=$(date +%s)
+              CANDIDATE=$(date -u -d "today ${TPART}" +%s 2>/dev/null || echo "")
+              if [ -n "$CANDIDATE" ]; then
+                [ "$CANDIDATE" -le "$NOW" ] && CANDIDATE=$(date -u -d "tomorrow ${TPART}" +%s)
+                RESET_HUMAN=$(date -u -d "@${CANDIDATE}" '+%H:%M UTC %Y-%m-%d')
+              fi
+            fi
+            echo "::warning::Analyst quota hit — resets ${RESET_HUMAN}"
+            {
+              echo "## ⏳ Claude Analyst Quota Hit"
+              echo "| | |"
+              echo "|---|---|"
+              echo "| **Resets at** | \`${RESET_HUMAN}\` |"
+              echo ""
+              echo "Analysis sentinel pushed — hourly cron will not retry today."
+            } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "quota_hit=false" >> "$GITHUB_OUTPUT"
           fi
