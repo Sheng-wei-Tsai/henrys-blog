@@ -20,10 +20,21 @@ export async function POST(req: NextRequest) {
   try { body = await req.json(); }
   catch { return NextResponse.json({ error: 'Bad request' }, { status: 400 }); }
 
-  const { videoId, videoTitle, studyGuide } = body;
-  if (!videoId || !videoTitle || !studyGuide) {
+  const { videoId, videoTitle: rawVideoTitle, studyGuide: rawStudyGuide } = body;
+  if (!videoId || !rawVideoTitle || !rawStudyGuide) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
+
+  const videoTitle = rawVideoTitle.slice(0, 200);
+  const studyGuide: StudyGuide = {
+    summary: (rawStudyGuide.summary ?? '').slice(0, 1000),
+    keyConcepts: (rawStudyGuide.keyConcepts ?? []).map(c => ({
+      term: c.term.slice(0, 100),
+      definition: c.definition.slice(0, 300),
+      whyMatters: c.whyMatters.slice(0, 300),
+    })),
+    coreInsights: (rawStudyGuide.coreInsights ?? []).map(s => s.slice(0, 300)),
+  };
 
   if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'OpenAI API not configured' }, { status: 503 });
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
