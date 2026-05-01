@@ -147,7 +147,7 @@
 ### Expand Test Coverage
 **Current:** 41 tests. Target: critical paths covered.
 - [x] 2026-05-01 `track` API route (currently swallows errors silently)
-- [ ] `gap-analysis` route (pgvector path)
+- [x] `gap-analysis` route (pgvector path) ✅ 2026-05-01
 - [x] 2026-05-01 `cover-letter` route (streaming)
 - [x] Stripe webhook events (checkout, renewal, cancellation) ✅ 2026-05-01
 - [ ] `AuthProvider` component
@@ -231,7 +231,7 @@
 - [x] Add `checkEndpointRateLimit(admin.id, 'analytics/ai-insights')` to app/api/analytics/ai-insights/route.ts — GPT-4o call is unmetered [security] ✅ 2026-04-27
 
 ### Performance / A11y
-- [ ] Replace raw `<img>` with `next/image` in components/Comments.tsx:20 — user avatar CLS + bandwidth [perf]
+- [x] Replace raw `<img>` with `next/image` in components/Comments.tsx:20 — user avatar CLS + bandwidth [perf] ✅ 2026-05-01 (already done in code)
 
 ### Style (dark-mode breakage)
 - [x] Replace `#fffbeb` / `#fcd34d` / `#92400e` / `#b45309` with design tokens (var(--gold), var(--parchment), var(--text-secondary)) in app/au-insights/Sponsorship.tsx:31-42 — disclaimer box unreadable in dark mode [style] ✅ 2026-05-01

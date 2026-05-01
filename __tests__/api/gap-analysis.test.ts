@@ -54,15 +54,18 @@ vi.mock('@/lib/subscription', () => ({
 
 // ── OpenAI mock ───────────────────────────────────────────────────────────────
 vi.mock('openai', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    chat: {
-      completions: {
-        create: vi.fn().mockResolvedValue({
-          choices: [{ message: { content: '["React","TypeScript"]' } }],
-        }),
+  // Must use regular function (not arrow) so `new OpenAI()` works as constructor
+  default: vi.fn(function() {
+    return {
+      chat: {
+        completions: {
+          create: vi.fn().mockResolvedValue({
+            choices: [{ message: { content: '["React","TypeScript"]' } }],
+          }),
+        },
       },
-    },
-  })),
+    };
+  }),
 }));
 
 const { POST } = await import('@/app/api/gap-analysis/route');
@@ -107,5 +110,30 @@ describe('POST /api/gap-analysis', () => {
     expect(body.cached).toBe(true);
     expect(body.matchPercent).toBe(80);
     expect(body.jobId).toBe('j1');
+  });
+
+  it('returns 400 when required fields are missing', async () => {
+    mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } }, error: null });
+    mockCheckEndpointRateLimit.mockResolvedValueOnce(true);
+    const res = await POST(makePost({ jobId: 'j1' })); // missing description
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBeTruthy();
+  });
+
+  it('performs full analysis and returns non-cached result with computed matchPercent', async () => {
+    mockGetUser.mockResolvedValueOnce({ data: { user: { id: 'u1' } }, error: null });
+    mockCheckEndpointRateLimit.mockResolvedValueOnce(true);
+    // mockMaybySingle default returns { data: null } → cache miss → full analysis path
+
+    const res = await POST(makePost({ jobId: 'j-fresh', description: 'Build apps with React and TypeScript' }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.cached).toBe(false);
+    expect(body.jobId).toBe('j-fresh');
+    expect(Array.isArray(body.allJdSkills)).toBe(true);
+    expect(typeof body.matchPercent).toBe('number');
+    expect(body.matchPercent).toBeGreaterThanOrEqual(0);
+    expect(body.matchPercent).toBeLessThanOrEqual(100);
   });
 });
