@@ -109,9 +109,9 @@ export async function POST(req: NextRequest) {
         role: 'user',
         content: [
           {
-            type: 'document',
-            source: { type: 'base64', media_type: 'application/pdf', data: base64 },
-          } as any,
+            type: 'document' as const,
+            source: { type: 'base64' as const, media_type: 'application/pdf' as const, data: base64 },
+          },
           {
             type: 'text',
             text: 'Analyse this resume for the Australian IT job market. Return the JSON analysis as instructed.',
