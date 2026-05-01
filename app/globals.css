@@ -1450,3 +1450,12 @@ h3, h4 {
   background-image: radial-gradient(circle, rgba(0,0,0,0.18) 0.06em, transparent 0.06em);
   background-size: 0.55em 0.55em;
 }
+
+/* ── Post-a-Role form submit button ── */
+.post-role-submit-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+.post-role-submit-btn:focus-visible {
+  outline: 3px solid var(--vermilion);
+  outline-offset: 2px;
+}

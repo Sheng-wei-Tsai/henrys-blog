@@ -52,10 +52,32 @@ export async function POST(req: NextRequest) {
 
   switch (event.type) {
 
-    // ── Payment succeeded → activate Pro ──────────────────────────
+    // ── Payment succeeded → activate Pro or create job listing ────
     case 'checkout.session.completed': {
-      const session  = event.data.object as Stripe.Checkout.Session;
-      const userId   = session.metadata?.supabase_user_id;
+      const session = event.data.object as Stripe.Checkout.Session;
+
+      // ── Job listing one-time payment ───────────────────────────
+      if (session.metadata?.type === 'job_listing') {
+        const m = session.metadata;
+        const { error } = await sb.from('job_listings').insert({
+          company:          m.company,
+          title:            m.title,
+          location:         m.location,
+          job_type:         m.jobType,
+          description:      m.description,
+          apply_url:        m.applyUrl,
+          salary:           m.salary || null,
+          contact_email:    m.contactEmail,
+          status:           'active',
+          stripe_session_id: session.id,
+          expires_at:       new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        });
+        if (error) console.error(`[stripe/webhook] job_listings insert failed event=${event.id}:`, error.message);
+        break;
+      }
+
+      // ── Subscription payment ────────────────────────────────────
+      const userId = session.metadata?.supabase_user_id;
       if (!userId) break;
 
       let expiresAt: string | null = null;
