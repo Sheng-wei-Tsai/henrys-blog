@@ -1133,14 +1133,14 @@ export default function StudySession({
         if (parsed.error) {
           setGuideError(parsed.error);
         } else if (!parsed.essay && !parsed.summary && !(parsed.keyConcepts?.length)) {
-          setGuideError('Could not read this video. It may be private, a live stream, or temporarily unavailable — try again or open in NotebookLM.');
+          setGuideError('Could not extract study content. The video may be music-only, a live stream, or private. Try a tech tutorial or lecture instead.');
         } else {
           setStreamingEssay('');
           setGuide(parsed);
         }
       } catch { setGuideError('Could not parse the study guide.'); }
     } else {
-      setGuideError('Could not analyse this video. It may be private, too long, or music-only.');
+      setGuideError('Could not analyse this video. It may be music-only, private, or too long for AI processing. Try a different video or open in NotebookLM.');
     }
     setGuideLoading(false);
   }, [videoId]);

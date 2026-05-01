@@ -141,9 +141,9 @@ Rules:
         console.error('[analyse] Gemini error:', raw);
         const lower = raw.toLowerCase();
         let friendly: string;
-        if (lower.includes('too long') || lower.includes('exceed') || lower.includes('duration') || lower.includes('length')) {
+        if (lower.includes('too long') || lower.includes('too large') || lower.includes('exceed') || lower.includes('duration') || lower.includes('resource_exhausted') || lower.includes('token')) {
           friendly = 'This video is too long for AI analysis (Gemini supports up to ~2 hours). Try a shorter video, or open it in NotebookLM.';
-        } else if (lower.includes('audio') || lower.includes('music') || lower.includes('sound only')) {
+        } else if (lower.includes('audio') || lower.includes('no speech') || lower.includes('music') || lower.includes('sound only') || lower.includes('unsupported')) {
           friendly = 'This appears to be a music or audio-only video. AI analysis works best on tech tutorials with spoken explanations and on-screen content.';
         } else {
           friendly = raw;
