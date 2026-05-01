@@ -52,12 +52,13 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
   }
 
-  const { error } = await sb
+  const { error, count } = await sb
     .from('job_alerts')
-    .delete()
+    .delete({ count: 'exact' })
     .eq('id', id)
     .eq('user_id', user.id); // ownership check — user cannot delete another user's alert
 
   if (error) return NextResponse.json({ error: 'Failed to delete alert' }, { status: 500 });
+  if (!count) return NextResponse.json({ error: 'Alert not found' }, { status: 404 });
   return NextResponse.json({ ok: true });
 }
