@@ -48,6 +48,8 @@ const nextConfig: NextConfig = {
               "frame-src https://js.stripe.com https://hooks.stripe.com https://www.youtube.com",
               "object-src 'none'",
               "base-uri 'self'",
+              "frame-ancestors 'none'",
+              "form-action 'self'",
             ].join('; '),
           },
         ],
