@@ -26,6 +26,78 @@ export interface AdzunaJob {
   salary_max?: number;
 }
 
+interface JSearchHit {
+  job_id: string;
+  job_city?: string;
+  job_state?: string;
+  job_min_salary?: number;
+  job_max_salary?: number;
+  job_title?: string;
+  employer_name?: string;
+  job_description?: string;
+  job_apply_link?: string;
+  job_google_link?: string;
+  job_posted_at_datetime_utc?: string;
+  job_employment_type?: string;
+  job_publisher?: string;
+}
+
+interface AdzunaHit {
+  id: string;
+  title: string;
+  company?: { display_name?: string };
+  location?: { display_name?: string };
+  description?: string;
+  salary_min?: number;
+  salary_max?: number;
+  redirect_url: string;
+  created: string;
+  category?: { label?: string };
+  contract_type?: string;
+}
+
+interface GoogleJobsHit {
+  title?: string;
+  company_name?: string;
+  location?: string;
+  description?: string;
+  detected_extensions?: {
+    salary?: string;
+    posted_at?: string;
+    schedule_type?: string;
+  };
+  apply_options?: Array<{ link: string }>;
+  related_links?: Array<{ link: string }>;
+  via?: string;
+}
+
+interface JobicyHit {
+  id: string;
+  jobTitle?: string;
+  companyName?: string;
+  jobGeo?: string;
+  jobExcerpt?: string;
+  annualSalaryMin?: number;
+  annualSalaryMax?: number;
+  url?: string;
+  pubDate?: string;
+  jobIndustry?: string | string[];
+  jobType?: string | string[];
+}
+
+interface RemotiveHit {
+  id: string;
+  title?: string;
+  company_name?: string;
+  candidate_required_location?: string;
+  description?: string;
+  salary?: string;
+  url?: string;
+  publication_date?: string;
+  category?: string;
+  job_type?: string;
+}
+
 // ─── IT title filter ──────────────────────────────────────────────────────────
 // Title-only check. "analyst" and "engineer" are intentionally NOT included as
 // bare words — they match too many non-IT roles (Finance Analyst, Mechanical
@@ -113,7 +185,7 @@ async function fetchJSearch(keywords: string, location: string): Promise<AdzunaJ
       return [];
     }
     const json = await res.json();
-    return (json.data ?? []).map((r: any) => {
+    return (json.data ?? []).map((r: JSearchHit) => {
       const loc = [r.job_city, r.job_state].filter(Boolean).join(', ') || location;
       let salary: string | null = null;
       if (r.job_min_salary && r.job_max_salary)
@@ -197,9 +269,9 @@ async function fetchGoogleJobs(
       return [];
     }
     const data = await res.json();
-    const jobs: any[] = Array.isArray(data) ? data : (data.jobs ?? data.job_results ?? []);
+    const jobs: GoogleJobsHit[] = Array.isArray(data) ? data : (data.jobs ?? data.job_results ?? []);
 
-    return jobs.map((r: any, i: number) => ({
+    return jobs.map((r: GoogleJobsHit, i: number) => ({
       id:            gjobsId(r.title ?? '', r.company_name ?? '', start + i),
       title:         r.title ?? '',
       company:       r.company_name ?? 'Unknown',
@@ -233,7 +305,7 @@ async function fetchJobicy(keywords: string): Promise<AdzunaJob[]> {
     );
     if (!res.ok) { console.warn('[jobs] Jobicy HTTP error:', res.status); return []; }
     const json = await res.json();
-    return (json.jobs ?? []).map((r: any) => ({
+    return (json.jobs ?? []).map((r: JobicyHit) => ({
       id:            `jobicy-${r.id}`,
       title:         r.jobTitle ?? '',
       company:       r.companyName ?? 'Unknown',
@@ -371,15 +443,17 @@ async function fetchAdzuna(
       return [];
     }
     const data = await res.json();
-    return (data.results ?? []).map((r: any) => ({
+    return (data.results ?? []).map((r: AdzunaHit) => ({
       id:            r.id,
       title:         r.title,
       company:       r.company?.display_name ?? 'Unknown',
       location:      r.location?.display_name ?? location,
       description:   r.description ?? '',
-      salary:        r.salary_min
+      salary:        r.salary_min && r.salary_max
         ? `$${Math.round(r.salary_min / 1000)}k – $${Math.round(r.salary_max / 1000)}k`
-        : null,
+        : r.salary_min
+          ? `From $${Math.round(r.salary_min / 1000)}k`
+          : null,
       salary_min:    r.salary_min ?? undefined,
       salary_max:    r.salary_max ?? undefined,
       url:           r.redirect_url,
@@ -405,7 +479,7 @@ async function fetchRemotive(keywords: string): Promise<AdzunaJob[]> {
     );
     if (!res.ok) { console.warn('[jobs] Remotive HTTP error:', res.status); return []; }
     const json = await res.json();
-    return (json.jobs ?? []).map((r: any) => ({
+    return (json.jobs ?? []).map((r: RemotiveHit) => ({
       id:            `remotive-${r.id}`,
       title:         r.title ?? '',
       company:       r.company_name ?? 'Unknown',
