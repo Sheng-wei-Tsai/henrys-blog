@@ -7,6 +7,14 @@ import { useSearchParams } from 'next/navigation';
 
 const BACKGROUND_KEY = 'cover_letter_background';
 
+interface CoverLetterHistoryItem {
+  id: string;
+  job_title: string;
+  company: string;
+  cover_letter: string;
+  created_at: string;
+}
+
 const BACKGROUND_PLACEHOLDER = `Example:
 - Recent IT graduate (Bachelor of IT, Griffith University, 2025)
 - 1 year internship at XYZ as a fullstack developer (React, Node.js, PostgreSQL)
@@ -27,7 +35,7 @@ function CoverLetterContent() {
   const [generating,      setGenerating]      = useState(false);
   const [saved,           setSaved]           = useState(false);
   const [copied,          setCopied]          = useState(false);
-  const [history,         setHistory]         = useState<any[]>([]);
+  const [history,         setHistory]         = useState<CoverLetterHistoryItem[]>([]);
   const [showHistory,     setShowHistory]     = useState(false);
   const outputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -125,7 +133,7 @@ function CoverLetterContent() {
     URL.revokeObjectURL(url);
   };
 
-  const loadFromHistory = (item: any) => {
+  const loadFromHistory = (item: CoverLetterHistoryItem) => {
     setJobTitle(item.job_title);
     setCompany(item.company);
     setOutput(item.cover_letter);
