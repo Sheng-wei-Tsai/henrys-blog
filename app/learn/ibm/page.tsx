@@ -225,7 +225,6 @@ export default function LearnIBMPage() {
   const [progress,    setProgress]    = useState<Record<string, Progress>>({});
   const [selected,    setSelected]    = useState<Video | null>(null);
   const [tab,         setTab]         = useState<'guide' | 'quiz'>('guide');
-  const [transcript,  setTranscript]  = useState('');
   const [guide,       setGuide]       = useState<StudyGuide | null>(null);
   const [guideLoading, setGuideLoading] = useState(false);
   const [guideError,   setGuideError]   = useState('');
@@ -264,26 +263,11 @@ export default function LearnIBMPage() {
     setTab('guide');
     setQuestions([]);
 
-    // Fetch transcript
-    let tx = '';
-    try {
-      const tres = await fetch(`/api/learn/transcript?videoId=${video.id}`);
-      const tdata = await tres.json();
-      tx = tdata.transcript ?? '';
-    } catch { /* no transcript */ }
-    setTranscript(tx);
-
-    if (!tx) {
-      setGuideError('No transcript available for this video.');
-      setGuideLoading(false);
-      return;
-    }
-
-    // Stream analysis
+    // Stream analysis — Gemini reads the video URL directly
     const res = await fetch('/api/learn/analyse', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ videoId: video.id, videoTitle: video.title, transcript: tx }),
+      body: JSON.stringify({ videoId: video.id, videoTitle: video.title }),
     });
 
     if (!res.ok) { setGuideError('Analysis failed.'); setGuideLoading(false); return; }
@@ -383,7 +367,7 @@ export default function LearnIBMPage() {
               guideLoading ? (
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                   <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⟳</span>
-                  Analysing transcript with Claude…
+                  Analysing video with Gemini…
                 </div>
               ) : guideError ? (
                 <p style={{ color: '#dc2626', fontSize: '0.88rem' }}>{guideError}</p>

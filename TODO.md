@@ -131,7 +131,7 @@
 
 ### Gemini Multimodal for YouTube — `features/gemini-multimodal.md`
 **Why:** Current YouTube study guides fail on videos without captions. Gemini watches the video directly.
-- [ ] Replace `youtube-transcript` + OpenAI with Gemini 1.5 Flash direct video URL input
+- [x] Replace `youtube-transcript` + OpenAI with Gemini 1.5 Flash direct video URL input ✅ 2026-05-01
 - [ ] Gains: visual content (slides, code on screen), architecture diagrams, no caption dependency
 - [ ] Error handling for long videos (>2h) and music-only content
 - **Effort:** S (1–2 days)
