@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
 import { requireSubscription, recordUsage, checkEndpointRateLimit } from '@/lib/subscription';
 import { rateLimitResponse } from '@/lib/auth-server';
+import { kvGet, kvSet } from '@/lib/kv';
 
 const SCHEMA_FULL = `{
   "summary": "3-4 sentence plain-English overview of what this video teaches and who it is for",
@@ -76,7 +77,20 @@ export async function POST(req: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
 
-  // ── Check global video cache first ─────────────────────────────────
+  const cacheKey = `study-guide:${videoId}`;
+
+  // ── 1. KV fast path ────────────────────────────────────────────────
+  const kvHit = await kvGet(cacheKey);
+  if (kvHit) {
+    try {
+      const guide = JSON.parse(kvHit) as { essay?: string; summary?: string };
+      if (guide.essay || guide.summary) {
+        return new Response(kvHit, { headers: { 'Content-Type': 'application/json' } });
+      }
+    } catch { /* corrupt KV entry — fall through to Supabase */ }
+  }
+
+  // ── 2. Supabase fallback ────────────────────────────────────────────
   const { data: cached } = await sb
     .from('video_content')
     .select('study_guide')
@@ -84,6 +98,8 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (cached?.study_guide && (cached.study_guide.essay || cached.study_guide.summary)) {
+    // Warm KV so next request is served from the fast path
+    void kvSet(cacheKey, JSON.stringify(cached.study_guide));
     return new Response(JSON.stringify(cached.study_guide), {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -154,12 +170,13 @@ Rules:
 
       void recordUsage(auth.user.id, 'learn/analyse');
 
-      // ── Save to global cache ────────────────────────────────────────
+      // ── Save to KV + Supabase ───────────────────────────────────────
       const match = accumulated.match(/\{[\s\S]*\}/);
       if (match) {
         try {
-          const guide = JSON.parse(match[0]);
+          const guide = JSON.parse(match[0]) as { error?: string; essay?: string; summary?: string };
           if (!guide.error && (guide.essay || guide.summary)) {
+            void kvSet(cacheKey, match[0]);
             await sb.from('video_content').upsert({
               video_id: videoId,
               video_title: videoTitle || videoId,
