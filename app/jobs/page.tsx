@@ -205,7 +205,7 @@ function JobCard({ job, savedIds, onSaveToggle, onApply, isLoggedIn }: {
           title={isSaved ? 'Remove from saved' : 'Save job'}
           className="job-btn-save"
           style={{
-            background: isSaved ? '#fff3f0' : undefined,
+            background: isSaved ? 'rgba(232,64,64,0.08)' : undefined,
             border: isSaved ? '1px solid var(--terracotta)' : undefined,
             color: isSaved ? 'var(--terracotta)' : undefined,
           }}
@@ -613,7 +613,7 @@ export default function JobsPage() {
       </div>
 
       {error && (
-        <div role="alert" style={{ background: '#fff0f0', border: '1px solid #fcc', borderRadius: '10px', padding: '1rem', marginBottom: '1rem', color: '#c00', fontSize: '0.9rem' }}>
+        <div role="alert" style={{ background: 'rgba(232,64,64,0.08)', border: '1px solid rgba(232,64,64,0.35)', borderRadius: '10px', padding: '1rem', marginBottom: '1rem', color: 'var(--vermilion)', fontSize: '0.9rem' }}>
           {error}
         </div>
       )}
@@ -651,7 +651,7 @@ export default function JobsPage() {
               )}
               {page > 1 && <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Page {page}</span>}
               {alertSaved
-                ? <span style={{ fontSize: '0.82rem', color: '#16a34a' }}>✓ Alert saved</span>
+                ? <span style={{ fontSize: '0.82rem', color: 'var(--jade)' }}>✓ Alert saved</span>
                 : (
                   <button onClick={handleSaveSearch} style={{
                     background: 'none', border: '1px solid var(--parchment)',
@@ -750,7 +750,7 @@ export default function JobsPage() {
           whiteSpace: 'nowrap',
         }}>
           Applied to {applyToast.company}?
-          <Link href="/dashboard" style={{ color: '#fbbf24', fontWeight: 600, textDecoration: 'none' }}>
+          <Link href="/dashboard" style={{ color: 'var(--gold)', fontWeight: 600, textDecoration: 'none' }}>
             Track it →
           </Link>
           <button onClick={() => setApplyToast(null)}

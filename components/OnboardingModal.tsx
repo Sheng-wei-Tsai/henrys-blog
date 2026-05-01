@@ -146,7 +146,7 @@ export default function OnboardingModal({ onComplete }: Props) {
         <div style={{ ...modalStyle, textAlign: 'center', padding: '3.5rem 2rem' }}>
           <div style={{
             width: '56px', height: '56px', borderRadius: '50%',
-            background: '#f0fdf4', border: '2px solid #86efac',
+            background: 'rgba(30,122,82,0.1)', border: '2px solid var(--jade)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             margin: '0 auto 1.2rem', fontSize: '1.6rem',
           }}>✓</div>
