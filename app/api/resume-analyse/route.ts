@@ -52,6 +52,33 @@ Australian IT market context to apply:
 Be specific and actionable. Reference actual content from the resume in your feedback.
 Return ONLY the JSON — no markdown fences, no preamble.`;
 
+interface ResumeAnalysis {
+  overallScore: number;
+  scoreLabel: 'Excellent' | 'Strong' | 'Good' | 'Needs Work' | 'Major Revision Needed';
+  summary: string;
+  auFormatting: {
+    score: number;
+    issues: Array<{ severity: 'critical' | 'warning' | 'pass'; title: string; detail: string }>;
+  };
+  contentQuality: {
+    score: number;
+    strengths: string[];
+    gaps: string[];
+  };
+  auMarketFit: {
+    score: number;
+    topRolesMatch: string[];
+    missingSkills: string[];
+    shortage: boolean;
+  };
+  actionItems: Array<{ priority: 'high' | 'medium' | 'low'; action: string }>;
+  interviewReadiness:
+    | 'Ready to apply now'
+    | '1-2 quick fixes needed'
+    | 'Significant revision needed'
+    | 'Complete rewrite recommended';
+}
+
 export async function POST(req: NextRequest) {
   const auth = await requireSubscription();
   if (auth instanceof NextResponse) return auth;
@@ -104,7 +131,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Persist score for readiness tracking (fire-and-forget)
-  const a = analysis as Record<string, any>;
+  const a = analysis as ResumeAnalysis;
   if (a.overallScore) {
     sbService.from('resume_analyses').insert({
       user_id:          auth.user.id,
