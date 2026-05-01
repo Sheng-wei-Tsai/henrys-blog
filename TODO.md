@@ -1,6 +1,6 @@
 # TODO — TechPath AU Feature Backlog
 
-**Last updated:** 2026-04-22
+**Last updated:** 2026-05-01
 **Product vision:** The definitive career platform for international IT graduates entering the Australian job market.
 **Single source of truth for:** what is done, what is next, and why.
 
@@ -277,6 +277,34 @@
 - [ ] Add Vitest test for /api/admin/users/[id] — 403 without admin role, PATCH rejects invalid role enum, DELETE blocks self-ban [tests]
 - [ ] Add Vitest test for /api/alerts — DELETE id ownership check rejects another user's alert (PGRST affected-rows = 0) [tests]
 - [ ] Add Vitest test for /api/learn/progress — POST 401 without session, upsert on `(user_id, video_id)` conflict preserves prior quiz_score [tests]
+
+---
+
+## 🛡 Daily Analyst Findings — 2026-05-01
+
+> Fresh items from today's Opus scan. `tsc --noEmit` is clean; `npm audit` reports one moderate (see #3). Major surface areas today: (a) `/api/learn/analyse` is missing the same videoId regex + title truncation that was applied to `/api/learn/video-meta` last week, and (b) `/dashboard/visa-tracker` + `/dashboard/learn` + `PathTracker.tsx` carry ~25 hardcoded hex colours that all break dark mode.
+
+### Security
+- [ ] Validate `videoId` with `/^[A-Za-z0-9_-]{11}$/` before transcript fetch + OpenAI call in app/api/learn/analyse/route.ts:149 — same hardening applied to /video-meta on 2026-04-26 [security]
+- [ ] Truncate `videoTitle` (`.slice(0,200)`) and `channelTitle` (`.slice(0,100)`) before interpolating into the OpenAI prompt in app/api/learn/analyse/route.ts:148, 207-209, 229 [security]
+- [ ] Investigate npm audit moderate GHSA-p7fg-763f-g4gf (`@anthropic-ai/sdk` Local Filesystem Memory Tool) — confirm we never use the Memory Tool in any route, then upgrade to `^0.92.0` (breaking) or pin via `overrides` per AGENTS §4 [security]
+
+### Style (dark-mode breakage)
+- [ ] Replace `#3b82f6`/`#8b5cf6` actor map + status pill colours with var(--terracotta)/var(--gold)/var(--jade) tokens in app/dashboard/visa-tracker/page.tsx:73-74, 230-232, 441 [style]
+- [ ] Replace warning-yellow draft alert (`#fef9c3`/`#fde047`/`#854d0e`) with var(--gold) + var(--parchment) tokens in app/dashboard/visa-tracker/page.tsx:268-270 [style]
+- [ ] Replace success-green hex (`#ecfdf5`/`#6ee7b7`/`#065f46`/`#10b981`) with var(--jade) tokens in app/dashboard/visa-tracker/page.tsx:281, 327, 353, 388-392 [style]
+- [ ] Replace amber tips/watch-out card hex (`#fff7ed`/`#9a3412`) with var(--gold) + var(--text-secondary) tokens in app/dashboard/visa-tracker/page.tsx:396-400 [style]
+- [ ] Replace 5 skill-path colour map hex (`#0ea5e9`/`#7c3aed`/`#059669`/`#d97706`/`#4338ca`) with design tokens (var(--terracotta)/var(--gold)/var(--jade) etc.) in app/dashboard/learn/page.tsx:28-32 [style]
+- [ ] Replace `background: '#10b981'` completion bar with `var(--jade)` in app/dashboard/learn/page.tsx:138 and app/learn/[path]/PathTracker.tsx:261 [style]
+- [ ] Replace `#92400e`/`#fef3c7` paid badge with `var(--gold)` + `var(--text-secondary)` in app/learn/[path]/PathTracker.tsx:398 [style]
+- [ ] Replace `#fff7ed`/`#c2410c` paid-resource row pill with `var(--gold)` tokens in app/learn/[path]/PathTracker.tsx:601-602 [style]
+
+### Code Quality
+- [ ] Replace `as any` cast on PDF document block with the proper `DocumentBlockParam`/`Base64PDFSource` type from `@anthropic-ai/sdk/resources` in app/api/resume-analyse/route.ts:87 [quality]
+
+### Tests
+- [ ] Add Vitest test for /api/diagrams/generate — 401 without subscription, 400 on missing topic, 400 on `topic.length < 3`, fallback to `'flowchart'` on invalid `type` [tests]
+- [ ] Add Vitest test for /api/diagrams/list — public endpoint, returns array, ISR (`force-static`, revalidate 3600) verified [tests]
 
 ---
 
