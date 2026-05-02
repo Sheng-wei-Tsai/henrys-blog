@@ -2,6 +2,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/components/AuthProvider';
 import ThemeToggle from '@/components/ThemeToggle';
 import LangToggle from '@/components/LangToggle';
@@ -9,56 +10,60 @@ import { ReadinessScoreMini } from '@/components/ReadinessScore';
 import { useState, useRef, useEffect } from 'react';
 import EIcon, { EIconName } from '@/components/icons/EIcon';
 
-/* ── Zone data ─────────────────────────────────────────────── */
+/* ── Zone data (translation keys resolved inside component) ─── */
 
-const PREPARE_ITEMS = [
-  { href: '/resume',         label: 'Resume Analyser', desc: 'AI feedback for AU IT roles',        icon: 'resume'        as EIconName },
-  { href: '/cover-letter',   label: 'Cover Letter',    desc: 'GPT-4.1, AU English structure',      icon: 'pencil-letter' as EIconName },
-  { href: '/interview-prep', label: 'Interview Prep',  desc: 'Alex mentor, company-specific Qs',  icon: 'target'        as EIconName },
-  { href: '/learn',          label: 'Learning Paths',  desc: '5 AU IT career paths + spaced rep',  icon: 'books'         as EIconName },
-  { href: '/learn/youtube',  label: 'YouTube Learning', desc: 'Gemini study guide from any video', icon: 'video'         as EIconName },
+const PREPARE_DEF = [
+  { href: '/resume',         tKey: 'prepare_resume',      tDesc: 'prepare_resume_desc',      icon: 'resume'        as EIconName },
+  { href: '/cover-letter',   tKey: 'prepare_coverLetter', tDesc: 'prepare_coverLetter_desc', icon: 'pencil-letter' as EIconName },
+  { href: '/interview-prep', tKey: 'prepare_interview',   tDesc: 'prepare_interview_desc',   icon: 'target'        as EIconName },
+  { href: '/learn',          tKey: 'prepare_learn',       tDesc: 'prepare_learn_desc',       icon: 'books'         as EIconName },
+  { href: '/learn/youtube',  tKey: 'prepare_youtube',     tDesc: 'prepare_youtube_desc',     icon: 'video'         as EIconName },
 ];
 
-/* Left column of the Search mega-dropdown */
-const SEARCH_DIRECT = [
-  { href: '/jobs',         label: 'Job Search',   desc: 'Live AU jobs, working rights filter', icon: 'briefcase' as EIconName },
-  { href: '/posts/githot', label: 'GitHub Hot',   desc: 'Trending repos daily',               icon: 'fire'      as EIconName },
-  { href: '/digest',       label: 'Daily Digest', desc: 'Auto-generated daily summaries',     icon: 'newspaper' as EIconName },
-  { href: '/posts',        label: 'All Posts',    desc: 'Blog, AI news, visa news',           icon: 'brush'     as EIconName },
+const SEARCH_DIRECT_DEF = [
+  { href: '/jobs',         tKey: 'search_jobs',    tDesc: 'search_jobs_desc',    icon: 'briefcase' as EIconName },
+  { href: '/posts/githot', tKey: 'search_github',  tDesc: 'search_github_desc',  icon: 'fire'      as EIconName },
+  { href: '/digest',       tKey: 'search_digest',  tDesc: 'search_digest_desc',  icon: 'newspaper' as EIconName },
+  { href: '/posts',        tKey: 'search_posts',   tDesc: 'search_posts_desc',   icon: 'brush'     as EIconName },
 ];
 
-/* AU Insights items — used for mobile Search drawer + active detection */
-const AU_INSIGHTS_ITEMS = [
-  { href: '/au-insights',                  label: 'AU Companies',   desc: 'Company tiers, culture & interview Qs', icon: 'trophy'   as EIconName },
-  { href: '/au-insights?tab=salary',       label: 'Salary Checker', desc: 'Paste your offer → AI verdict',         icon: 'coin'     as EIconName },
-  { href: '/au-insights?tab=skillmap',     label: 'Skill Map',      desc: 'Your skills → matching AU roles',       icon: 'map'      as EIconName },
-  { href: '/au-insights?tab=sponsorship',  label: 'Visa Sponsors',  desc: 'Top 20 by 482 sponsorship volume',      icon: 'passport' as EIconName },
-  { href: '/au-insights?tab=gradprograms', label: 'Grad Programs',  desc: 'Live status, deadlines, apply links',   icon: 'cap'      as EIconName },
-  { href: '/au-insights?tab=visa',         label: 'Visa Guide',     desc: '482/SID — 6 steps, costs & timeline',  icon: 'plane'    as EIconName },
-  { href: '/au-insights?tab=visa-news',    label: 'Visa News',      desc: 'Daily immigration & student visa updates', icon: 'newspaper' as EIconName },
+const AU_INSIGHTS_DEF = [
+  { href: '/au-insights',                  tKey: 'search_auCompanies',  tDesc: 'search_auCompanies_desc',  icon: 'trophy'    as EIconName },
+  { href: '/au-insights?tab=salary',       tKey: 'search_salary',       tDesc: 'search_salary_desc',       icon: 'coin'      as EIconName },
+  { href: '/au-insights?tab=skillmap',     tKey: 'search_skillMap',     tDesc: 'search_skillMap_desc',     icon: 'map'       as EIconName },
+  { href: '/au-insights?tab=sponsorship',  tKey: 'search_visaSponsors', tDesc: 'search_visaSponsors_desc', icon: 'passport'  as EIconName },
+  { href: '/au-insights?tab=gradprograms', tKey: 'search_gradPrograms', tDesc: 'search_gradPrograms_desc', icon: 'cap'       as EIconName },
+  { href: '/au-insights?tab=visa',         tKey: 'search_visaGuide',    tDesc: 'search_visaGuide_desc',    icon: 'plane'     as EIconName },
+  { href: '/au-insights?tab=visa-news',    tKey: 'search_visaNews',     tDesc: 'search_visaNews_desc',     icon: 'newspaper' as EIconName },
 ];
 
-/* Right column — compact AU Insights items for Search mega-menu */
-const AU_MEGA_ITEMS = [
-  { href: '/au-insights',                   label: 'Company Tiers',  icon: 'trophy'   as EIconName },
-  { href: '/au-insights?tab=ecosystem',     label: 'IT Ecosystem',   icon: 'chart'    as EIconName },
-  { href: '/au-insights?tab=market',        label: 'Job Market',     icon: 'coin'     as EIconName },
-  { href: '/au-insights?tab=salary',        label: 'Salary Checker', icon: 'coin'     as EIconName },
-  { href: '/au-insights?tab=skillmap',      label: 'Skill Map',      icon: 'map'      as EIconName },
-  { href: '/au-insights?tab=gradprograms',  label: 'Grad Programs',  icon: 'cap'      as EIconName },
-  { href: '/au-insights?tab=sponsorship',   label: 'Visa Sponsors',  icon: 'passport' as EIconName },
-  { href: '/au-insights?tab=visa',          label: 'Visa Guide',     icon: 'plane'    as EIconName },
-  { href: '/au-insights?tab=guide',         label: 'Career Guide',   icon: 'rocket'   as EIconName },
-  { href: '/au-insights?tab=compare',       label: 'Compare',        icon: 'scale'    as EIconName },
+const AU_MEGA_DEF = [
+  { href: '/au-insights',                   tKey: 'tabCompanyTiers',  icon: 'trophy'   as EIconName },
+  { href: '/au-insights?tab=ecosystem',     tKey: 'tabItEcosystem',   icon: 'chart'    as EIconName },
+  { href: '/au-insights?tab=market',        tKey: 'tabJobMarket',     icon: 'coin'     as EIconName },
+  { href: '/au-insights?tab=salary',        tKey: 'tabSalaryChecker', icon: 'coin'     as EIconName },
+  { href: '/au-insights?tab=skillmap',      tKey: 'tabSkillMap',      icon: 'map'      as EIconName },
+  { href: '/au-insights?tab=gradprograms',  tKey: 'tabGradPrograms',  icon: 'cap'      as EIconName },
+  { href: '/au-insights?tab=sponsorship',   tKey: 'tabVisaSponsors',  icon: 'passport' as EIconName },
+  { href: '/au-insights?tab=visa',          tKey: 'tabVisaGuide',     icon: 'plane'    as EIconName },
+  { href: '/au-insights?tab=guide',         tKey: 'tabCareerGuide',   icon: 'rocket'   as EIconName },
+  { href: '/au-insights?tab=compare',       tKey: 'tabCompare',       icon: 'scale'    as EIconName },
 ];
 
-const TRACK_ITEMS = [
-  { href: '/dashboard',              label: 'Dashboard',    desc: 'Applications + career pipeline',     icon: 'chart'    as EIconName },
-  { href: '/dashboard/visa-tracker', label: 'Visa Tracker', desc: '6-step 482 tracker, doc checklists', icon: 'passport' as EIconName },
+const TRACK_DEF = [
+  { href: '/dashboard',              tKey: 'track_dashboard',   tDesc: 'track_dashboard_desc',   icon: 'chart'    as EIconName },
+  { href: '/dashboard/visa-tracker', tKey: 'track_visaTracker', tDesc: 'track_visaTracker_desc', icon: 'passport' as EIconName },
 ];
 
-/* Flat list for zone active detection */
-const ALL_SEARCH_ITEMS = [...SEARCH_DIRECT, ...AU_INSIGHTS_ITEMS];
+const ME_LINKS_DEF = [
+  { href: '/dashboard',              tKey: 'user_dashboard',   icon: 'chart'    as EIconName },
+  { href: '/dashboard/visa-tracker', tKey: 'user_visaTracker', icon: 'passport' as EIconName },
+  { href: '/pricing',                tKey: 'user_upgradePro',  icon: 'sparkles' as EIconName },
+  { href: '/about',                  tKey: 'user_about',       icon: 'wave'     as EIconName },
+];
+
+/* Flat list for zone active detection (hrefs only) */
+const ALL_SEARCH_DEF = [...SEARCH_DIRECT_DEF, ...AU_INSIGHTS_DEF];
 
 type Drawer = 'prepare' | 'me' | null;
 
@@ -128,6 +133,15 @@ export default function Header() {
   const pathname = usePathname();
   const router   = useRouter();
   const { user, loading, signOut } = useAuth();
+  const t   = useTranslations('nav');
+  const tAI = useTranslations('auInsights');
+
+  const PREPARE_ITEMS     = PREPARE_DEF.map(({ href, tKey, tDesc, icon }) => ({ href, icon, label: t(tKey), desc: t(tDesc) }));
+  const SEARCH_DIRECT     = SEARCH_DIRECT_DEF.map(({ href, tKey, tDesc, icon }) => ({ href, icon, label: t(tKey), desc: t(tDesc) }));
+  const AU_INSIGHTS_ITEMS = AU_INSIGHTS_DEF.map(({ href, tKey, tDesc, icon }) => ({ href, icon, label: t(tKey), desc: t(tDesc) }));
+  const AU_MEGA_ITEMS     = AU_MEGA_DEF.map(({ href, tKey, icon }) => ({ href, icon, label: tAI(tKey) }));
+  const TRACK_ITEMS       = TRACK_DEF.map(({ href, tKey, tDesc, icon }) => ({ href, icon, label: t(tKey), desc: t(tDesc) }));
+  const ME_ITEMS          = ME_LINKS_DEF.map(({ href, tKey, icon }) => ({ href, icon, label: t(tKey) }));
 
   const [openMenu,     setOpenMenu]    = useState<'prepare' | 'search' | 'track' | null>(null);
   const [avatarOpen,   setAvatarOpen]  = useState(false);
@@ -199,7 +213,7 @@ export default function Header() {
             boxShadow: '3px 3px 0 rgba(20,10,5,0.14)',
             display: 'flex', gap: '0.35rem', alignItems: 'center',
           }}>
-            <Link href="/" style={navLink(isActive('/'))}>Home</Link>
+            <Link href="/" style={navLink(isActive('/'))}>{t('home')}</Link>
 
             {/* Prepare — dropdown */}
             <div style={{ position: 'relative' }}>
@@ -210,7 +224,7 @@ export default function Header() {
                 aria-expanded={prepareOpen}
                 style={{ ...navLink(isZoneActive(PREPARE_ITEMS)), border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3em' }}
               >
-                Prepare <Chevron open={prepareOpen} />
+                {t('prepare')} <Chevron open={prepareOpen} />
               </button>
               {prepareOpen && (
                 <DropPanel>
@@ -228,9 +242,9 @@ export default function Header() {
                 onKeyDown={e => { if (e.key === 'Escape') setOpenMenu(null); }}
                 aria-haspopup="true"
                 aria-expanded={searchOpen}
-                style={{ ...navLink(isZoneActive(ALL_SEARCH_ITEMS)), border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3em' }}
+                style={{ ...navLink(isZoneActive(ALL_SEARCH_DEF)), border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3em' }}
               >
-                Search <Chevron open={searchOpen} />
+                {t('search')} <Chevron open={searchOpen} />
               </button>
               {searchOpen && (
                 <div role="menu" style={{
@@ -270,7 +284,7 @@ export default function Header() {
                 aria-expanded={trackOpen}
                 style={{ ...navLink(isZoneActive(TRACK_ITEMS)), border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.3em' }}
               >
-                Track <Chevron open={trackOpen} />
+                {t('track')} <Chevron open={trackOpen} />
               </button>
               {trackOpen && (
                 <DropPanel>
@@ -313,7 +327,7 @@ export default function Header() {
                 boxShadow: '0 2px 10px rgba(180,60,40,0.2)',
                 display: 'flex', alignItems: 'center', gap: '0.4rem',
                 textDecoration: 'none', whiteSpace: 'nowrap',
-              }}>Sign in</Link>
+              }}>{t('user_signIn')}</Link>
             )}
 
             {avatarOpen && user && (
@@ -328,12 +342,7 @@ export default function Header() {
                 <div style={{ padding: '0.3rem 0.6rem 0.5rem', fontSize: '0.72rem', color: 'var(--text-muted)', borderBottom: '1px solid var(--parchment)', marginBottom: '0.3rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {user.email}
                 </div>
-                {[
-                  { href: '/dashboard',              label: 'Dashboard' },
-                  { href: '/dashboard/visa-tracker', label: 'Visa Tracker' },
-                  { href: '/pricing',                label: 'Upgrade to Pro' },
-                  { href: '/about',                  label: 'About' },
-                ].map(({ href, label }) => (
+                {ME_ITEMS.map(({ href, label }) => (
                   <AvatarLink key={href} href={href} label={label} onClick={() => setAvatarOpen(false)} />
                 ))}
                 <div style={{ height: '1px', background: 'var(--parchment)', margin: '0.2rem 0.4rem' }} />
@@ -344,7 +353,7 @@ export default function Header() {
                   textAlign: 'left', transition: 'background 0.12s ease', fontFamily: 'inherit',
                 }}
                             className="drop-item"
-                >Sign out</button>
+                >{t('user_signOut')}</button>
               </div>
             )}
           </div>
@@ -364,7 +373,7 @@ export default function Header() {
 
         {/* Prepare drawer */}
         {mobileDrawer === 'prepare' && (
-          <MobileDrawer title="Prepare" onClose={() => setMobileDrawer(null)}>
+          <MobileDrawer title={t('prepare')} onClose={() => setMobileDrawer(null)}>
             {PREPARE_ITEMS.map(item => (
               <MobileDrawerItem key={item.href} {...item} active={isActive(item.href)} onClick={() => setMobileDrawer(null)} />
             ))}
@@ -385,12 +394,7 @@ export default function Header() {
                 <div style={{ padding: '0.3rem 0.75rem 0.5rem', fontSize: '0.7rem', color: 'var(--text-muted)', borderBottom: '1px solid var(--parchment)', marginBottom: '0.4rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {user.email}
                 </div>
-                {[
-                  { href: '/dashboard',              label: 'Dashboard',      icon: 'chart'     as EIconName },
-                  { href: '/dashboard/visa-tracker', label: 'Visa Tracker',   icon: 'passport'  as EIconName },
-                  { href: '/pricing',                label: 'Upgrade to Pro', icon: 'sparkles'  as EIconName },
-                  { href: '/about',                  label: 'About',          icon: 'wave'      as EIconName },
-                ].map(({ href, label, icon }) => (
+                {ME_ITEMS.map(({ href, label, icon }) => (
                   <MobileDrawerItem key={href} href={href} icon={icon} label={label} desc="" active={isActive(href)} onClick={() => setMobileDrawer(null)} />
                 ))}
                 <div style={{ height: '1px', background: 'var(--parchment)', margin: '0.3rem 0.5rem' }} />
@@ -400,7 +404,7 @@ export default function Header() {
                   background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                 }}>
                   <EIcon name="wave" size={18} style={{ color: 'var(--text-muted)' }} />
-                  <span style={{ fontSize: '0.92rem', fontWeight: 500, color: 'var(--text-muted)' }}>Sign out</span>
+                  <span style={{ fontSize: '0.92rem', fontWeight: 500, color: 'var(--text-muted)' }}>{t('user_signOut')}</span>
                 </button>
               </>
             ) : (
@@ -410,7 +414,7 @@ export default function Header() {
                 textDecoration: 'none', background: 'var(--vermilion)',
               }}>
                 <EIcon name="person" size={18} style={{ color: 'white' }} />
-                <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'white' }}>Sign in</span>
+                <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'white' }}>{t('user_signIn')}</span>
               </Link>
             )}
           </div>
@@ -424,14 +428,14 @@ export default function Header() {
           border: '2.5px solid var(--parchment)', borderRadius: '8px',
           padding: '0.55rem 0.25rem', boxShadow: 'var(--panel-shadow)', width: '100%',
         }}>
-          <MobileTab href="/" active={isActive('/')} label="Home" icon={<IconHome active={isActive('/')} />} />
+          <MobileTab href="/" active={isActive('/')} label={t('home')} icon={<IconHome active={isActive('/')} />} />
 
           {/* Search → direct link to /jobs */}
-          <MobileTab href="/jobs" active={isActive('/jobs') || isZoneActive(ALL_SEARCH_ITEMS)} label="Search" icon={<IconSearch active={isActive('/jobs') || isZoneActive(ALL_SEARCH_ITEMS)} />} />
+          <MobileTab href="/jobs" active={isActive('/jobs') || isZoneActive(ALL_SEARCH_DEF)} label={t('search')} icon={<IconSearch active={isActive('/jobs') || isZoneActive(ALL_SEARCH_DEF)} />} />
 
           {/* Prepare → drawer */}
           <MobileDrawerTab
-            label="Prepare"
+            label={t('prepare')}
             active={isZoneActive(PREPARE_ITEMS)}
             open={mobileDrawer === 'prepare'}
             onClick={() => setMobileDrawer(d => d === 'prepare' ? null : 'prepare')}
@@ -463,7 +467,7 @@ export default function Header() {
                     ? <Image src={user.user_metadata.avatar_url} alt="" width={36} height={36} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : user.email?.[0].toUpperCase()}
                 </div>
-                <span style={{ fontSize: '0.6rem', fontWeight: 500, color: mobileDrawer === 'me' ? 'white' : 'var(--text-muted)' }}>Me</span>
+                <span style={{ fontSize: '0.6rem', fontWeight: 500, color: mobileDrawer === 'me' ? 'white' : 'var(--text-muted)' }}>{t('me')}</span>
               </button>
             ) : (
               <Link href="/login" style={{
@@ -473,7 +477,7 @@ export default function Header() {
                 transition: 'all 0.15s', minWidth: '44px',
               }}>
                 <IconAbout active={isActive('/login')} />
-                <span style={{ fontSize: '0.6rem', fontWeight: 500, color: isActive('/login') ? 'white' : 'var(--text-muted)' }}>Sign in</span>
+                <span style={{ fontSize: '0.6rem', fontWeight: 500, color: isActive('/login') ? 'white' : 'var(--text-muted)' }}>{t('user_signIn')}</span>
               </Link>
             )
           )}
