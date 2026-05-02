@@ -530,6 +530,8 @@ h3, h4 {
 
 /* ── Job tabs ── */
 .job-tab {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px;
   background: var(--warm-white);
   color: var(--text-secondary);
   border: 1px solid var(--parchment);
@@ -539,6 +541,8 @@ h3, h4 {
 }
 .job-tab:hover { background: var(--parchment); }
 .job-tab-active {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px;
   background: var(--vermilion);
   color: white;
   border: 1px solid var(--vermilion);
@@ -548,6 +552,8 @@ h3, h4 {
 
 /* ── Source filter chips ── */
 .source-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px;
   background: var(--warm-white);
   color: var(--text-secondary);
   border: 1px solid var(--parchment);
@@ -618,6 +624,8 @@ h3, h4 {
   margin-bottom: 0.3rem;
 }
 .job-btn-save {
+  display: inline-flex; align-items: center;
+  min-height: 44px;
   background: var(--warm-white);
   border: 1px solid var(--parchment);
   border-radius: 99px;
@@ -627,6 +635,8 @@ h3, h4 {
   transition: all 0.2s;
 }
 .job-btn-cover {
+  display: inline-flex; align-items: center;
+  min-height: 44px;
   background: white;
   color: var(--terracotta);
   padding: 0.4rem 0.8rem;
@@ -761,6 +771,7 @@ h3, h4 {
   display: inline-flex;
   align-items: center;
   gap: 0.3em;
+  min-height: 44px;
   padding: 0.4rem 0.85rem;
   border-radius: 999px;
   border: 1.5px solid var(--parchment);
@@ -789,6 +800,7 @@ h3, h4 {
   display: flex;
   align-items: center;
   gap: 0.4em;
+  min-height: 44px;
   background: none;
   border: none;
   font-family: inherit;
@@ -796,7 +808,7 @@ h3, h4 {
   font-weight: 600;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 0.1rem 0;
+  padding: 0.25rem 0;
   transition: color 0.15s;
 }
 .search-adv-toggle:hover { color: var(--terracotta); }

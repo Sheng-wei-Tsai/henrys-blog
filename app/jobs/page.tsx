@@ -168,7 +168,8 @@ function FeaturedJobCard({ listing }: { listing: FeaturedListing }) {
         target="_blank"
         rel="noopener noreferrer"
         style={{
-          display: 'inline-block',
+          display: 'inline-flex', alignItems: 'center',
+          minHeight: '44px',
           background: 'var(--gold)', color: 'var(--ink)',
           padding: '0.4rem 1.1rem', borderRadius: '99px',
           fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none',
@@ -351,6 +352,8 @@ function JobCard({ job, savedIds, onSaveToggle, onApply, isLoggedIn }: {
             onClick={() => onApply(job)}
             className="job-apply-link"
             style={{
+              display: 'inline-flex', alignItems: 'center',
+              minHeight: '44px',
               background: 'var(--terracotta)', color: 'white',
               padding: '0.4rem 1rem', borderRadius: '99px',
               fontSize: '0.85rem', fontWeight: 500, textDecoration: 'none',
@@ -385,6 +388,7 @@ function JobCard({ job, savedIds, onSaveToggle, onApply, isLoggedIn }: {
           <button onClick={() => setExpanded(v => !v)} className="job-read-more-btn" style={{
             background: 'none', border: 'none', color: 'var(--terracotta)',
             cursor: 'pointer', fontSize: '0.82rem', padding: '0.2rem 0',
+            minHeight: '44px',
           }}>
             {expanded ? 'Show less ↑' : 'Read more ↓'}
           </button>
@@ -650,6 +654,8 @@ export default function JobsPage() {
         {QUICK_STARTS.map(q => (
           <button key={q} onClick={() => { setKeywords(q); search(1, true, q); }}
             style={{
+              display: 'inline-flex', alignItems: 'center',
+              minHeight: '44px',
               padding: '0.35rem 0.9rem', borderRadius: '99px', fontSize: '0.82rem',
               border: '1px solid var(--parchment)', background: 'var(--warm-white)',
               color: 'var(--text-secondary)', cursor: 'pointer',
@@ -829,7 +835,7 @@ export default function JobsPage() {
               {fromCache && (
                 <button onClick={() => { clearJobsCache(); search(1, true); }}
                   className="job-util-btn"
-                  style={{ background: 'none', border: '1px solid var(--parchment)', borderRadius: '99px', padding: '0.3rem 0.8rem', fontSize: '0.82rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                  style={{ background: 'none', border: '1px solid var(--parchment)', borderRadius: '99px', padding: '0.3rem 0.8rem', fontSize: '0.82rem', cursor: 'pointer', color: 'var(--text-secondary)', minHeight: '44px' }}>
                   ↻ Refresh
                 </button>
               )}
@@ -841,6 +847,7 @@ export default function JobsPage() {
                     background: 'none', border: '1px solid var(--parchment)',
                     borderRadius: '99px', padding: '0.3rem 0.8rem',
                     fontSize: '0.82rem', cursor: 'pointer', color: 'var(--text-secondary)',
+                    minHeight: '44px',
                   }}>
                     <EIcon name="bell" size={13} style={{ marginRight: '0.3em' }} />Save this search
                   </button>
@@ -954,7 +961,7 @@ export default function JobsPage() {
           </Link>
           <button onClick={() => setApplyToast(null)}
             className="toast-close-btn"
-            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '1rem', padding: 0 }}>
+            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: '1rem', padding: 0, minHeight: '44px', minWidth: '44px' }}>
             ✕
           </button>
         </div>
@@ -964,12 +971,12 @@ export default function JobsPage() {
         <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', paddingBottom: '4rem' }}>
           <button onClick={() => search(page - 1)} disabled={page <= 1 || loading}
             className="job-pagination-btn"
-            style={{ padding: '0.5rem 1.2rem', borderRadius: '99px', border: '1px solid var(--parchment)', background: 'var(--warm-white)', cursor: page <= 1 ? 'not-allowed' : 'pointer', color: page <= 1 ? 'var(--text-muted)' : 'var(--brown-dark)', fontSize: '0.9rem' }}>
+            style={{ padding: '0.5rem 1.2rem', borderRadius: '99px', border: '1px solid var(--parchment)', background: 'var(--warm-white)', cursor: page <= 1 ? 'not-allowed' : 'pointer', color: page <= 1 ? 'var(--text-muted)' : 'var(--brown-dark)', fontSize: '0.9rem', minHeight: '44px' }}>
             ← Prev
           </button>
           <button onClick={() => search(page + 1)} disabled={!hasMore || loading}
             className="job-pagination-btn"
-            style={{ padding: '0.5rem 1.2rem', borderRadius: '99px', border: '1px solid var(--parchment)', background: 'var(--warm-white)', cursor: !hasMore ? 'not-allowed' : 'pointer', color: !hasMore ? 'var(--text-muted)' : 'var(--brown-dark)', fontSize: '0.9rem' }}>
+            style={{ padding: '0.5rem 1.2rem', borderRadius: '99px', border: '1px solid var(--parchment)', background: 'var(--warm-white)', cursor: !hasMore ? 'not-allowed' : 'pointer', color: !hasMore ? 'var(--text-muted)' : 'var(--brown-dark)', fontSize: '0.9rem', minHeight: '44px' }}>
             Next →
           </button>
         </div>
