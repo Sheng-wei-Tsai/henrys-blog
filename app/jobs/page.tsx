@@ -412,6 +412,7 @@ export default function JobsPage() {
   const [salaryMin, setSalaryMin] = useState<string>(prefs.salaryMin ?? '');
   const [salaryMax, setSalaryMax] = useState<string>(prefs.salaryMax ?? '');
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
 
   const [featuredListings, setFeaturedListings] = useState<FeaturedListing[]>([]);
 
@@ -574,6 +575,23 @@ export default function JobsPage() {
     }, { onConflict: 'user_id,job_id' });
   };
 
+  // Close filter drawer on Escape
+  useEffect(() => {
+    if (!filterDrawerOpen) return;
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFilterDrawerOpen(false); };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [filterDrawerOpen]);
+
+  const activeFilterCount = [
+    sortBy !== 'date',
+    category !== 'All',
+    fullTime,
+    workingRights,
+    !!salaryMin,
+    !!salaryMax,
+  ].filter(Boolean).length;
+
   const handleSaveSearch = async () => {
     if (!user) { router.push('/login'); return; }
     await supabase.from('job_alerts').insert({
@@ -641,7 +659,7 @@ export default function JobsPage() {
       </div>
 
       {/* Search panel — hero command + chip filters + advanced drawer */}
-      <div className="animate-fade-up delay-2 search-panel">
+      <div className="animate-fade-up delay-2 search-panel mobile-search-sticky">
 
         {/* Hero row: large keyword input + location + search button */}
         <div className="search-panel-hero">
@@ -684,6 +702,28 @@ export default function JobsPage() {
         <span id="job-keywords-hint" style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '-0.5rem' }}>
           Press <kbd style={{ padding: '0 0.3em', border: '1px solid var(--parchment)', borderRadius: '3px', fontSize: '0.85em' }}>Enter</kbd> to search
         </span>
+
+        {/* Mobile-only: Filters button — opens bottom drawer */}
+        <div className="mobile-filter-row">
+          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+            {activeFilterCount > 0 ? `${activeFilterCount} filter${activeFilterCount > 1 ? 's' : ''} active` : 'No filters set'}
+          </span>
+          <button
+            className="mobile-filter-btn"
+            onClick={() => setFilterDrawerOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={filterDrawerOpen}
+          >
+            <EIcon name="sparkle" size={14} />
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="filter-count-badge" aria-label={`${activeFilterCount} active`}>{activeFilterCount}</span>
+            )}
+          </button>
+        </div>
+
+        {/* Desktop-only: chip filter row + advanced drawer (hidden on mobile — use bottom drawer instead) */}
+        <div className="desktop-filters-only">
 
         {/* Chip filter row */}
         <div className="search-chip-row">
@@ -750,6 +790,8 @@ export default function JobsPage() {
             </div>
           </div>
         </div>
+
+        </div>{/* end .desktop-filters-only */}
       </div>
 
       {error && (
@@ -926,6 +968,126 @@ export default function JobsPage() {
             Next →
           </button>
         </div>
+      )}
+
+      {/* Filter bottom drawer — mobile only, shown when filterDrawerOpen */}
+      {filterDrawerOpen && (
+        <>
+          <div
+            className="filter-drawer-overlay"
+            onClick={() => setFilterDrawerOpen(false)}
+            aria-hidden="true"
+          />
+          <div
+            className="filter-bottom-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Job filters"
+          >
+            {/* Drag handle */}
+            <div className="filter-drawer-handle" aria-hidden="true" />
+
+            {/* Header row */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ fontFamily: "'Lora', serif", fontSize: '1.15rem', fontWeight: 700, color: 'var(--brown-dark)', margin: 0 }}>
+                Filters
+              </h2>
+              <button
+                onClick={() => setFilterDrawerOpen(false)}
+                className="filter-drawer-close"
+                aria-label="Close filters"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Sort */}
+            <div className="filter-drawer-row">
+              <label htmlFor="mobile-job-sort" style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Sort by</label>
+              <select id="mobile-job-sort" value={sortBy} onChange={e => setSortBy(e.target.value)} className="search-select" style={{ fontSize: '0.9rem', flex: 1 }}>
+                {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+
+            {/* Category */}
+            <div className="filter-drawer-row">
+              <label htmlFor="mobile-job-category" style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Category</label>
+              <select id="mobile-job-category" value={category} onChange={e => setCategory(e.target.value)} className="search-select" style={{ fontSize: '0.9rem', flex: 1 }}>
+                {CATEGORIES.map(c => <option key={c.label} value={c.label}>{c.label === 'All' ? 'All categories' : c.label}</option>)}
+              </select>
+            </div>
+
+            {/* Toggle chips */}
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setFullTime(v => !v)}
+                className={fullTime ? 'search-chip active' : 'search-chip'}
+                style={{ fontSize: '0.9rem', padding: '0.55rem 1rem' }}
+              >
+                {fullTime && <EIcon name="tick" size={13} />}Full-time
+              </button>
+              <button
+                onClick={() => setWorkingRights(v => !v)}
+                className={workingRights ? 'search-chip active' : 'search-chip'}
+                style={{ fontSize: '0.9rem', padding: '0.55rem 1rem' }}
+              >
+                {workingRights && <EIcon name="tick" size={13} />}Working rights
+              </button>
+            </div>
+
+            {/* Salary range */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.35em' }}>
+                <EIcon name="coin" size={14} />Salary (AUD)
+              </span>
+              <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                <label htmlFor="mobile-salary-min" className="visually-hidden">Minimum salary AUD</label>
+                <input
+                  id="mobile-salary-min" type="number" value={salaryMin}
+                  onChange={e => setSalaryMin(e.target.value)}
+                  placeholder="Min" min="0" step="10000"
+                  className="search-input"
+                  style={{ flex: 1, fontSize: '0.9rem' }}
+                />
+                <span aria-hidden="true" style={{ color: 'var(--text-muted)', fontWeight: 700 }}>–</span>
+                <label htmlFor="mobile-salary-max" className="visually-hidden">Maximum salary AUD</label>
+                <input
+                  id="mobile-salary-max" type="number" value={salaryMax}
+                  onChange={e => setSalaryMax(e.target.value)}
+                  placeholder="Max" min="0" step="10000"
+                  className="search-input"
+                  style={{ flex: 1, fontSize: '0.9rem' }}
+                />
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.25rem' }}>
+              <button
+                onClick={() => { setSortBy('date'); setCategory('All'); setFullTime(false); setWorkingRights(false); setSalaryMin(''); setSalaryMax(''); }}
+                style={{
+                  flex: 1, padding: '0.8rem', border: '1.5px solid var(--parchment)',
+                  borderRadius: '10px', background: 'none', color: 'var(--text-secondary)',
+                  fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500,
+                  minHeight: '44px',
+                }}
+              >
+                Reset
+              </button>
+              <button
+                onClick={() => { setFilterDrawerOpen(false); search(1, true); }}
+                style={{
+                  flex: 2, padding: '0.8rem', border: 'none', borderRadius: '10px',
+                  background: 'var(--terracotta)', color: 'white',
+                  fontSize: '0.9rem', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700,
+                  boxShadow: '2px 2px 0 var(--ink)', minHeight: '44px',
+                }}
+              >
+                Apply filters
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
