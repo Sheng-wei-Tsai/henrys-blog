@@ -1,5 +1,5 @@
 'use client';
-import { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
@@ -214,6 +214,54 @@ function JobCard({ job, savedIds, onSaveToggle, onApply, isLoggedIn }: {
   const isSaved = savedIds.has(job.id);
   const { label: ageLabel, color: ageColor } = freshness(job.created);
 
+  // Swipe-to-save gesture (mobile): right-swipe saves or removes the job
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const swipeCommitted = useRef(false);
+  const [swipeX, setSwipeX] = useState(0);
+  const [isSnapping, setIsSnapping] = useState(false);
+  const SWIPE_THRESHOLD = 80;
+  const SWIPE_MAX = 110;
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    swipeCommitted.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const dx = e.touches[0].clientX - touchStartX.current;
+    const dy = e.touches[0].clientY - touchStartY.current;
+    if (!swipeCommitted.current) {
+      if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+      if (Math.abs(dy) >= Math.abs(dx)) return; // vertical scroll — let it pass
+      if (dx <= 0) return; // left swipe — ignore
+      swipeCommitted.current = true;
+    }
+    setSwipeX(Math.min(dx, SWIPE_MAX));
+  };
+
+  const handleTouchEnd = () => {
+    if (!swipeCommitted.current) return;
+    swipeCommitted.current = false;
+    if (swipeX >= SWIPE_THRESHOLD) onSaveToggle(job);
+    setIsSnapping(true);
+    setSwipeX(0);
+    setTimeout(() => setIsSnapping(false), 320);
+  };
+
+  const handleTouchCancel = () => {
+    swipeCommitted.current = false;
+    setIsSnapping(true);
+    setSwipeX(0);
+    setTimeout(() => setIsSnapping(false), 320);
+  };
+
+  const swipeStyle: React.CSSProperties = (swipeX > 0 || isSnapping)
+    ? { transform: `translateX(${swipeX}px)`, transition: isSnapping ? 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none', willChange: 'transform' }
+    : {};
+  const backdropProgress = swipeX > 0 ? Math.min(swipeX / SWIPE_THRESHOLD, 1) : 0;
+
   const SOURCE_META: Record<string, { label: string; cls: string }> = {
     jsearch:     { label: job.publisher ?? 'Google Jobs', cls: 'tag tag-jsearch' },
     google_jobs: { label: job.publisher ?? 'Google Jobs', cls: 'tag tag-google' },
@@ -230,90 +278,116 @@ function JobCard({ job, savedIds, onSaveToggle, onApply, isLoggedIn }: {
   const isHtml = hasHtmlTags(job.description);
 
   return (
-    <div className="job-card" style={{ position: 'relative', overflow: 'hidden' }}>
-      {/* City mascot — slides in on hover/focus-within via .job-card-mascot CSS class */}
-      <div className="job-card-mascot" aria-hidden="true" role="presentation">
-        <CityIcon city={job.location ?? ''} size={80} style={{ color: 'var(--text-muted)', opacity: 0.6 }} />
+    <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '14px' }}>
+      {/* Swipe-to-save backdrop — revealed as card slides right on mobile */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute', inset: 0,
+          background: isSaved ? 'var(--vermilion)' : 'var(--jade)',
+          display: 'flex', alignItems: 'center', paddingLeft: '1.5rem', gap: '0.5rem',
+          opacity: backdropProgress,
+          transition: isSnapping ? 'opacity 0.3s' : 'none',
+          pointerEvents: 'none',
+        }}
+      >
+        <EIcon name={isSaved ? 'close' : 'heart-filled'} size={22} style={{ color: 'white' }} aria-hidden="true" />
+        <span style={{ color: 'white', fontWeight: 700, fontSize: '0.9rem' }}>
+          {isSaved ? 'Remove' : 'Save'}
+        </span>
       </div>
-      {/* Top row: title/meta + age badge */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.75rem' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h3 className="job-card-title">
-            {job.title}
-          </h3>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
-            {job.company} · {job.location}
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-            {job.contract_type && <span className="tag">{job.contract_type}</span>}
-            {job.category      && <span className="tag">{job.category}</span>}
-            {job.salary        && <span className="tag" style={{ color: 'var(--terracotta)', display: 'inline-flex', alignItems: 'center', gap: '0.25em' }}><EIcon name="coin" size={12} />{job.salary}</span>}
-            <span className={srcMeta.cls}>via {srcMeta.label}</span>
-          </div>
+      <div
+        className="job-card"
+        style={{ position: 'relative', overflow: 'hidden', ...swipeStyle }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchCancel}
+      >
+        {/* City mascot — slides in on hover/focus-within via .job-card-mascot CSS class */}
+        <div className="job-card-mascot" aria-hidden="true" role="presentation">
+          <CityIcon city={job.location ?? ''} size={80} style={{ color: 'var(--text-muted)', opacity: 0.6 }} />
         </div>
-        <span style={{ fontSize: '0.78rem', fontWeight: 600, color: ageColor, flexShrink: 0 }}>{ageLabel}</span>
-      </div>
+        {/* Top row: title/meta + age badge */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.75rem' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h3 className="job-card-title">
+              {job.title}
+            </h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+              {job.company} · {job.location}
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+              {job.contract_type && <span className="tag">{job.contract_type}</span>}
+              {job.category      && <span className="tag">{job.category}</span>}
+              {job.salary        && <span className="tag" style={{ color: 'var(--terracotta)', display: 'inline-flex', alignItems: 'center', gap: '0.25em' }}><EIcon name="coin" size={12} />{job.salary}</span>}
+              <span className={srcMeta.cls}>via {srcMeta.label}</span>
+            </div>
+          </div>
+          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: ageColor, flexShrink: 0 }}>{ageLabel}</span>
+        </div>
 
-      {/* Action buttons — always visible, wrap on mobile */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
-        <button
-          onClick={() => onSaveToggle(job)}
-          title={isSaved ? 'Remove from saved' : 'Save job'}
-          className="job-btn-save"
-          style={{
-            background: isSaved ? 'rgba(232,64,64,0.08)' : undefined,
-            border: isSaved ? '1px solid var(--terracotta)' : undefined,
-            color: isSaved ? 'var(--terracotta)' : undefined,
-          }}
-        >
-          <EIcon name={isSaved ? 'heart-filled' : 'heart'} size={13} style={{ marginRight: '0.3em' }} />
-          {isSaved ? 'Saved' : 'Save'}
-        </button>
-        <Link
-          href={`/cover-letter?title=${encodeURIComponent(job.title)}&company=${encodeURIComponent(job.company)}&desc=${encodeURIComponent(job.description)}`}
-          className="job-btn-cover">
-          <EIcon name="pencil-letter" size={13} style={{ marginRight: '0.3em' }} />Cover Letter
-        </Link>
-        <a href={job.url} target="_blank" rel="noopener noreferrer"
-          onClick={() => onApply(job)}
-          style={{
-            background: 'var(--terracotta)', color: 'white',
-            padding: '0.4rem 1rem', borderRadius: '99px',
-            fontSize: '0.85rem', fontWeight: 500, textDecoration: 'none',
+        {/* Action buttons — always visible, wrap on mobile */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+          <button
+            onClick={() => onSaveToggle(job)}
+            title={isSaved ? 'Remove from saved' : 'Save job'}
+            className="job-btn-save"
+            style={{
+              background: isSaved ? 'rgba(232,64,64,0.08)' : undefined,
+              border: isSaved ? '1px solid var(--terracotta)' : undefined,
+              color: isSaved ? 'var(--terracotta)' : undefined,
+            }}
+          >
+            <EIcon name={isSaved ? 'heart-filled' : 'heart'} size={13} style={{ marginRight: '0.3em' }} />
+            {isSaved ? 'Saved' : 'Save'}
+          </button>
+          <Link
+            href={`/cover-letter?title=${encodeURIComponent(job.title)}&company=${encodeURIComponent(job.company)}&desc=${encodeURIComponent(job.description)}`}
+            className="job-btn-cover">
+            <EIcon name="pencil-letter" size={13} style={{ marginRight: '0.3em' }} />Cover Letter
+          </Link>
+          <a href={job.url} target="_blank" rel="noopener noreferrer"
+            onClick={() => onApply(job)}
+            style={{
+              background: 'var(--terracotta)', color: 'white',
+              padding: '0.4rem 1rem', borderRadius: '99px',
+              fontSize: '0.85rem', fontWeight: 500, textDecoration: 'none',
+            }}>
+            Apply →
+          </a>
+        </div>
+
+        {/* Skill Gap Analysis */}
+        <div style={{ marginBottom: '0.5rem' }}>
+          <GapAnalysisPanel
+            jobId={job.id}
+            jobTitle={job.title}
+            company={job.company}
+            description={job.description}
+            isLoggedIn={isLoggedIn}
+          />
+        </div>
+
+        <div style={{ marginTop: '0.8rem', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+          {expanded ? (
+            isHtml
+              /* Description is server-sanitized (script/iframe/on* stripped) before reaching client */
+              // eslint-disable-next-line react/no-danger
+              ? <div className="job-description-html" dangerouslySetInnerHTML={{ __html: job.description }} />
+              : <p>{job.description}</p>
+          ) : (
+            <p style={{ overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+              {isHtml ? stripHtml(job.description) : job.description}
+            </p>
+          )}
+          <button onClick={() => setExpanded(v => !v)} style={{
+            background: 'none', border: 'none', color: 'var(--terracotta)',
+            cursor: 'pointer', fontSize: '0.82rem', padding: '0.2rem 0',
           }}>
-          Apply →
-        </a>
-      </div>
-
-      {/* Skill Gap Analysis */}
-      <div style={{ marginBottom: '0.5rem' }}>
-        <GapAnalysisPanel
-          jobId={job.id}
-          jobTitle={job.title}
-          company={job.company}
-          description={job.description}
-          isLoggedIn={isLoggedIn}
-        />
-      </div>
-
-      <div style={{ marginTop: '0.8rem', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-        {expanded ? (
-          isHtml
-            /* Description is server-sanitized (script/iframe/on* stripped) before reaching client */
-            // eslint-disable-next-line react/no-danger
-            ? <div className="job-description-html" dangerouslySetInnerHTML={{ __html: job.description }} />
-            : <p>{job.description}</p>
-        ) : (
-          <p style={{ overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
-            {isHtml ? stripHtml(job.description) : job.description}
-          </p>
-        )}
-        <button onClick={() => setExpanded(v => !v)} style={{
-          background: 'none', border: 'none', color: 'var(--terracotta)',
-          cursor: 'pointer', fontSize: '0.82rem', padding: '0.2rem 0',
-        }}>
-          {expanded ? 'Show less ↑' : 'Read more ↓'}
-        </button>
+            {expanded ? 'Show less ↑' : 'Read more ↓'}
+          </button>
+        </div>
       </div>
     </div>
   );
