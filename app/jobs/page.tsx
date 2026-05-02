@@ -209,6 +209,9 @@ const SOURCE_LABELS: Record<string, string> = {
   jsearch: 'Google Jobs', google_jobs: 'Google Jobs',
   jora: 'Jora', indeed: 'Indeed', acs: 'ACS', seek: 'Seek',
   adzuna: 'Adzuna', linkedin: 'LinkedIn', remotive: 'Remotive', jobicy: 'Jobicy',
+  greenhouse: 'Greenhouse', lever: 'Lever', workday: 'Workday', ashby: 'Ashby',
+  apify: 'Apify', '80kh': '80,000 Hours',
+  smartrec: 'Smartrecruiters', apsjobs: 'APS Jobs', hatch: 'Hatch',
 };
 
 const SOURCE_CLS: Record<string, string> = {
@@ -216,6 +219,10 @@ const SOURCE_CLS: Record<string, string> = {
   jora: 'tag tag-jora', indeed: 'tag tag-indeed', acs: 'tag tag-acs',
   seek: 'tag tag-seek', adzuna: 'tag tag-adzuna', linkedin: 'tag tag-linkedin',
   remotive: 'tag tag-remotive', jobicy: 'tag tag-jobicy',
+  greenhouse: 'tag tag-greenhouse', lever: 'tag tag-lever',
+  workday: 'tag tag-workday', ashby: 'tag tag-ashby', apify: 'tag tag-apify',
+  '80kh': 'tag tag-80kh',
+  smartrec: 'tag tag-smartrec', apsjobs: 'tag tag-apsjobs', hatch: 'tag tag-hatch',
 };
 
 function JobDetailModal({ job, isSaved, isLoggedIn, onClose, onSaveToggle, onApply }: {
@@ -427,6 +434,9 @@ function JobCard({ job, savedIds, onSaveToggle, onApply, isLoggedIn, onOpenDetai
     linkedin:    { label: 'LinkedIn',      cls: 'tag tag-linkedin' },
     remotive:    { label: 'Remotive',      cls: 'tag tag-remotive' },
     jobicy:      { label: 'Jobicy',        cls: 'tag tag-jobicy' },
+    smartrec:    { label: 'Smartrecruiters', cls: 'tag tag-smartrec' },
+    apsjobs:     { label: 'APS Jobs',      cls: 'tag tag-apsjobs' },
+    hatch:       { label: 'Hatch',         cls: 'tag tag-hatch' },
   };
 
   // Attribution: use pre-computed attribution string if available, else fall back to single source
@@ -497,7 +507,7 @@ function JobCard({ job, savedIds, onSaveToggle, onApply, isLoggedIn, onOpenDetai
                 >
                   {attrLabel}
                 </button>
-                {sourcesExpanded && job.sources && job.sources.length > 0 && (
+                {sourcesExpanded && job.sources && job.sources.length > 1 && (
                   <div
                     role="menu"
                     style={{
