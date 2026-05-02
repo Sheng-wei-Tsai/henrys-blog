@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/components/AuthProvider';
 
@@ -287,7 +288,7 @@ export default function Comments({ slug }: { slug: string }) {
         </form>
       ) : (
         <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '2rem' }}>
-          <a href="/login" style={{ color: 'var(--terracotta)', fontWeight: 600 }}>Sign in</a> to join the conversation.
+          <Link href="/login" style={{ color: 'var(--terracotta)', fontWeight: 600 }}>Sign in</Link> to join the conversation.
         </p>
       )}
 

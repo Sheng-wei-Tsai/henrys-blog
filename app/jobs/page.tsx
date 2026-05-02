@@ -526,7 +526,7 @@ function JobCard({ job, savedIds, onSaveToggle, onApply, isLoggedIn, onOpenDetai
               ? <div className="job-description-html" dangerouslySetInnerHTML={{ __html: job.description }} />
               : <p>{job.description}</p>
           ) : (
-            <p style={{ overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+            <p style={{ overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>
               {isHtml ? stripHtml(job.description) : job.description}
             </p>
           )}
