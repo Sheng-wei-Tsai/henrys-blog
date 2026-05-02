@@ -419,7 +419,7 @@ export default function NetworkPageClient({
               Edit
             </Link>
             <Link
-              href="/dashboard/messages"
+              href="/network/messages"
               style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
             >
               Inbox
