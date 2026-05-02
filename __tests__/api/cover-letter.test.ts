@@ -16,6 +16,26 @@ vi.mock('@/lib/subscription', () => ({
   recordUsage: vi.fn(),
 }));
 
+// ── KV mock ───────────────────────────────────────────────────────────────────
+const mockKvGet = vi.fn().mockResolvedValue(null);
+const mockKvSet = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('@/lib/kv', () => ({
+  kvGet: (...args: unknown[]) => mockKvGet(...args),
+  kvSet: (...args: unknown[]) => mockKvSet(...args),
+}));
+
+// ── Supabase mock ─────────────────────────────────────────────────────────────
+const mockMaybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+const mockUpsert      = vi.fn().mockResolvedValue({ error: null });
+const mockEq          = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+const mockSelect      = vi.fn().mockReturnValue({ eq: mockEq });
+const mockFrom        = vi.fn().mockReturnValue({ select: mockSelect, upsert: mockUpsert });
+
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: vi.fn().mockReturnValue({ from: mockFrom }),
+}));
+
 // ── OpenAI mock ───────────────────────────────────────────────────────────────
 const mockCreate = vi.fn();
 
@@ -85,6 +105,8 @@ describe('POST /api/cover-letter', () => {
     beforeEach(() => {
       mockRequireSubscription.mockResolvedValue(validAuth);
       mockCheckEndpointRateLimit.mockResolvedValue(true);
+      mockKvGet.mockResolvedValue(null);
+      mockMaybeSingle.mockResolvedValue({ data: null, error: null });
     });
 
     it('returns 429 when endpoint rate limit is reached', async () => {
@@ -106,6 +128,34 @@ describe('POST /api/cover-letter', () => {
       });
       const res = await POST(req);
       expect(res.status).toBe(400);
+    });
+
+    it('returns cached text from KV without calling OpenAI', async () => {
+      const cachedLetter = 'A'.repeat(200);
+      mockKvGet.mockResolvedValueOnce(cachedLetter);
+      const res = await POST(makePost(validBody));
+      expect(res.status).toBe(200);
+      expect(res.headers.get('content-type')).toContain('text/plain');
+      expect(await res.text()).toBe(cachedLetter);
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it('returns cached text from Supabase on KV miss and populates KV', async () => {
+      const cachedLetter = 'B'.repeat(200);
+      mockKvGet.mockResolvedValueOnce(null);
+      mockMaybeSingle.mockResolvedValueOnce({
+        data: { cover_letter_text: cachedLetter },
+        error: null,
+      });
+      const res = await POST(makePost(validBody));
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe(cachedLetter);
+      expect(mockCreate).not.toHaveBeenCalled();
+      expect(mockKvSet).toHaveBeenCalledWith(
+        expect.stringContaining('cover-letter-fragment:'),
+        cachedLetter,
+        expect.any(Number),
+      );
     });
 
     it('streams plain-text content for a valid request', async () => {
@@ -139,6 +189,14 @@ describe('POST /api/cover-letter', () => {
       // Truncated to 1500
       expect(capturedUserContent).toContain('z'.repeat(1500));
       expect(capturedUserContent).not.toContain('z'.repeat(1501));
+    });
+
+    it('uses company+jobTitle as the cache key', async () => {
+      mockCreate.mockResolvedValueOnce(makeStreamChunks(['ok']));
+      await POST(makePost(validBody));
+      expect(mockKvGet).toHaveBeenCalledWith(
+        expect.stringMatching(/^cover-letter-fragment:atlassian:software-engineer$/),
+      );
     });
   });
 });

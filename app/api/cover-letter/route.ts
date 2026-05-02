@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { createClient } from '@supabase/supabase-js';
 import { requireSubscription, recordUsage, checkEndpointRateLimit, rateLimitResponse } from '@/lib/subscription';
+import { kvGet, kvSet } from '@/lib/kv';
+
+// Cover letter fragments are role+company-specific — cache for 7 days
+const CACHE_TTL_SECONDS = 7 * 24 * 60 * 60;
+
+function normalizeCacheSegment(s: string): string {
+  return s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 80);
+}
 
 const SYSTEM_PROMPT = `You are a senior career coach specialising in the Australian IT job market with 15+ years placing engineers at Atlassian, Canva, CBA, and Accenture.
 
@@ -28,8 +37,6 @@ export async function POST(req: NextRequest) {
   const withinLimit = await checkEndpointRateLimit(auth.user.id, 'cover-letter');
   if (!withinLimit) return rateLimitResponse();
 
-  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
   let body: { jobTitle?: string; company?: string; jobDescription?: string; background?: string };
   try {
     body = await req.json();
@@ -41,6 +48,37 @@ export async function POST(req: NextRequest) {
   if (!jobTitle || !company || !jobDescription || !background) {
     return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400 });
   }
+
+  const cacheKey = `cover-letter-fragment:${normalizeCacheSegment(company)}:${normalizeCacheSegment(jobTitle)}`;
+
+  const sb = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
+
+  // ── 1. KV fast path ────────────────────────────────────────────────────────
+  const kvHit = await kvGet(cacheKey);
+  if (kvHit && kvHit.length > 100) {
+    void recordUsage(auth.user.id, 'cover-letter');
+    return new Response(kvHit, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+  }
+
+  // ── 2. Supabase fallback ───────────────────────────────────────────────────
+  const { data: cached } = await sb
+    .from('cover_letter_fragments_cache')
+    .select('cover_letter_text')
+    .eq('cache_key', cacheKey)
+    .maybeSingle();
+
+  const cachedText = (cached as { cover_letter_text?: string } | null)?.cover_letter_text;
+  if (cachedText && cachedText.length > 100) {
+    void kvSet(cacheKey, cachedText, CACHE_TTL_SECONDS);
+    void recordUsage(auth.user.id, 'cover-letter');
+    return new Response(cachedText, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+  }
+
+  // ── 3. Generate fresh ──────────────────────────────────────────────────────
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   const userPrompt = `Write a cover letter for this role.
 
@@ -66,13 +104,26 @@ Write the cover letter now. 3-4 paragraphs, plain text only, no headers or bulle
   });
 
   const encoder = new TextEncoder();
+  const chunks: string[] = [];
   const readable = new ReadableStream({
     async start(controller) {
       for await (const chunk of stream) {
         const text = chunk.choices[0]?.delta?.content ?? '';
-        if (text) controller.enqueue(encoder.encode(text));
+        if (text) {
+          controller.enqueue(encoder.encode(text));
+          chunks.push(text);
+        }
       }
       controller.close();
+      // Write to both caches after stream completes (fire-and-forget)
+      const fullText = chunks.join('');
+      if (fullText.length > 100) {
+        void kvSet(cacheKey, fullText, CACHE_TTL_SECONDS);
+        void sb.from('cover_letter_fragments_cache').upsert(
+          { cache_key: cacheKey, cover_letter_text: fullText, updated_at: new Date().toISOString() },
+          { onConflict: 'cache_key' },
+        );
+      }
     },
   });
 

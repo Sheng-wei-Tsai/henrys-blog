@@ -141,7 +141,7 @@
 - [ ] Vercel KV set up via Marketplace (free tier: 256MB)
 - [x] Study guide cache: KV → Supabase fallback ✅ 2026-05-01
 - [x] Interview questions shared pool cache (same role = same questions, not per-user) ✅ 2026-05-02
-- [ ] Cover letter fragment cache by company+role key
+- [x] Cover letter fragment cache by company+role key ✅ 2026-05-02
 - **Effort:** S (1–2 days)
 
 ### Expand Test Coverage
