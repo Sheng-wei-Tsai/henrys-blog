@@ -19,8 +19,8 @@ export default function DigitalPulseCard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
             <span style={{
               fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.55rem',
-              borderRadius: '99px', background: '#eff6ff', color: '#0369a1',
-              border: '1px solid #bfdbfe', textTransform: 'uppercase', letterSpacing: '0.08em',
+              borderRadius: '99px', background: 'var(--warm-white)', color: 'var(--jade)',
+              border: '1px solid var(--parchment)', textTransform: 'uppercase', letterSpacing: '0.08em',
             }}>
               ACS Digital Pulse {DIGITAL_PULSE_META._year}
             </span>
@@ -40,10 +40,10 @@ export default function DigitalPulseCard() {
           target="_blank"
           rel="noopener noreferrer"
           style={{
-            fontSize: '0.75rem', fontWeight: 600, color: '#0369a1',
+            fontSize: '0.75rem', fontWeight: 600, color: 'var(--jade)',
             textDecoration: 'none', whiteSpace: 'nowrap',
             padding: '0.3rem 0.75rem', borderRadius: '6px',
-            border: '1px solid #bfdbfe', background: '#eff6ff',
+            border: '1px solid var(--parchment)', background: 'var(--warm-white)',
           }}
         >
           Full report →
@@ -66,7 +66,7 @@ export default function DigitalPulseCard() {
             <div style={{ fontSize: '1.25rem', fontWeight: 700, color: stat.color, lineHeight: 1.1 }}>
               {stat.value}
               {stat.trend === 'up' && (
-                <span style={{ fontSize: '0.65rem', marginLeft: '0.25rem', color: '#10b981' }}>▲</span>
+                <span style={{ fontSize: '0.65rem', marginLeft: '0.25rem', color: 'var(--jade)' }}>▲</span>
               )}
             </div>
             <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--brown-dark)', marginTop: '0.2rem' }}>
@@ -97,13 +97,13 @@ export default function DigitalPulseCard() {
                 <div style={{
                   width: `${(s.growth / 40) * 100}%`,
                   height: '100%', borderRadius: '99px',
-                  background: s.category === 'Data & AI' ? '#7c3aed'
-                    : s.category === 'Infrastructure' ? '#0369a1'
-                    : s.category === 'Security' ? '#dc2626'
-                    : '#374151',
+                  background: s.category === 'Data & AI' ? 'var(--gold)'
+                    : s.category === 'Infrastructure' ? 'var(--jade)'
+                    : s.category === 'Security' ? 'var(--vermilion)'
+                    : 'var(--text-secondary)',
                 }} />
               </div>
-              <div style={{ minWidth: 36, fontSize: '0.72rem', fontWeight: 700, color: '#10b981', textAlign: 'right' }}>
+              <div style={{ minWidth: 36, fontSize: '0.72rem', fontWeight: 700, color: 'var(--jade)', textAlign: 'right' }}>
                 +{s.growth}%
               </div>
             </div>
@@ -113,19 +113,19 @@ export default function DigitalPulseCard() {
 
       {/* Key insights */}
       <div style={{
-        background: '#f0f9ff', border: '1px solid #bae6fd',
+        background: 'var(--warm-white)', border: '1px solid var(--parchment)',
         borderRadius: '10px', padding: '0.85rem 1rem',
         marginBottom: '0.75rem',
       }}>
         <p style={{
-          fontSize: '0.68rem', fontWeight: 700, color: '#0369a1',
+          fontSize: '0.68rem', fontWeight: 700, color: 'var(--jade)',
           textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem', marginTop: 0,
         }}>
           Key Insights
         </p>
         <ul style={{ margin: 0, paddingLeft: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
           {DIGITAL_PULSE_INSIGHTS.map((ins, i) => (
-            <li key={i} style={{ fontSize: '0.78rem', color: '#0c4a6e', lineHeight: 1.6 }}>{ins}</li>
+            <li key={i} style={{ fontSize: '0.78rem', color: 'var(--text-primary)', lineHeight: 1.6 }}>{ins}</li>
           ))}
         </ul>
       </div>
