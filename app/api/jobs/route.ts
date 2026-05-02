@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { sourceLabel, makeSingleSource, formatAttribution, type SourceRef } from '@/lib/jobs-sources';
 
 const APP_ID          = process.env.ADZUNA_APP_ID;
 const APP_KEY         = process.env.ADZUNA_APP_KEY;
@@ -20,10 +21,15 @@ export interface AdzunaJob {
   created: string;
   category: string;
   contract_type: string | null;
-  source: 'adzuna' | 'jsearch' | 'jora' | 'indeed' | 'acs' | 'seek' | 'linkedin' | 'remotive' | 'google_jobs' | 'jobicy';
+  source: 'adzuna' | 'jsearch' | 'jora' | 'indeed' | 'acs' | 'seek' | 'linkedin' | 'remotive' | 'google_jobs' | 'jobicy' | 'greenhouse' | 'lever' | 'workday' | 'ashby' | 'apify' | '80kh';
   publisher?: string;
   salary_min?: number;
   salary_max?: number;
+  // v2 attribution fields (present on all jobs from this route)
+  primary_source?: string;
+  sources?: SourceRef[];
+  attribution?: string;
+  sponsor_signal?: boolean;
 }
 
 interface JSearchHit {
@@ -96,6 +102,27 @@ interface RemotiveHit {
   publication_date?: string;
   category?: string;
   job_type?: string;
+}
+
+// ─── v2 attribution helper ────────────────────────────────────────────────────
+// Adds sources[], primary_source, attribution to jobs that don't have them yet
+// (live-fetched jobs from Adzuna / Google Jobs / JSearch / etc.)
+
+function withAttribution(jobs: AdzunaJob[]): AdzunaJob[] {
+  return jobs.map(j => {
+    if (j.sources?.length) return j;
+    const srcs = makeSingleSource(
+      j.source === 'google_jobs' ? 'googlejobs' : j.source,
+      j.url,
+    );
+    return {
+      ...j,
+      primary_source: j.source,
+      sources:        srcs,
+      attribution:    formatAttribution(srcs),
+      sponsor_signal: false,
+    };
+  });
 }
 
 // ─── IT title filter ──────────────────────────────────────────────────────────
@@ -368,7 +395,7 @@ async function fetchScrapedJobs(location: string): Promise<AdzunaJob[]> {
 
     const { data, error } = await sb
       .from('scraped_jobs')
-      .select('id, source, title, company, location, description, salary, salary_min, salary_max, url, category, contract_type, created')
+      .select('id, source, primary_source, sources, sponsor_signal, title, company, location, description, salary, salary_min, salary_max, url, category, contract_type, created')
       .or(locationClauses)
       .gt('expires_at', new Date().toISOString())
       .gte('created', '2026-01-01')
@@ -380,21 +407,31 @@ async function fetchScrapedJobs(location: string): Promise<AdzunaJob[]> {
       console.warn('[jobs] Scraped query error:', error?.message ?? 'no data');
       return [];
     }
-    return data.map(r => ({
-      id:            r.id,
-      title:         r.title,
-      company:       r.company,
-      location:      r.location,
-      description:   r.description ?? '',
-      salary:        r.salary ?? null,
-      salary_min:    r.salary_min ?? undefined,
-      salary_max:    r.salary_max ?? undefined,
-      url:           r.url,
-      created:       r.created,
-      category:      r.category ?? '',
-      contract_type: r.contract_type ?? null,
-      source:        r.source as AdzunaJob['source'],
-    }));
+    return data.map(r => {
+      const srcs: SourceRef[] = Array.isArray(r.sources) && r.sources.length
+        ? r.sources as SourceRef[]
+        : makeSingleSource(r.source, r.url);
+      const primary = r.primary_source ?? r.source;
+      return {
+        id:             r.id,
+        title:          r.title,
+        company:        r.company,
+        location:       r.location,
+        description:    r.description ?? '',
+        salary:         r.salary ?? null,
+        salary_min:     r.salary_min ?? undefined,
+        salary_max:     r.salary_max ?? undefined,
+        url:            r.url,
+        created:        r.created,
+        category:       r.category ?? '',
+        contract_type:  r.contract_type ?? null,
+        source:         r.source as AdzunaJob['source'],
+        primary_source: primary,
+        sources:        srcs,
+        attribution:    formatAttribution(srcs),
+        sponsor_signal: r.sponsor_signal ?? false,
+      };
+    });
   } catch (e) {
     console.warn('[jobs] Scraped exception:', e);
     return [];
@@ -582,11 +619,11 @@ export async function GET(req: NextRequest) {
     if (az2Res.status      === 'rejected') console.warn('[jobs] Adzuna p2 rejected:', az2Res.reason);
     if (gjRes.status       === 'rejected') console.warn('[jobs] GoogleJobs rejected:', gjRes.reason);
 
-    const remotiveJobs = filterIT(rawRemotive);
-    const jobicyJobs   = filterIT(rawJobicy);
-    const jsearchJobs  = filterIT(rawJSearch);
-    const adzunaJobs   = filterIT(rawAdzuna);
-    const gjobsJobs    = filterIT(rawGJobs);
+    const remotiveJobs = filterIT(withAttribution(rawRemotive));
+    const jobicyJobs   = filterIT(withAttribution(rawJobicy));
+    const jsearchJobs  = filterIT(withAttribution(rawJSearch));
+    const adzunaJobs   = filterIT(withAttribution(rawAdzuna));
+    const gjobsJobs    = filterIT(withAttribution(rawGJobs));
     if (process.env.NODE_ENV !== 'production') console.log(`[jobs] remote: remotive=${rawRemotive.length}→${remotiveJobs.length} jobicy=${rawJobicy.length}→${jobicyJobs.length} jsearch=${rawJSearch.length}→${jsearchJobs.length} gjobs=${rawGJobs.length}→${gjobsJobs.length} adzuna=${rawAdzuna.length}→${adzunaJobs.length}`);
 
     const merged = sanitizeJobs([
@@ -624,8 +661,8 @@ export async function GET(req: NextRequest) {
     if (az1Res.status     === 'rejected') console.warn('[jobs] Adzuna p1 rejected:', az1Res.reason);
     if (az2Res.status     === 'rejected') console.warn('[jobs] Adzuna p2 rejected:', az2Res.reason);
 
-    const jsearchJobs = filterIT(rawJSearch);
-    const adzunaJobs  = filterIT(rawAdzuna);
+    const jsearchJobs = filterIT(withAttribution(rawJSearch));
+    const adzunaJobs  = filterIT(withAttribution(rawAdzuna));
     if (process.env.NODE_ENV !== 'production') console.log(`[jobs] freelance: jsearch=${rawJSearch.length}→${jsearchJobs.length} adzuna=${rawAdzuna.length}→${adzunaJobs.length}`);
 
     const merged = sanitizeJobs([
@@ -670,8 +707,8 @@ export async function GET(req: NextRequest) {
   if (az2Res.status     === 'rejected') console.warn('[jobs] Adzuna p2 rejected:',  az2Res.reason);
 
   const scrapedJobs = addUnique(filterIT(rawScraped));
-  const googleFinal = addUnique(filterIT(rawGJobs));
-  const adzunaFinal = addUnique(filterIT(rawAdzuna));
+  const googleFinal = addUnique(filterIT(withAttribution(rawGJobs)));
+  const adzunaFinal = addUnique(filterIT(withAttribution(rawAdzuna)));
 
   if (process.env.NODE_ENV !== 'production') console.log(`[jobs] au: scraped=${rawScraped.length}→${scrapedJobs.length} google=${rawGJobs.length}→${googleFinal.length} adzuna=${rawAdzuna.length}→${adzunaFinal.length}`);
 
