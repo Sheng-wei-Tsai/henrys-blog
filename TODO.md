@@ -140,7 +140,7 @@
 **Why:** AI calls hit Supabase for cache checks. Redis is 50× faster for hot-path lookups.
 - [ ] Vercel KV set up via Marketplace (free tier: 256MB)
 - [x] Study guide cache: KV → Supabase fallback ✅ 2026-05-01
-- [ ] Interview questions shared pool cache (same role = same questions, not per-user)
+- [x] Interview questions shared pool cache (same role = same questions, not per-user) ✅ 2026-05-02
 - [ ] Cover letter fragment cache by company+role key
 - **Effort:** S (1–2 days)
 
