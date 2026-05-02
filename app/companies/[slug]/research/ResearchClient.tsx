@@ -86,6 +86,100 @@ function StatChip({ label, value, valueColor = 'var(--text-primary)' }: {
   );
 }
 
+function BattleCard({ company, research }: { company: CompanyData; research: CompanyResearch }) {
+  const printDate = new Date().toLocaleDateString('en-AU', {
+    day: 'numeric', month: 'short', year: 'numeric',
+  });
+  return (
+    <div className="battle-card" aria-hidden="true">
+      <div className="bc-header">
+        <div className="bc-company-name">{company.name}</div>
+        <div className="bc-header-meta">
+          <span className="bc-tier">{company.tierLabel}</span>
+          <span>·</span>
+          <span>{company.auCity}</span>
+          <span>·</span>
+          <span>Glassdoor {company.glassdoor.rating}/5 ({company.glassdoor.reviews} reviews)</span>
+        </div>
+        <div className="bc-tagline">{company.tagline}</div>
+      </div>
+
+      <div className="bc-stats-bar">
+        <div className="bc-stat">
+          <span className="bc-stat-label">WFH Policy</span>
+          <span className="bc-stat-val">{company.wfh}</span>
+        </div>
+        <div className="bc-stat">
+          <span className="bc-stat-label">Visa 482</span>
+          <span className="bc-stat-val">{company.sponsorship.sponsors482 ? '✓ Sponsors' : '✗ None'}</span>
+        </div>
+        <div className="bc-stat">
+          <span className="bc-stat-label">Grad Salary</span>
+          <span className="bc-stat-val">{company.compensation.gradRange}</span>
+        </div>
+        <div className="bc-stat">
+          <span className="bc-stat-label">Culture</span>
+          <span className="bc-stat-val">{company.culture.vibe}</span>
+        </div>
+      </div>
+
+      <div className="bc-body">
+        <div className="bc-col">
+          <div className="bc-section">
+            <div className="bc-section-title">Interview Process</div>
+            <p className="bc-text-primary">{research.interviewProcess.rounds}</p>
+            <p className="bc-text-secondary">{research.interviewProcess.style}</p>
+          </div>
+          <div className="bc-section">
+            <div className="bc-section-title">Prep Checklist</div>
+            <ol className="bc-ordered-list">
+              {research.interviewProcess.tips.map((tip, i) => (
+                <li key={i}>{tip}</li>
+              ))}
+            </ol>
+          </div>
+          <div className="bc-section">
+            <div className="bc-section-title">Culture Insight</div>
+            <p className="bc-quote">&ldquo;{research.culture.standout}&rdquo;</p>
+          </div>
+        </div>
+        <div className="bc-col">
+          <div className="bc-section">
+            <div className="bc-section-title">Must-Haves</div>
+            <ul className="bc-check-list">
+              {research.candidateProfile.mustHaves.map((item, i) => (
+                <li key={i}><span className="bc-check">✓</span>{item}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="bc-section">
+            <div className="bc-section-title">Nice-to-Haves</div>
+            <ul className="bc-check-list">
+              {research.candidateProfile.niceToHaves.map((item, i) => (
+                <li key={i}><span className="bc-diamond">◆</span>{item}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="bc-section">
+            <div className="bc-section-title">Insider Tips</div>
+            <ol className="bc-ordered-list">
+              {research.insiderTips.map((tip, i) => (
+                <li key={i}>{tip}</li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <div className="bc-footer">
+        <span>TechPath AU · henrysdigitallife.com</span>
+        <span>AI-generated · verify with recent sources</span>
+        <span>{printDate}</span>
+      </div>
+    </div>
+  );
+}
+
 export function ResearchClient({ company }: { company: CompanyData }) {
   const cacheKey = `company_research_${company.slug}`;
   const [research, setResearch] = useState<CompanyResearch | null>(null);
@@ -299,6 +393,23 @@ export function ResearchClient({ company }: { company: CompanyData }) {
             >
               Regenerate
             </button>
+            <button
+              onClick={() => window.print()}
+              className="btn-research-print"
+              aria-label="Print interview battle card"
+              style={{
+                background: 'var(--ink)',
+                color: 'var(--warm-white)',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '0.35rem 0.85rem',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              🖨 Battle Card
+            </button>
           </div>
 
           {/* Culture */}
@@ -433,6 +544,8 @@ export function ResearchClient({ company }: { company: CompanyData }) {
               View full company profile →
             </Link>
           </div>
+
+          <BattleCard company={company} research={research} />
         </>
       )}
     </div>

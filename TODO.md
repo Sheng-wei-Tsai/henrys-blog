@@ -190,7 +190,7 @@
 
 ### Company Research AI — `features/company-research-ai.md`
 - [x] 2026-05-02 `/companies/[slug]/research` — AI company brief (culture, news, tech stack, interview style)
-- [ ] "Interview battle card" — printable 1-pager per company
+- [x] "Interview battle card" — printable 1-pager per company ✅ 2026-05-02
 - **Effort:** L (1–2 weeks)
 
 ---
