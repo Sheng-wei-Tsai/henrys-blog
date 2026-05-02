@@ -34,6 +34,8 @@ interface Props {
   isLoggedIn: boolean;
   hasProfile: boolean;
   currentProfile: CurrentProfile | null;
+  currentProfileId: string | null;
+  unreadCount: number;
 }
 
 const VISA_LABELS: Record<string, string> = {
@@ -62,7 +64,11 @@ function skillsMatch(userSkills: string[], referrerSkills: string[]): number {
   return referrerSkills.filter(s => lower.includes(s.toLowerCase())).length;
 }
 
-function SeekerCard({ profile }: { profile: Profile }) {
+function SeekerCard({ profile, canMessage, onMessage }: {
+  profile: Profile;
+  canMessage: boolean;
+  onMessage: (profileId: string, label: string) => void;
+}) {
   const duration = lookingDuration(profile.created_at);
   const visaLabel = VISA_LABELS[profile.visa_type] ?? profile.visa_type;
 
@@ -122,11 +128,25 @@ function SeekerCard({ profile }: { profile: Profile }) {
           ))}
         </div>
       )}
+
+      {canMessage && (
+        <button
+          className="network-dm-btn"
+          onClick={() => onMessage(profile.id, `${profile.role_title} in ${profile.city}`)}
+        >
+          Message
+        </button>
+      )}
     </div>
   );
 }
 
-function ReferrerCard({ referrer, matchCount }: { referrer: ReferrerProfile; matchCount: number }) {
+function ReferrerCard({ referrer, matchCount, canMessage, onMessage }: {
+  referrer: ReferrerProfile;
+  matchCount: number;
+  canMessage: boolean;
+  onMessage: (profileId: string, label: string) => void;
+}) {
   const visaLabel = VISA_LABELS[referrer.visa_type] ?? referrer.visa_type;
 
   return (
@@ -223,18 +243,27 @@ function ReferrerCard({ referrer, matchCount }: { referrer: ReferrerProfile; mat
         </div>
       )}
 
-      <div
-        style={{
-          fontSize: '0.8rem',
-          color: 'var(--text-muted)',
-          padding: '0.6rem 0.8rem',
-          background: 'var(--cream)',
-          borderRadius: '6px',
-          border: '1px solid var(--parchment)',
-        }}
-      >
-        Direct messaging coming soon — join the network to be notified.
-      </div>
+      {canMessage ? (
+        <button
+          className="network-dm-btn"
+          onClick={() => onMessage(referrer.id, `${referrer.hired_company ?? 'Referrer'} in ${referrer.city}`)}
+        >
+          Message
+        </button>
+      ) : (
+        <div
+          style={{
+            fontSize: '0.8rem',
+            color: 'var(--text-muted)',
+            padding: '0.6rem 0.8rem',
+            background: 'var(--cream)',
+            borderRadius: '6px',
+            border: '1px solid var(--parchment)',
+          }}
+        >
+          <Link href="/login" style={{ color: 'var(--vermilion)', fontWeight: 600 }}>Sign in</Link> to send a message.
+        </div>
+      )}
     </div>
   );
 }
@@ -245,11 +274,61 @@ export default function NetworkPageClient({
   isLoggedIn,
   hasProfile,
   currentProfile,
+  currentProfileId,
+  unreadCount,
 }: Props) {
   const [tab, setTab]               = useState<'seekers' | 'referrers'>('seekers');
   const [cityFilter, setCityFilter]  = useState('');
   const [visaFilter, setVisaFilter]  = useState('');
   const [roleSearch, setRoleSearch]  = useState('');
+
+  // Compose modal state
+  const [composeTarget, setComposeTarget]   = useState<{ profileId: string; label: string } | null>(null);
+  const [draftContent, setDraftContent]     = useState('');
+  const [sending, setSending]               = useState(false);
+  const [sendError, setSendError]           = useState('');
+  const [sendSuccess, setSendSuccess]       = useState(false);
+
+  function openCompose(profileId: string, label: string) {
+    setComposeTarget({ profileId, label });
+    setDraftContent('');
+    setSendError('');
+    setSendSuccess(false);
+  }
+
+  function closeCompose() {
+    setComposeTarget(null);
+    setDraftContent('');
+    setSendError('');
+    setSendSuccess(false);
+  }
+
+  async function handleSend() {
+    if (!composeTarget || !draftContent.trim()) return;
+    setSending(true);
+    setSendError('');
+    try {
+      const res = await fetch('/api/network/messages', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          recipient_profile_id: composeTarget.profileId,
+          content:              draftContent.trim(),
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as { error?: string };
+        setSendError(err.error ?? 'Failed to send. Please try again.');
+      } else {
+        setSendSuccess(true);
+        setTimeout(closeCompose, 2000);
+      }
+    } catch {
+      setSendError('Network error. Please try again.');
+    } finally {
+      setSending(false);
+    }
+  }
 
   const filteredSeekers = useMemo(() => {
     return initialProfiles.filter(p => {
@@ -332,12 +411,23 @@ export default function NetworkPageClient({
           </Link>
         )}
         {hasProfile && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '0.8rem', fontWeight: 700, padding: '0.25em 0.75em', borderRadius: '4px', background: 'rgba(30,122,82,0.1)', color: 'var(--jade)', border: '1.5px solid rgba(30,122,82,0.3)' }}>
               ✓ Your profile is active
             </span>
             <Link href="/dashboard/profile" style={{ fontSize: '0.85rem', color: 'var(--vermilion)', textDecoration: 'underline' }}>
               Edit
+            </Link>
+            <Link
+              href="/dashboard/messages"
+              style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+            >
+              Inbox
+              {unreadCount > 0 && (
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '0.1em 0.5em', borderRadius: '10px', background: 'var(--vermilion)', color: 'white' }}>
+                  {unreadCount}
+                </span>
+              )}
             </Link>
           </div>
         )}
@@ -433,7 +523,14 @@ export default function NetworkPageClient({
 
           {filteredSeekers.length > 0 ? (
             <div className="network-seeker-grid">
-              {filteredSeekers.map(p => <SeekerCard key={p.id} profile={p} />)}
+              {filteredSeekers.map(p => (
+                <SeekerCard
+                  key={p.id}
+                  profile={p}
+                  canMessage={hasProfile && p.id !== currentProfileId}
+                  onMessage={openCompose}
+                />
+              ))}
             </div>
           ) : (
             <div
@@ -503,6 +600,8 @@ export default function NetworkPageClient({
                   key={r.id}
                   referrer={r}
                   matchCount={currentProfile ? skillsMatch(currentProfile.skills, r.hired_skills) : 0}
+                  canMessage={hasProfile && r.id !== currentProfileId}
+                  onMessage={openCompose}
                 />
               ))}
             </div>
@@ -605,6 +704,74 @@ export default function NetworkPageClient({
           >
             Get started for free →
           </Link>
+        </div>
+      )}
+
+      {/* ── Compose modal ──────────────────────────────────────────── */}
+      {composeTarget && (
+        <div
+          className="network-compose-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Send a message"
+          onClick={e => { if (e.target === e.currentTarget) closeCompose(); }}
+        >
+          <div className="network-compose-panel">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div>
+                <div style={{ fontFamily: "'Lora', serif", fontWeight: 700, fontSize: '1.05rem', color: 'var(--ink)' }}>
+                  Send a message
+                </div>
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                  To: {composeTarget.label}
+                </div>
+              </div>
+              <button
+                className="network-compose-close"
+                onClick={closeCompose}
+                aria-label="Close compose"
+              >
+                ✕
+              </button>
+            </div>
+
+            {sendSuccess ? (
+              <div style={{ padding: '1rem', background: 'rgba(30,122,82,0.08)', border: '1.5px solid rgba(30,122,82,0.3)', borderRadius: '8px', color: 'var(--jade)', fontWeight: 600, textAlign: 'center' }}>
+                Message sent!
+              </div>
+            ) : (
+              <>
+                <textarea
+                  className="network-compose-textarea"
+                  value={draftContent}
+                  onChange={e => setDraftContent(e.target.value.slice(0, 500))}
+                  placeholder="Introduce yourself and explain why you're reaching out…"
+                  rows={5}
+                  aria-label="Message content"
+                  disabled={sending}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.6rem', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.78rem', color: draftContent.length > 450 ? 'var(--vermilion)' : 'var(--text-muted)' }}>
+                    {draftContent.length}/500
+                  </span>
+                  {sendError && (
+                    <span style={{ fontSize: '0.82rem', color: 'var(--vermilion)', flex: 1 }}>{sendError}</span>
+                  )}
+                  <button
+                    className="network-compose-send"
+                    onClick={handleSend}
+                    disabled={sending || !draftContent.trim()}
+                    aria-busy={sending}
+                  >
+                    {sending ? 'Sending…' : 'Send message'}
+                  </button>
+                </div>
+                <p style={{ fontSize: '0.77rem', color: 'var(--text-muted)', marginTop: '0.75rem', marginBottom: 0 }}>
+                  Your message is anonymous — the recipient sees only your role and city, not your name or email. Max 5 messages per day.
+                </p>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

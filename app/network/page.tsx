@@ -28,8 +28,10 @@ export default async function NetworkPage() {
       .limit(100),
   ]);
 
-  let hasProfile     = false;
+  let hasProfile      = false;
+  let currentProfileId: string | null = null;
   let currentProfile: { skills: string[]; visa_type: string; role_title: string } | null = null;
+  let unreadCount     = 0;
 
   if (user) {
     const { data } = await sb
@@ -37,8 +39,16 @@ export default async function NetworkPage() {
       .select('id, skills, visa_type, role_title')
       .eq('user_id', user.id)
       .maybeSingle();
-    hasProfile     = !!data;
-    currentProfile = data ? { skills: data.skills, visa_type: data.visa_type, role_title: data.role_title } : null;
+    hasProfile       = !!data;
+    currentProfileId = data?.id ?? null;
+    currentProfile   = data ? { skills: data.skills, visa_type: data.visa_type, role_title: data.role_title } : null;
+
+    const { count } = await sb
+      .from('network_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('recipient_id', user.id)
+      .is('read_at', null);
+    unreadCount = count ?? 0;
   }
 
   return (
@@ -48,6 +58,8 @@ export default async function NetworkPage() {
       isLoggedIn={!!user}
       hasProfile={hasProfile}
       currentProfile={currentProfile}
+      currentProfileId={currentProfileId}
+      unreadCount={unreadCount}
     />
   );
 }
