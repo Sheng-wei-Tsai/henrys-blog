@@ -527,6 +527,7 @@ function JobCard({ job, savedIds, onSaveToggle, onApply, isLoggedIn, onOpenDetai
                   </div>
                 )}
               </div>
+            </div>
           </div>
           <span style={{ fontSize: '0.78rem', fontWeight: 600, color: ageColor, flexShrink: 0 }}>{ageLabel}</span>
         </div>
