@@ -2,13 +2,13 @@ name: Scrape AU IT Jobs
 
 on:
   schedule:
-    - cron: '0 20 * * *'  # 6am AEST (UTC+10)
+    - cron: '0 20 * * *'  # 6am AEST (UTC+10) daily
   workflow_dispatch: {}    # manual trigger from GitHub UI
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30    # Apify actors can take up to 10 min each
 
     steps:
       - uses: actions/checkout@v4
@@ -21,11 +21,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Scrape AU IT jobs (Jora + ACS only)
+      - name: Scrape AU IT jobs (Greenhouse + Lever + Jora + ACS + 80kh + Apify)
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL:  ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        # Seek/Indeed/LinkedIn Apify actors removed — ToS violation.
-        # Live Seek/LinkedIn/Indeed coverage now via ScraperAPI Google Jobs in /api/jobs.
+          APIFY_API_KEY:             ${{ secrets.APIFY_API_KEY }}
         run: npx tsx scripts/scrape-au-jobs.ts
-

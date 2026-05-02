@@ -46,8 +46,8 @@ const QUICK_STARTS = [
 ];
 
 const LS_KEY        = 'job-search-prefs';
-// v5: ScraperAPI Google Jobs added (googleCount), Jobicy added to remote tab
-const JOBS_CACHE_KEY = 'job-search-cache-v5';
+// v6: sources[] attribution + sponsor_signal added
+const JOBS_CACHE_KEY = 'job-search-cache-v6';
 const JOBS_CACHE_TTL = 10 * 60 * 1000;
 // Evict all prior cache versions on load
 if (typeof window !== 'undefined') {
@@ -55,6 +55,7 @@ if (typeof window !== 'undefined') {
   localStorage.removeItem('job-search-cache-v2');
   localStorage.removeItem('job-search-cache-v3');
   localStorage.removeItem('job-search-cache-v4');
+  localStorage.removeItem('job-search-cache-v5');
 }
 
 function loadPrefs() {
@@ -356,7 +357,8 @@ function JobCard({ job, savedIds, onSaveToggle, onApply, isLoggedIn, onOpenDetai
   isLoggedIn: boolean;
   onOpenDetail: (job: AdzunaJob) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded,       setExpanded]       = useState(false);
+  const [sourcesExpanded, setSourcesExpanded] = useState(false);
   const isSaved = savedIds.has(job.id);
   const { label: ageLabel, color: ageColor } = freshness(job.created);
 
@@ -411,16 +413,28 @@ function JobCard({ job, savedIds, onSaveToggle, onApply, isLoggedIn, onOpenDetai
   const SOURCE_META: Record<string, { label: string; cls: string }> = {
     jsearch:     { label: job.publisher ?? 'Google Jobs', cls: 'tag tag-jsearch' },
     google_jobs: { label: job.publisher ?? 'Google Jobs', cls: 'tag tag-google' },
-    jora:        { label: 'Jora',     cls: 'tag tag-jora' },
-    indeed:      { label: 'Indeed',   cls: 'tag tag-indeed' },
-    acs:         { label: 'ACS',      cls: 'tag tag-acs' },
-    seek:        { label: 'Seek',     cls: 'tag tag-seek' },
-    adzuna:      { label: 'Adzuna',   cls: 'tag tag-adzuna' },
-    linkedin:    { label: 'LinkedIn', cls: 'tag tag-linkedin' },
-    remotive:    { label: 'Remotive', cls: 'tag tag-remotive' },
-    jobicy:      { label: 'Jobicy',   cls: 'tag tag-jobicy' },
+    greenhouse:  { label: 'Greenhouse',    cls: 'tag tag-greenhouse' },
+    lever:       { label: 'Lever',         cls: 'tag tag-lever' },
+    workday:     { label: 'Workday',       cls: 'tag tag-workday' },
+    ashby:       { label: 'Ashby',         cls: 'tag tag-ashby' },
+    apify:       { label: 'Apify',         cls: 'tag tag-apify' },
+    '80kh':      { label: '80,000 Hours',  cls: 'tag tag-80kh' },
+    jora:        { label: 'Jora',          cls: 'tag tag-jora' },
+    indeed:      { label: 'Indeed',        cls: 'tag tag-indeed' },
+    acs:         { label: 'ACS',           cls: 'tag tag-acs' },
+    seek:        { label: 'Seek',          cls: 'tag tag-seek' },
+    adzuna:      { label: 'Adzuna',        cls: 'tag tag-adzuna' },
+    linkedin:    { label: 'LinkedIn',      cls: 'tag tag-linkedin' },
+    remotive:    { label: 'Remotive',      cls: 'tag tag-remotive' },
+    jobicy:      { label: 'Jobicy',        cls: 'tag tag-jobicy' },
   };
-  const srcMeta = SOURCE_META[job.source] ?? { label: job.source, cls: 'tag' };
+
+  // Attribution: use pre-computed attribution string if available, else fall back to single source
+  const primarySrc = job.primary_source ?? job.source;
+  const srcMeta    = SOURCE_META[primarySrc] ?? { label: primarySrc, cls: 'tag' };
+  const extraCount = (job.sources?.length ?? 1) - 1;
+  const attrLabel  = job.attribution ?? `via ${srcMeta.label}`;
+
   const isHtml = hasHtmlTags(job.description);
 
   return (
@@ -464,11 +478,55 @@ function JobCard({ job, savedIds, onSaveToggle, onApply, isLoggedIn, onOpenDetai
               {job.company} · {job.location}
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-              {job.contract_type && <span className="tag">{job.contract_type}</span>}
-              {job.category      && <span className="tag">{job.category}</span>}
-              {job.salary        && <span className="tag" style={{ color: 'var(--terracotta)', display: 'inline-flex', alignItems: 'center', gap: '0.25em' }}><EIcon name="coin" size={12} />{job.salary}</span>}
-              <span className={srcMeta.cls}>via {srcMeta.label}</span>
-            </div>
+              {job.contract_type  && <span className="tag">{job.contract_type}</span>}
+              {job.category       && <span className="tag">{job.category}</span>}
+              {job.salary         && <span className="tag" style={{ color: 'var(--terracotta)', display: 'inline-flex', alignItems: 'center', gap: '0.25em' }}><EIcon name="coin" size={12} />{job.salary}</span>}
+              {job.sponsor_signal && (
+                <span className="tag" style={{ color: 'var(--jade)', fontWeight: 700 }} title="This employer is on the Home Affairs 482 accredited sponsor list">
+                  482 sponsor
+                </span>
+              )}
+              {/* Attribution button — expands to show all source URLs */}
+              <div style={{ position: 'relative', display: 'inline-block' }}>
+                <button
+                  className={srcMeta.cls}
+                  onClick={e => { e.stopPropagation(); setSourcesExpanded(v => !v); }}
+                  aria-expanded={sourcesExpanded}
+                  aria-haspopup="true"
+                  style={{ cursor: extraCount > 0 ? 'pointer' : 'default', background: 'none', border: 'none', padding: 0 }}
+                >
+                  {attrLabel}
+                </button>
+                {sourcesExpanded && job.sources && job.sources.length > 0 && (
+                  <div
+                    role="menu"
+                    style={{
+                      position: 'absolute', top: '1.6rem', left: 0, zIndex: 50,
+                      background: 'var(--warm-white)', border: 'var(--panel-border)',
+                      boxShadow: 'var(--panel-shadow)', borderRadius: '8px',
+                      padding: '0.4rem 0', minWidth: '180px',
+                    }}
+                  >
+                    {job.sources.map(s => (
+                      <a
+                        key={s.name}
+                        href={s.apply_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        role="menuitem"
+                        style={{
+                          display: 'block', padding: '0.35rem 0.85rem',
+                          fontSize: '0.82rem', color: 'var(--text-primary)',
+                          textDecoration: 'none',
+                        }}
+                        onClick={e => e.stopPropagation()}
+                      >
+                        {s.label} ↗
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
           </div>
           <span style={{ fontSize: '0.78rem', fontWeight: 600, color: ageColor, flexShrink: 0 }}>{ageLabel}</span>
         </div>
@@ -783,7 +841,7 @@ export default function JobsPage() {
         </h1>
         <p className="animate-fade-up delay-1" style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
           {activeTab === 'au'
-            ? 'IT roles from Jora, ACS, Google Jobs (Seek · LinkedIn · Indeed) and Adzuna.'
+            ? 'IT roles from Greenhouse, Lever, Workday, Ashby, Jora, ACS, 80,000 Hours, Google Jobs and Adzuna.'
             : activeTab === 'remote'
             ? 'Remote IT roles from Remotive, Jobicy, Google Jobs and Adzuna.'
             : 'Contract & freelance IT roles from Google Jobs and Adzuna.'}
@@ -1072,7 +1130,7 @@ export default function JobsPage() {
           <>
             {sectionScraped.length > 0 && (
               <>
-                <SectionDivider label="Jora · ACS" count={sectionScraped.length} />
+                <SectionDivider label="Greenhouse · Lever · Workday · Jora · ACS · 80kh" count={sectionScraped.length} />
                 {sectionScraped.map(job => (
                   <JobCard key={job.id} job={job} {...jobCardProps} />
                 ))}
